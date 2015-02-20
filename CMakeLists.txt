@@ -23,7 +23,7 @@ endif()
 
 if(ENKITS_BUILD_EXAMPLES)
 	if(UNIX)
-    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++0x")
+    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
 	endif()
 	add_executable( Example example/Example.cpp )
 	target_link_libraries(Example enkiTS )

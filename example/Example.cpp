@@ -19,8 +19,15 @@
 #include "TaskScheduler.h"
 #include <chrono>
 
+#include <stdio.h>
+
+#ifndef _WIN32
+	#include <string.h>
+#endif
+
 using namespace enki;
 using namespace std::chrono;
+
 
 
 
@@ -130,7 +137,7 @@ int main(int argc, const char * argv[])
 
 	}
 
-	printf("\nSpeed Up Average Serial / Parallel: %f\n", avSpeedUp );
+	printf("\nAverage Speed Up for %d Hardware Threads Serial / Parallel: %f\n", GetNumHardwareThreads(), avSpeedUp );
 
 
 	return 0;

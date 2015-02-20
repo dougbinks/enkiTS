@@ -100,13 +100,13 @@ namespace enki
 #else // posix
 
 	#include <pthread.h>
-
+	#include <unistd.h>
 	#define THREADFUNC_DECL void*
 	#define THREAD_LOCAL __thread
 
 namespace enki
 {
-	typedef pthread_t threadid_t;
+    typedef pthread_t threadid_t;
     struct eventid_t
     {
         pthread_cond_t  cond;

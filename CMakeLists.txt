@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 
 option( ENKITS_BUILD_EXAMPLES	"Build example applications" ON )
 
+
+
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
 set( ENKITS_SRC
@@ -13,10 +15,16 @@ set( ENKITS_SRC
      )
 	 
 add_library( enkiTS STATIC ${ENKITS_SRC} )
+if(UNIX)
+	find_package (Threads)
+	target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 
 if(ENKITS_BUILD_EXAMPLES)
-
+	if(UNIX)
+    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++0x")
+	endif()
 	add_executable( Example example/Example.cpp )
 	target_link_libraries(Example enkiTS )
 	

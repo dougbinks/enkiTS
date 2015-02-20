@@ -23,6 +23,10 @@
 
 #include "Atomics.h"
 
+#ifndef _WIN32
+	#include <string.h>
+#endif
+
 namespace enki
 {
     // LockLessMultiReadPipe - Single writer, multiple reader thread safe pipe using (semi) lockless programming

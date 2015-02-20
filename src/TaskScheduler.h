@@ -112,7 +112,6 @@ namespace enki
 		void             StartThreads();
 		void             StopThreads( bool bWait_ );
 
-		// this object is essentially a singleton so using static global data (internal linkage only)
 		TaskPipe*                                                m_pPipesPerThread;
 
 		uint32_t                                                 m_NumThreads;

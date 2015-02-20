@@ -8,14 +8,12 @@ Note - this is a work in progress conversion from my code for [enkisoftware's](h
 
 As this was originally written before widespread decent C++11 support for atomics and threads, these are implemented here per-platform only supporting Windows, Linux and OSX on Intel x86 / x64.
 
-Very much a work in progress ATM, currently only Windows and Linux build and are tested.
-
 The example code requires C++ 11 for chrono.
 
 ## To Do
 
-* Complete build, test and fix for OSX.
 * Documentation.
+* C style header API for those who want to use C or other languages.
 * Add a profile header for support of various profiling libraries such as [ITT](https://software.intel.com/en-us/articles/intel-itt-api-open-source), [Remotery](https://github.com/dougbinks/Remotery), [InsightProfile](https://github.com/kayru/insightprofiler), [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) and potentially [Telemetry](http://www.radgametools.com/telemetry.htm).
 * Lambda support where compiler supports them.
 * Potential C++ 11 conversion (if performance the same)?

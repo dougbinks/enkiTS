@@ -20,6 +20,7 @@
 #include <chrono>
 
 #include <stdio.h>
+#include <inttypes.h>
 
 #ifndef _WIN32
 	#include <string.h>
@@ -112,7 +113,7 @@ int main(int argc, const char * argv[])
 
 		double timeTakenParallel = duration_cast<duration<double>>(tEndParallel - tStartParallel).count();
 
-		printf("Parallel Example complete in \t%fms,\t sum: %llu\n", 1000.0 * timeTakenParallel, m_ParallelReductionSumTaskSet.m_FinalSum );
+		printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", 1000.0 * timeTakenParallel, m_ParallelReductionSumTaskSet.m_FinalSum );
 
 		auto tStartSerial = high_resolution_clock::now();
 		uint64_t sum = 0;
@@ -132,7 +133,7 @@ int main(int argc, const char * argv[])
 			avSpeedUp += timeTakenSerial  / timeTakenParallel / RUNS;
 		}
 
-		printf("Serial Example complete in \t%fms,\t sum: %llu\n", 1000.0 * timeTakenSerial, sum );
+		printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", 1000.0 * timeTakenSerial, sum );
 		printf("Speed Up Serial / Parallel: %f\n\n", timeTakenSerial  / timeTakenParallel );
 
 	}

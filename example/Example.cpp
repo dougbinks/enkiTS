@@ -124,7 +124,7 @@ int main(int argc, const char * argv[])
 
 		tSerial.Stop();
 
-		if( run > WARMUPS )
+		if( run >= WARMUPS )
 		{
 			avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
 		}

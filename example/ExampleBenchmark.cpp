@@ -90,7 +90,7 @@ int main(int argc, const char * argv[])
 		printf("Parallel Example complete in \t%fms, task rate: %f M tasks/s\n", tParallel.GetTimeMS(), numTasks / tParallel.GetTimeMS() / 1000.0f );
 
 
-		if( run > WARMUPS )
+		if( run >= WARMUPS )
 		{
 			avTime += tParallel.GetTimeMS() / RUNS;
 		}

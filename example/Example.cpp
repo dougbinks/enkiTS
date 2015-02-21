@@ -17,7 +17,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 
 #include "TaskScheduler.h"
-#include <chrono>
+#include "Timer.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -27,7 +27,7 @@
 #endif
 
 using namespace enki;
-using namespace std::chrono;
+
 
 
 
@@ -100,7 +100,8 @@ int main(int argc, const char * argv[])
 	{
 
 		printf("Run %d.....\n", run);
-		auto tStartParallel = high_resolution_clock::now();
+		Timer tParallel;
+		tParallel.Start();
 
 		ParallelReductionSumTaskSet m_ParallelReductionSumTaskSet( 10 * 1024 * 1024 );
 
@@ -108,29 +109,28 @@ int main(int argc, const char * argv[])
 
 		g_TS.WaitforTaskSet( &m_ParallelReductionSumTaskSet );
 
-		auto tEndParallel = high_resolution_clock::now();
+		tParallel.Stop();
 
-		double timeTakenParallel = duration_cast<duration<double>>(tEndParallel - tStartParallel).count();
 
-		printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", 1000.0 * timeTakenParallel, m_ParallelReductionSumTaskSet.m_FinalSum );
+		printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), m_ParallelReductionSumTaskSet.m_FinalSum );
 
-		auto tStartSerial = high_resolution_clock::now();
+		Timer tSerial;
+		tSerial.Start();
 		uint64_t sum = 0;
 		for( uint64_t i = 0; i < (uint64_t)m_ParallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
 		{
 			sum += i + 1;
 		}
 
-		auto tEndSerial= high_resolution_clock::now();
-		double timeTakenSerial= duration_cast<duration<double>>(tEndSerial - tStartSerial).count();
+		tSerial.Stop();
 
 		if( run < WARMUPS )
 		{
-			avSpeedUp += timeTakenSerial  / timeTakenParallel / RUNS;
+			avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
 		}
 
-		printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", 1000.0 * timeTakenSerial, sum );
-		printf("Speed Up Serial / Parallel: %f\n\n", timeTakenSerial  / timeTakenParallel );
+		printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sum );
+		printf("Speed Up Serial / Parallel: %f\n\n", tSerial.GetTimeMS()  / tParallel.GetTimeMS() );
 
 	}
 

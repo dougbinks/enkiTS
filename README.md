@@ -2,7 +2,10 @@
 
 ## enkiTaskSystem
 
-A C++ Task System.
+A C and C++ Task System.
+
+* [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
+* [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
 
 Note - this is a work in progress conversion from my code for [enkisoftware's](http://www.enkisoftware.com/) Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 

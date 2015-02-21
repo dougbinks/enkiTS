@@ -62,7 +62,7 @@ SplitTask SplitTask::tasks[numTasks];
 
 
 static const int WARMUPS	= 10;
-static const int RUNS		= 1000;
+static const int RUNS		= 20;
 static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])

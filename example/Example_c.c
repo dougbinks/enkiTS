@@ -42,12 +42,12 @@ void ParallelSumTaskSetArgsInit( ParallelSumTaskSetArgs* pArgs_ )
 void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
 {
 	ParallelSumTaskSetArgs args;
-	uint64_t sum;
+	uint64_t sum, i;
 	
 	args = *(ParallelSumTaskSetArgs*)pArgs_;
 
 	sum = args.pPartialSums[threadnum_];
-	for( uint64_t i = start_; i < end; ++i )
+	for( i = start_; i < end; ++i )
 	{
 		sum += i + 1;
 	}
@@ -95,7 +95,7 @@ int main(int argc, const char * argv[])
 	enkiAddTaskSetToPipe( pETS, pPSumReductionTask, &inMax_outSum, 1);
 	enkiWaitForTaskSet( pETS, pPSumReductionTask );
 
-	printf("Parallel Example complete sum: \t %llu\n", inMax_outSum );
+	printf("Parallel Example complete sum: \t %llu\n", (long long unsigned int)inMax_outSum );
 
 	serialSum = 0;
 	for( i = 0; i < max; ++i )
@@ -103,7 +103,7 @@ int main(int argc, const char * argv[])
 		serialSum += i + 1;
 	}
 
-	printf("Serial Example complete sum: \t %llu\n", serialSum );
+	printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
 
 	enkiDeleteTaskScheduler( pETS );
 }

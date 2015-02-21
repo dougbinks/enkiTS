@@ -48,7 +48,7 @@ struct ParallelSumTaskSet : ITaskSet
 	void Init()
 	{
 		delete[] m_pPartialSums;
-		m_NumPartialSums = GetNumHardwareThreads();
+		m_NumPartialSums = g_TS.GetNumTaskThreads();
 		m_pPartialSums = new uint64_t[ m_NumPartialSums ];
 		memset( m_pPartialSums, 0, sizeof(uint64_t)*m_NumPartialSums );
 	}
@@ -56,8 +56,7 @@ struct ParallelSumTaskSet : ITaskSet
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
 		assert( m_pPartialSums && m_NumPartialSums );
-		uint64_t sumstart = m_pPartialSums[threadnum];
-		uint64_t sum = sumstart;
+		uint64_t sum = m_pPartialSums[threadnum];
 		for( uint64_t i = range.start; i < range.end; ++i )
 		{
 			sum += i + 1;
@@ -117,12 +116,9 @@ int main(int argc, const char * argv[])
 
 		auto tStartSerial = high_resolution_clock::now();
 		uint64_t sum = 0;
-		if( true )
+		for( uint64_t i = 0; i < (uint64_t)m_ParallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
 		{
-			for( uint64_t i = 0; i < (uint64_t)m_ParallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
-			{
-				sum += i + 1;
-			}
+			sum += i + 1;
 		}
 
 		auto tEndSerial= high_resolution_clock::now();

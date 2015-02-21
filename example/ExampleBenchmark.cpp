@@ -40,7 +40,6 @@ TaskScheduler g_TS;
 struct SplitTask : ITaskSet
 {
 	static SplitTask tasks[numTasks];
-
 	uint32_t taskId;
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
@@ -49,8 +48,8 @@ struct SplitTask : ITaskSet
 		{
 			uint32_t newTaskId = taskId + range.start + 1;
 			assert( taskId < numTasks );
-			SplitTask& task = tasks[ taskId ];
-			task.taskId = taskId;
+			SplitTask& task = tasks[ newTaskId ];
+			task.taskId = newTaskId;
 			task.m_SetSize = num;
 			g_TS.AddTaskSetToPipe( &task );
 		}

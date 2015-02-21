@@ -251,6 +251,14 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 }
 
 TaskScheduler::TaskScheduler()
+		: m_pPipesPerThread(NULL)
+		, m_NumThreads(0)
+		, m_pThreadNumStore(NULL)
+		, m_pThreadIDs(NULL)
+		, m_bRunning(false)
+		, m_NumThreadsRunning(0)
+		, m_NumPartitions(0)
+		, m_bHaveThreads(false)
 {
 }
 
@@ -264,6 +272,7 @@ TaskScheduler::~TaskScheduler()
 
 void    TaskScheduler::Initialize( uint32_t numThreads_ )
 {
+	assert( numThreads_ );
     StopThreads( true ); // Stops threads, waiting for them.
     delete[] m_pPipesPerThread;
 

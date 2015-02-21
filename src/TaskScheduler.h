@@ -75,12 +75,17 @@ namespace enki
 		TaskScheduler();
 		~TaskScheduler();
 
-		// Call either Initialize() or Initialize( numThreads_ ) before adding tasks
+		// Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
+
 		// Initialize() will create GetNumHardwareThreads()-1 threads, which is
 		// sufficient to fill the system when including the main thread.
 		// Initialize can be called multiple times - it will wait for completion
 		// before re-initializing.
 		void			Initialize();
+
+		// Initialize( numThreads_ ) - numThreads_ (must be > 0)
+		// will create numThreads_-1 threads, as thread 0 is
+		// the thread on which the initialize was called.
 		void			Initialize( uint32_t numThreads_ );
 
 

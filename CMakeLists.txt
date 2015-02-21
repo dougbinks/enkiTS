@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+project( enkiTS )
+
 option( ENKITS_BUILD_EXAMPLES	"Build example applications" ON )
 
 

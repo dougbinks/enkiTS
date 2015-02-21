@@ -4,7 +4,7 @@
     #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
 #else
-	#include <chrono>
+    #include <chrono>
 #endif
 
 // simple time struct you shouldn't use outside example code.
@@ -22,7 +22,7 @@ struct Timer
 #ifdef _WIN32
 		QueryPerformanceCounter( &start );
 #else
-		start = chrono::high_resolution_clock::now();;
+		start = std::chrono::high_resolution_clock::now();
 #endif
 	}
 
@@ -38,8 +38,8 @@ struct Timer
 		QueryPerformanceFrequency( &freq );
 		timeMS += (double)( 1000 * elapsed.QuadPart ) / (double)freq.QuadPart;
 #else
-		auto stop = chrono::high_resolution_clock::now();
-		timeMS += 1000.0 * chrono::duration_cast<duration<double>>(stop - start).count();
+		auto stop = std::chrono::high_resolution_clock::now();
+		timeMS += 1000.0 * std::chrono::duration_cast<std::chrono::duration<double>>(stop - start).count();
 #endif
 	}
 
@@ -58,6 +58,6 @@ private:
 #ifdef _WIN32
 	LARGE_INTEGER start;
 #else
-	std::chrono::timepoint start;
+	std::chrono::high_resolution_clock::time_point start;
 #endif
 };

@@ -95,8 +95,8 @@ namespace enki
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
 		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
-		// should only be called from main thread, or within a task
-		// if called with 0 it will try to run tasks, but wait on them if none available.
+		// should only be called from thread which created the taskscheduler , or within a task
+		// if called with 0 it will try to run tasks, and return if none available.
 		void            WaitforTaskSet( const ITaskSet* pTaskSet );
 
 		// Waits for all task sets to complete - not guaranteed to work unless we know we

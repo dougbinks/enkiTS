@@ -96,10 +96,10 @@ int main(int argc, const char * argv[])
 	g_TS.Initialize();
 
 	double avSpeedUp = 0.0;
-	for( int i = 0; i < REPEATS; ++i )
+	for( int run = 0; run< REPEATS; ++run )
 	{
 
-		printf("Run %d.....\n", i);
+		printf("Run %d.....\n", run);
 		auto tStartParallel = high_resolution_clock::now();
 
 		ParallelReductionSumTaskSet m_ParallelReductionSumTaskSet( 10 * 1024 * 1024 );
@@ -124,7 +124,7 @@ int main(int argc, const char * argv[])
 		auto tEndSerial= high_resolution_clock::now();
 		double timeTakenSerial= duration_cast<duration<double>>(tEndSerial - tStartSerial).count();
 
-		if( i < WARMUPS )
+		if( run < WARMUPS )
 		{
 			avSpeedUp += timeTakenSerial  / timeTakenParallel / RUNS;
 		}

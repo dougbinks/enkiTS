@@ -226,7 +226,7 @@ void    TaskScheduler::WaitforAll()
     {
         TryRunTask( gtl_threadNum );
         bHaveTasks = false;
-        for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
+        for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
         {
             if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
             {

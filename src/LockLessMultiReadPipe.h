@@ -22,10 +22,9 @@
 #include <assert.h>
 
 #include "Atomics.h"
+#include <atomic>
+#include <string.h>
 
-#ifndef _WIN32
-	#include <string.h>
-#endif
 
 namespace enki
 {
@@ -100,20 +99,22 @@ namespace enki
         uint32_t actualReadIndex;
 		
         // We get hold of read index for consistency
-        uint32_t writeIndex = m_WriteIndex;
-        uint32_t readIndex  = m_ReadIndex;
+		uint32_t readIndexToUse  = m_ReadIndex;
 		while(true)
         {
 
-            // power of two sizes ensures we can use a simple calc without modulus
-            uint32_t numInPipe = writeIndex - readIndex;
-            if( 0 == numInPipe )
-            {
-                return false;
-            }
+			uint32_t writeIndex = m_WriteIndex;
+			uint32_t readIndex  = m_ReadIndex;
+			 // power of two sizes ensures we can use a simple calc without modulus
+			uint32_t numInPipe = writeIndex - readIndex;
+			if( 0 == numInPipe )
+			{
+				return false;
+			}
+
  
             // power of two sizes ensures we can perform AND for a modulus
-            actualReadIndex    = readIndex & ms_cIndexMask;
+            actualReadIndex    = readIndexToUse & ms_cIndexMask;
 
             // Multiple potential readers mean we should check if the data is valid,
             // using an atomic compare exchange
@@ -122,8 +123,7 @@ namespace enki
             {
                break;
             }
-
-			++readIndex;
+			++readIndexToUse;
         }
  
         // we update the read index using an atomic add, as we've only read one piece of data.
@@ -136,6 +136,7 @@ namespace enki
         *pOut = m_Buffer[ actualReadIndex ];
 
         m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
+
 
         return true;
     }
@@ -169,7 +170,7 @@ namespace enki
         }
  
         BASE_MEMORYBARRIER_ACQUIRE();
-        // now read data, ensuring we do so after above reads & CAS
+       // now read data, ensuring we do so after above reads & CAS
         *pOut = m_Buffer[ actualReadIndex ];
 
 		m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
@@ -203,7 +204,10 @@ namespace enki
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;
 
         // a reader may still be reading this item, as there are multiple readers
-        while( m_Flags[ actualWriteIndex ] != FLAG_CAN_WRITE ) {}
+        while( m_Flags[ actualWriteIndex ] != FLAG_CAN_WRITE ) 
+		{
+			return false; // still being read, so have caught up with tail. 
+		}
 
 
         // as we are the only writer we can update the data without atomics

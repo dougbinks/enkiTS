@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 
 project( enkiTS )
 
-option( ENKITS_BUILD_EXAMPLES	"Build example applications" ON )
+option( ENKITS_BUILD_C_INTERFACE	"Build C interface" ON )
+option( ENKITS_BUILD_EXAMPLES		"Build example applications" ON )
 
 
 
@@ -15,6 +16,13 @@ set( ENKITS_SRC
      src/TaskScheduler.h
      src/TaskScheduler.cpp
      )
+	 
+if( ENKITS_BUILD_C_INTERFACE )
+	list( APPEND ENKITS_SRC
+		src/TaskScheduler_c.h
+		src/TaskScheduler_c.cpp
+		)
+endif()
 	 
 add_library( enkiTS STATIC ${ENKITS_SRC} )
 if(UNIX)
@@ -32,5 +40,9 @@ if(ENKITS_BUILD_EXAMPLES)
 	endif()
 	add_executable( Example example/Example.cpp )
 	target_link_libraries(Example enkiTS )
-	
+
+if( ENKITS_BUILD_C_INTERFACE )
+	add_executable( Example_c example/Example_c.c )
+	target_link_libraries(Example_c enkiTS )
+endif()	
 endif()

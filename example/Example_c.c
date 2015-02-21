@@ -34,7 +34,6 @@ typedef struct ParallelSumTaskSetArgs
 
 void ParallelSumTaskSetArgsInit( ParallelSumTaskSetArgs* pArgs_ )
 {
-	free( pArgs_->pPartialSums );
 	pArgs_->numPartialSums = enkiGetNumTaskThreads( pETS );
 	pArgs_->pPartialSums = (uint64_t*)malloc( sizeof(uint64_t) * pArgs_->numPartialSums );
 	memset( pArgs_->pPartialSums, 0, sizeof(uint64_t) * pArgs_->numPartialSums );
@@ -61,7 +60,6 @@ void ParallelReductionSumTaskSet(  uint32_t start_, uint32_t end, uint32_t threa
 	uint64_t sum;
 	uint64_t inMax_outSum, i;
 
-	memset( &args, 0, sizeof(args) );
 	inMax_outSum = *(uint64_t*)pArgs_;
 
 	ParallelSumTaskSetArgsInit( &args );
@@ -74,6 +72,9 @@ void ParallelReductionSumTaskSet(  uint32_t start_, uint32_t end, uint32_t threa
 	{
 		sum += args.pPartialSums[i];
 	}
+
+	free( args.pPartialSums );
+
 
 	*(uint64_t*)pArgs_ = sum;
 }

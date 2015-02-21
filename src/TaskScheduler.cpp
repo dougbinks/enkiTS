@@ -102,8 +102,14 @@ void TaskScheduler::StartThreads()
     // ensure we have sufficient tasks to equally fill either all threads including main
     // or just the threads we've launched, this is outside the firstinit as we want to be able
     // to runtime change it
-    m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
-
+	if( 1 == m_NumThreads )
+	{
+		m_NumPartitions = 1;
+	}
+	else
+	{
+		m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
+	}
 
     m_bHaveThreads = true;
 }

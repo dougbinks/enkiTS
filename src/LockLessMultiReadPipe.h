@@ -168,10 +168,11 @@ namespace enki
             return false;
         }
  
+        BASE_MEMORYBARRIER_ACQUIRE();
         // now read data, ensuring we do so after above reads & CAS
         *pOut = m_Buffer[ actualReadIndex ];
-        BASE_MEMORYBARRIER_ACQUIRE();
-        m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
+
+		m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
 
         // 32-bit aligned stores are atomic, and writer owns the write index
         --writeIndex;

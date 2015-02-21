@@ -72,10 +72,22 @@ void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, 
 	pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
+int				enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+{
+	assert( pTaskSet_ );
+	return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
+}
+
 void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
 	pETS_->WaitforTaskSet( pTaskSet_ );
 }
+
+void				enkiWaitForAll( enkiTaskScheduler* pETS_ )
+{
+	pETS_->WaitforAll();
+}
+
 
 uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 {

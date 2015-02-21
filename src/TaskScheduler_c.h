@@ -51,8 +51,20 @@ enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange 
 // schedule the task
 void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ );
 
-// schedule the task
+// Check if TaskSet is complete. Doesn't wait. Returns 1 if complete, 0 if not.
+int					enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+
+
+// Wait for a given task.
+// should only be called from thread which created the taskscheduler , or within a task
+// if called with 0 it will try to run tasks, and return if none available.
 void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+
+
+// Waits for all task sets to complete - not guaranteed to work unless we know we
+// are in a situation where tasks aren't being continuosly added.
+void				enkiWaitForAll( enkiTaskScheduler* pETS_ );
+
 
 // get number of threads
 uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );

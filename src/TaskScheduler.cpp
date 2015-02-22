@@ -57,6 +57,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	uint32_t threadNum				= args.threadNum;
 	TaskScheduler*  pTS				= args.pTaskScheduler;
     gtl_threadNum      = threadNum;
+	AtomicAdd( &pTS->m_NumThreadsActive, 1 );
     
     uint32_t spinCount = 0;
     while( pTS->m_bRunning )
@@ -67,7 +68,9 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
+				AtomicAdd( &pTS->m_NumThreadsActive, -1 );
                 EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
+				AtomicAdd( &pTS->m_NumThreadsActive, 1 );
                 spinCount = 0;
             }
         }
@@ -205,7 +208,12 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
             --pTaskSet->m_CompletionCount;
         }
     }
-    EventSignal( m_NewTaskEvent );
+
+	if( m_NumThreadsActive != m_NumThreadsRunning )
+	{
+		assert( m_NumThreadsActive < m_NumThreadsRunning );
+		EventSignal( m_NewTaskEvent );
+	}
 
 }
 
@@ -263,6 +271,7 @@ TaskScheduler::TaskScheduler()
 		, m_pThreadIDs(NULL)
 		, m_bRunning(false)
 		, m_NumThreadsRunning(0)
+		, m_NumThreadsActive(0)
 		, m_NumPartitions(0)
 		, m_bHaveThreads(false)
 {

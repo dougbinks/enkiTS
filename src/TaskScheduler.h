@@ -124,6 +124,7 @@ namespace enki
 		threadid_t*                                              m_pThreadIDs;
 		volatile bool                                            m_bRunning;
 		volatile int32_t                                         m_NumThreadsRunning;
+		volatile int32_t                                         m_NumThreadsActive;
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		bool                                                     m_bHaveThreads;

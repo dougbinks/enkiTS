@@ -208,7 +208,10 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         AtomicAdd( &info.pTask->m_CompletionCount, +1 );
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( info ) )
         {
-            EventSignal( m_NewTaskEvent );
+			if( m_NumThreadsActive < m_NumThreadsRunning )
+			{
+				EventSignal( m_NewTaskEvent );
+			}
             info.pTask->ExecuteRange( info.partition, gtl_threadNum );
             --pTaskSet->m_CompletionCount;
         }

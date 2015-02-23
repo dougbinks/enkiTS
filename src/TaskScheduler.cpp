@@ -26,7 +26,7 @@
 using namespace enki;
 
 
-static const uint32_t PIPESIZE_LOG2 = 8;
+static const uint32_t PIPESIZE_LOG2 = 10;
 static const uint32_t SPIN_COUNT = 100;
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable

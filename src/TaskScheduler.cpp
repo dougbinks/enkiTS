@@ -94,6 +94,9 @@ void TaskScheduler::StartThreads()
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadNumStore = new ThreadArgs[m_NumThreads];
     m_pThreadIDs      = new threadid_t[m_NumThreads];
+	m_pThreadNumStore[0].threadNum      = 0;
+	m_pThreadNumStore[0].pTaskScheduler = this;
+	m_pThreadIDs[0] = 0;
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
 		m_pThreadNumStore[thread].threadNum      = thread;
@@ -142,6 +145,8 @@ void TaskScheduler::StopThreads( bool bWait_ )
         EventClose( m_NewTaskEvent );
 
         m_bHaveThreads = false;
+		m_NumThreadsActive = 0;
+		m_NumThreadsRunning = 0;
     }
 }
 
@@ -209,9 +214,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         }
     }
 
-	if( m_NumThreadsActive != m_NumThreadsRunning )
+	if( m_NumThreadsActive < m_NumThreadsRunning )
 	{
-		assert( m_NumThreadsActive < m_NumThreadsRunning );
 		EventSignal( m_NewTaskEvent );
 	}
 
@@ -236,7 +240,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
-    while( bHaveTasks )
+    while( bHaveTasks || m_NumThreadsActive)
     {
         TryRunTask( gtl_threadNum );
         bHaveTasks = false;

@@ -29,8 +29,6 @@
 using namespace enki;
 
 
-
-
 const uint32_t numTasks =  1024*1024;
 
 TaskScheduler g_TS;
@@ -39,26 +37,33 @@ TaskScheduler g_TS;
 struct ConsumeTask : ITaskSet
 {
 	static ConsumeTask tasks[numTasks];
-	static uint32_t*   pCount;
-	static uint32_t    numCount;
+
+	struct Count
+	{
+		// prevent false sharing.
+		uint32_t	count;
+		char		cacheline[64];
+	};
+	static Count*   pCount;
+	static uint32_t numCount;
 
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
-		++pCount[threadnum];
+		++pCount[threadnum].count;
 	}
 
 	static void Init()
 	{
 		delete[] ConsumeTask::pCount;
 		numCount = g_TS.GetNumTaskThreads();
-		ConsumeTask::pCount = new uint32_t[ numCount ];
-		memset( pCount, 0, sizeof(uint32_t) * numCount );
+		ConsumeTask::pCount = new Count[ numCount ];
+		memset( pCount, 0, sizeof(Count) * numCount );
 	}
 };
 
-ConsumeTask ConsumeTask::tasks[numTasks];
-uint32_t*   ConsumeTask::pCount = NULL;
-uint32_t    ConsumeTask::numCount = 0;
+ConsumeTask				 ConsumeTask::tasks[numTasks];
+ConsumeTask::Count*      ConsumeTask::pCount = NULL;
+uint32_t				 ConsumeTask::numCount = 0;
 
 
 
@@ -81,7 +86,7 @@ struct CreateTasks : ITaskSet
 
 
 static const int WARMUPS	= 5;
-static const int RUNS		= 5;
+static const int RUNS		= 10;
 static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
@@ -119,7 +124,7 @@ int main(int argc, const char * argv[])
 			uint32_t numTasksDone = 0;
 			for( uint32_t check = 0; check < ConsumeTask::numCount; ++check )
 			{
-				numTasksDone += ConsumeTask::pCount[check];
+				numTasksDone += ConsumeTask::pCount[check].count;
 			}
 			if( numTasksDone != numTasks )
 			{

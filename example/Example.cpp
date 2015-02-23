@@ -36,7 +36,13 @@ TaskScheduler g_TS;
 
 struct ParallelSumTaskSet : ITaskSet
 {
-	uint64_t* m_pPartialSums;
+	struct Count
+	{
+		// prevent false sharing.
+		uint64_t	count;
+		char		cacheline[64];
+	};
+	Count*    m_pPartialSums;
 	uint32_t  m_NumPartialSums;
 
 	ParallelSumTaskSet( uint32_t size_ ) : m_pPartialSums(NULL), m_NumPartialSums(0) { m_SetSize = size_; }
@@ -49,19 +55,19 @@ struct ParallelSumTaskSet : ITaskSet
 	{
 		delete[] m_pPartialSums;
 		m_NumPartialSums = g_TS.GetNumTaskThreads();
-		m_pPartialSums = new uint64_t[ m_NumPartialSums ];
-		memset( m_pPartialSums, 0, sizeof(uint64_t)*m_NumPartialSums );
+		m_pPartialSums = new Count[ m_NumPartialSums ];
+		memset( m_pPartialSums, 0, sizeof(Count)*m_NumPartialSums );
 	}
 
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
 		assert( m_pPartialSums && m_NumPartialSums );
-		uint64_t sum = m_pPartialSums[threadnum];
+		uint64_t sum = m_pPartialSums[threadnum].count;
 		for( uint64_t i = range.start; i < range.end; ++i )
 		{
 			sum += i + 1;
 		}
-		m_pPartialSums[threadnum] = sum;
+		m_pPartialSums[threadnum].count = sum;
 	}
   
 };
@@ -82,7 +88,7 @@ struct ParallelReductionSumTaskSet : ITaskSet
 
 		for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
 		{
-			m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i];
+			m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i].count;
 		}
 	}
 };

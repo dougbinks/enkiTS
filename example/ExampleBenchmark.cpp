@@ -36,67 +36,118 @@ const uint32_t numTasks =  1024*1024;
 TaskScheduler g_TS;
 
 
-
-struct SplitTask : ITaskSet
+struct ConsumeTask : ITaskSet
 {
-	static SplitTask tasks[numTasks];
-	uint32_t taskId;
+	static ConsumeTask tasks[numTasks];
+	static uint32_t*   pCount;
+	static uint32_t    numCount;
+
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
-		uint32_t num = range.end - range.start - 1;
-		if( num  )
-		{
-			uint32_t newTaskId = taskId + range.start + 1;
-			assert( taskId < numTasks );
-			SplitTask& task = tasks[ newTaskId ];
-			task.taskId = newTaskId;
-			task.m_SetSize = num;
-			g_TS.AddTaskSetToPipe( &task );
-		}
+		++pCount[threadnum];
+	}
 
+	static void Init()
+	{
+		delete[] ConsumeTask::pCount;
+		numCount = g_TS.GetNumTaskThreads();
+		ConsumeTask::pCount = new uint32_t[ numCount ];
+		memset( pCount, 0, sizeof(uint32_t) * numCount );
 	}
 };
 
-SplitTask SplitTask::tasks[numTasks];
+ConsumeTask ConsumeTask::tasks[numTasks];
+uint32_t*   ConsumeTask::pCount = NULL;
+uint32_t    ConsumeTask::numCount = 0;
 
 
-static const int WARMUPS	= 10;
-static const int RUNS		= 20;
+
+struct CreateTasks : ITaskSet
+{
+	CreateTasks()
+	{
+		m_SetSize = numTasks;
+	}
+	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+	{
+		for( uint32_t i=range.start; i <range.end; ++i )
+		{
+			ConsumeTask& task = ConsumeTask::tasks[ i ];
+			g_TS.AddTaskSetToPipe( &task );
+		}
+	}
+};
+
+
+
+static const int WARMUPS	= 5;
+static const int RUNS		= 5;
 static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-	g_TS.Initialize();
+	uint32_t maxThreads = GetNumHardwareThreads();
+	double* times = new double[ maxThreads ];
 
-	double avTime = 0.0;
-	for( int run = 0; run< REPEATS; ++run )
+	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
 	{
+		g_TS.Initialize(numThreads);
 
-		printf("Run %d.....\n", run);
-		Timer tParallel;
-		tParallel.Start();
-
-		SplitTask::tasks[0].taskId = 0;
-		SplitTask::tasks[0].m_SetSize = numTasks;
-
-		g_TS.AddTaskSetToPipe( &SplitTask::tasks[0] );
-
-		g_TS.WaitforAll();
-
-		tParallel.Stop();
-
-
-		printf("Parallel Example complete in \t%fms, task rate: %f M tasks/s\n", tParallel.GetTimeMS(), numTasks / tParallel.GetTimeMS() / 1000.0f );
-
-
-		if( run >= WARMUPS )
+		double avTime = 0.0;
+		uint32_t totalErrors = 0;
+		for( int run = 0; run< REPEATS; ++run )
 		{
-			avTime += tParallel.GetTimeMS() / RUNS;
+
+			printf("Run %d.....\n", run);
+			Timer tParallel;
+			CreateTasks createTask;
+			ConsumeTask::Init();
+
+			tParallel.Start();
+
+
+			g_TS.AddTaskSetToPipe( &createTask );
+
+			g_TS.WaitforAll();
+
+			tParallel.Stop();
+
+
+			printf("Parallel Example complete in \t%fms, task rate: %f M tasks/s\n", tParallel.GetTimeMS(), numTasks / tParallel.GetTimeMS() / 1000.0f );
+
+			printf("Parallel Example error checking...");
+			uint32_t numTasksDone = 0;
+			for( uint32_t check = 0; check < ConsumeTask::numCount; ++check )
+			{
+				numTasksDone += ConsumeTask::pCount[check];
+			}
+			if( numTasksDone != numTasks )
+			{
+				printf("\n ERRORS FOUND - %d tasks not done!!!\n", numTasks - numTasksDone );
+			}
+			else
+			{
+				printf(" no errors found.\n", numTasks - numTasksDone );
+			}
+
+			if( run >= WARMUPS )
+			{
+				avTime += tParallel.GetTimeMS() / RUNS;
+			}
 		}
+
+		printf("\nAverage Time for %d Hardware Threads: %fms, rate: %f M tasks/s. %d errors found.\n", numThreads, avTime, numTasks / avTime / 1000.0f, totalErrors );
+
+		times[numThreads-1] = avTime;
 	}
 
-	printf("\nAverage Time for %d Hardware Threads: %fms, rate: %f M tasks/s\n", GetNumHardwareThreads(), avTime, numTasks / avTime / 1000.0f );
+	printf("\nHardware Threads, Time, MTasks/s\n" );
+	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
+	{
+		printf("%d, %f, %f\n", numThreads, times[numThreads-1], numTasks / times[numThreads-1] / 1000.0f);
+	}
 
+	delete[] times;
 
 	return 0;
 }

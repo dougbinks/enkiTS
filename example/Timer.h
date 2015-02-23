@@ -7,18 +7,20 @@
     #include <chrono>
 #endif
 
-// simple time struct you shouldn't use outside example code.
+// simple time class you shouldn't use outside example code.
 // made to get around precision issue with chrono on windows with VS2013
 // time returned is in ms
-struct Timer
+class Timer
 {
 	double timeMS;
-
-	Timer() : timeMS(0.0) {}
+	bool   bRunning;
+public:
+	Timer() : timeMS(0.0), bRunning(false) {}
 
 	// start does not reset time to 0, use reset
 	void Start()
 	{
+		bRunning = true;
 #ifdef _WIN32
 		QueryPerformanceCounter( &start );
 #else
@@ -26,8 +28,12 @@ struct Timer
 #endif
 	}
 
-	void Stop()
+	double GetTimeMS()
 	{
+		if( !bRunning )
+		{
+			return timeMS;
+		}
 #ifdef _WIN32
 		LARGE_INTEGER stop;
 		QueryPerformanceCounter( &stop );
@@ -36,22 +42,26 @@ struct Timer
 
 		LARGE_INTEGER freq;
 		QueryPerformanceFrequency( &freq );
-		timeMS += (double)( 1000 * elapsed.QuadPart ) / (double)freq.QuadPart;
+		return (double)( 1000 * elapsed.QuadPart ) / (double)freq.QuadPart;
 #else
 		auto stop = std::chrono::high_resolution_clock::now();
-		timeMS += 1000.0 * std::chrono::duration_cast<std::chrono::duration<double>>(stop - start).count();
+		return 1000.0 * std::chrono::duration_cast<std::chrono::duration<double>>(stop - start).count();
 #endif
+	};
+
+	void Stop()
+	{
+		if( bRunning )
+		{
+			timeMS += GetTimeMS();
+			bRunning = false;
+		}
 	}
 
 	void Reset()
 	{
 		timeMS = 0.0;
-	}
-
-	// GetTime() - must have called Stop() before hand.
-	double GetTimeMS()
-	{
-		return timeMS;
+		bRunning = false;
 	}
 
 private:

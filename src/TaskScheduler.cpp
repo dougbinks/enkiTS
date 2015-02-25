@@ -26,7 +26,7 @@
 using namespace enki;
 
 
-static const uint32_t PIPESIZE_LOG2 = 10;
+static const uint32_t PIPESIZE_LOG2 = 8;
 static const uint32_t SPIN_COUNT = 100;
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
@@ -68,10 +68,27 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
-				AtomicAdd( &pTS->m_NumThreadsActive, -1 );
-                EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
-				AtomicAdd( &pTS->m_NumThreadsActive, 1 );
-                spinCount = 0;
+				bool bHaveTasks = false;
+				for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
+				{
+					if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
+					{
+						bHaveTasks = true;
+						break;
+					}
+				}
+				if( bHaveTasks )
+				{
+					// keep trying
+					spinCount = 0;
+				}
+				else
+				{
+					AtomicAdd( &pTS->m_NumThreadsActive, -1 );
+					EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
+					AtomicAdd( &pTS->m_NumThreadsActive, 1 );
+					spinCount = 0;
+				}
             }
         }
     }
@@ -158,13 +175,14 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
 
     if( m_NumThreads )
     {
-        uint32_t checkOtherThread = threadNum + 1;
-        checkOtherThread %= m_NumThreads;
-        while( !bHaveTask && checkOtherThread != threadNum )
+        uint32_t checkOtherThread = 0;
+        while( !bHaveTask && checkOtherThread < m_NumThreads )
         {
-            bHaveTask = m_pPipesPerThread[ checkOtherThread ].ReaderTryReadBack( &info );
+			if( checkOtherThread != threadNum )
+			{
+				bHaveTask = m_pPipesPerThread[ checkOtherThread ].ReaderTryReadBack( &info );
+			}
             ++checkOtherThread;
-            checkOtherThread %= m_NumThreads;
         }
     }
         

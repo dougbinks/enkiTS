@@ -22,6 +22,7 @@
 #include <thread>
 #include <condition_variable>
 #include <stdint.h>
+#include <functional>
 
 namespace enki
 {
@@ -68,6 +69,24 @@ namespace enki
 	private:
 		friend class           TaskScheduler;
 		std::atomic<int32_t>   m_CompletionCount;
+	};
+
+	// A utility task set for creating tasks based on std::func.
+	typedef std::function<void (TaskSetPartition range, uint32_t threadnum  )> TaskSetFunction;
+	class TaskSet : public ITaskSet
+	{
+	public:
+		TaskSet() = default;
+		TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
+		TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
+
+
+		virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
+		{
+			m_Function( range, threadnum );
+		}
+
+		TaskSetFunction m_Function;
 	};
 
 

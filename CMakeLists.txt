@@ -45,7 +45,10 @@ if(ENKITS_BUILD_EXAMPLES)
 	
 	add_executable( ExampleBenchmark example/ExampleBenchmark.cpp example/Timer.h )
 	target_link_libraries(ExampleBenchmark enkiTS )
-
+	
+	add_executable( ExampleLambda example/ExampleLambda.cpp example/Timer.h )
+	target_link_libraries(ExampleLambda enkiTS )
+	
 if( ENKITS_BUILD_C_INTERFACE )
 	add_executable( Example_c example/Example_c.c )
 	target_link_libraries(Example_c enkiTS )

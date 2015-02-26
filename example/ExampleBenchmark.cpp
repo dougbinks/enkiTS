@@ -151,10 +151,10 @@ int main(int argc, const char * argv[])
 		stdev[numThreads-1] = sqrt(RUNS * avTime2 - (RUNS * avTime)*(RUNS * avTime)) / RUNS;
 	}
 
-	printf("\nHardware Threads, Time, std, MTasks/s\n" );
+	printf("\nHardware Threads, Time, std, MTasks/s, Perf Multiplier\n" );
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
 	{
-		printf("%d, %f, %f, %f\n", numThreads, times[numThreads-1], stdev[numThreads-1], numTasks / times[numThreads-1] / 1000.0f);
+		printf("%d, %f, %f, %f, %f\n", numThreads, times[numThreads-1], stdev[numThreads-1], numTasks / times[numThreads-1] / 1000.0f, times[0] / times[numThreads-1] );
 	}
 
 	delete[] times;

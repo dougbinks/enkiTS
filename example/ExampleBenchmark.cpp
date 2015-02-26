@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <math.h>
 
 #ifndef _WIN32
 	#include <string.h>
@@ -93,12 +94,14 @@ int main(int argc, const char * argv[])
 {
 	uint32_t maxThreads = std::thread::hardware_concurrency();
 	double* times = new double[ maxThreads ];
+	double* stdev = new double[ maxThreads ];
 
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
 	{
 		g_TS.Initialize(numThreads);
 
 		double avTime = 0.0;
+		double avTime2 = 0.0;
 		uint32_t totalErrors = 0;
 		for( int run = 0; run< REPEATS; ++run )
 		{
@@ -137,6 +140,7 @@ int main(int argc, const char * argv[])
 
 			if( run >= WARMUPS )
 			{
+				avTime2 += tParallel.GetTimeMS() * tParallel.GetTimeMS();
 				avTime += tParallel.GetTimeMS() / RUNS;
 			}
 		}
@@ -144,12 +148,13 @@ int main(int argc, const char * argv[])
 		printf("\nAverage Time for %d Hardware Threads: %fms, rate: %f M tasks/s. %d errors found.\n", numThreads, avTime, numTasks / avTime / 1000.0f, totalErrors );
 
 		times[numThreads-1] = avTime;
+		stdev[numThreads-1] = sqrt(RUNS * avTime2 - (RUNS * avTime)*(RUNS * avTime)) / RUNS;
 	}
 
-	printf("\nHardware Threads, Time, MTasks/s\n" );
+	printf("\nHardware Threads, Time, std, MTasks/s\n" );
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
 	{
-		printf("%d, %f, %f\n", numThreads, times[numThreads-1], numTasks / times[numThreads-1] / 1000.0f);
+		printf("%d, %f, %f, %f\n", numThreads, times[numThreads-1], stdev[numThreads-1], numTasks / times[numThreads-1] / 1000.0f);
 	}
 
 	delete[] times;

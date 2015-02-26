@@ -10,9 +10,7 @@ option( ENKITS_BUILD_EXAMPLES		"Build example applications" ON )
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
 set( ENKITS_SRC
-     src/Atomics.h
      src/LockLessMultiReadPipe.h
-     src/Threads.h
      src/TaskScheduler.h
      src/TaskScheduler.cpp
      )
@@ -30,14 +28,15 @@ if(UNIX)
 	target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
+if(UNIX)
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
+if(APPLE)
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
 
 if(ENKITS_BUILD_EXAMPLES)
-	if(UNIX)
-    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-	endif()
-	if(APPLE)
-    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-	endif()
+
 	if(WIN32)
     		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
 	endif()

@@ -22,7 +22,6 @@
 #include "LockLessMultiReadPipe.h"
 
 
-
 using namespace enki;
 
 
@@ -50,17 +49,15 @@ namespace enki
 	};
 }
 
-
-THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
+void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 {
-	ThreadArgs args					= *(ThreadArgs*)pArgs;
-	uint32_t threadNum				= args.threadNum;
-	TaskScheduler*  pTS				= args.pTaskScheduler;
+	uint32_t threadNum				= args_.threadNum;
+	TaskScheduler*  pTS				= args_.pTaskScheduler;
     gtl_threadNum      = threadNum;
-	AtomicAdd( &pTS->m_NumThreadsActive, 1 );
+	pTS->m_NumThreadsActive.fetch_add(1, std::memory_order_relaxed );
     
     uint32_t spinCount = 0;
-    while( pTS->m_bRunning )
+    while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
     {
         if(!pTS->TryRunTask( threadNum ) )
         {
@@ -84,17 +81,18 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 				}
 				else
 				{
-					AtomicAdd( &pTS->m_NumThreadsActive, -1 );
+
+					pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
 					EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
-					AtomicAdd( &pTS->m_NumThreadsActive, 1 );
+					pTS->m_NumThreadsActive.fetch_add( 1, std::memory_order_relaxed );
 					spinCount = 0;
 				}
             }
         }
     }
 
-    AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
-    return 0;
+    pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_relaxed );
+    return;
 }
 
 
@@ -104,21 +102,20 @@ void TaskScheduler::StartThreads()
     {
         return;
     }
-    m_bRunning = true;
+    m_bRunning = 1;
 
     m_NewTaskEvent = EventCreate();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadNumStore = new ThreadArgs[m_NumThreads];
-    m_pThreadIDs      = new threadid_t[m_NumThreads];
+    m_pThreads		  = new std::thread*[m_NumThreads];
 	m_pThreadNumStore[0].threadNum      = 0;
 	m_pThreadNumStore[0].pTaskScheduler = this;
-	m_pThreadIDs[0] = 0;
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
 		m_pThreadNumStore[thread].threadNum      = thread;
 		m_pThreadNumStore[thread].pTaskScheduler = this;
-        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadNumStore[thread] );
+        m_pThreads[thread] = new std::thread( TaskingThreadFunction, m_pThreadNumStore[thread] );
         ++m_NumThreadsRunning;
     }
 
@@ -142,23 +139,20 @@ void TaskScheduler::StopThreads( bool bWait_ )
     if( m_bHaveThreads )
     {
         // wait for them threads quit before deleting data
-        m_bRunning = false;
+        m_bRunning = 0;
         while( bWait_ && m_NumThreadsRunning )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
             EventSignal( m_NewTaskEvent );
         }
 
-        for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
-        {
-            ThreadTerminate( m_pThreadIDs[thread] );
-        }
+
 
 		m_NumThreads = 0;
         delete[] m_pThreadNumStore;
-        delete[] m_pThreadIDs;
+        delete[] m_pThreads;
         m_pThreadNumStore = 0;
-        m_pThreadIDs = 0;
+        m_pThreads = 0;
         EventClose( m_NewTaskEvent );
 
         m_bHaveThreads = false;
@@ -226,7 +220,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         AtomicAdd( &info.pTask->m_CompletionCount, +1 );
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( info ) )
         {
-			if( m_NumThreadsActive < m_NumThreadsRunning )
+			if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
 			{
 				EventSignal( m_NewTaskEvent );
 			}
@@ -235,7 +229,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         }
     }
 
-	if( m_NumThreadsActive < m_NumThreadsRunning )
+	if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
 	{
 		EventSignal( m_NewTaskEvent );
 	}
@@ -246,7 +240,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 {
 	if( pTaskSet )
 	{
-		while( pTaskSet->m_CompletionCount )
+		while( !pTaskSet->GetIsComplete() )
 		{
 			TryRunTask( gtl_threadNum );
 			// should add a spin then wait for task completion event.
@@ -261,7 +255,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
-    while( bHaveTasks || m_NumThreadsActive)
+    while( bHaveTasks || m_NumThreadsActive.load( std::memory_order_relaxed ) )
     {
         TryRunTask( gtl_threadNum );
         bHaveTasks = false;
@@ -293,8 +287,8 @@ TaskScheduler::TaskScheduler()
 		: m_pPipesPerThread(NULL)
 		, m_NumThreads(0)
 		, m_pThreadNumStore(NULL)
-		, m_pThreadIDs(NULL)
-		, m_bRunning(false)
+		, m_pThreads(NULL)
+		, m_bRunning(0)
 		, m_NumThreadsRunning(0)
 		, m_NumThreadsActive(0)
 		, m_NumPartitions(0)
@@ -325,5 +319,5 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 
 void   TaskScheduler::Initialize()
 {
-	Initialize( GetNumHardwareThreads() );
+	Initialize( std::thread::hardware_concurrency() );
 }

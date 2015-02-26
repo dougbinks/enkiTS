@@ -19,7 +19,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <atomic>
 #include "Threads.h"
+#include <thread>
 
 namespace enki
 {
@@ -59,13 +61,13 @@ namespace enki
 		// Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
 		uint32_t                m_SetSize;
 
-		bool                    GetIsComplete()
+		bool                    GetIsComplete() const
 		{
 			return 0 == m_CompletionCount;
 		}
 	private:
 		friend class           TaskScheduler;
-		volatile int32_t        m_CompletionCount;
+		volatile int32_t   m_CompletionCount;
 	};
 
 
@@ -112,7 +114,7 @@ namespace enki
 		uint32_t        GetNumTaskThreads() const;
 
 	private:
-		static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
+		static void  TaskingThreadFunction( const ThreadArgs& args_ );
 		bool             TryRunTask( uint32_t threadNum );
 		void             StartThreads();
 		void             StopThreads( bool bWait_ );
@@ -121,10 +123,10 @@ namespace enki
 
 		uint32_t                                                 m_NumThreads;
 		ThreadArgs*                                              m_pThreadNumStore;
-		threadid_t*                                              m_pThreadIDs;
-		volatile bool                                            m_bRunning;
-		volatile int32_t                                         m_NumThreadsRunning;
-		volatile int32_t                                         m_NumThreadsActive;
+		std::thread**											 m_pThreads;
+		std::atomic<int32_t>                                     m_bRunning;
+		std::atomic<int32_t>                                     m_NumThreadsRunning;
+		std::atomic<int32_t>                                     m_NumThreadsActive;
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		bool                                                     m_bHaveThreads;

@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <atomic>
-#include "Threads.h"
 #include <thread>
+#include <condition_variable>
+#include <stdint.h>
 
 namespace enki
 {
@@ -63,11 +63,11 @@ namespace enki
 
 		bool                    GetIsComplete() const
 		{
-			return 0 == m_CompletionCount;
+			return 0 == m_CompletionCount.load( std::memory_order_relaxed );
 		}
 	private:
 		friend class           TaskScheduler;
-		volatile int32_t   m_CompletionCount;
+		std::atomic<int32_t>   m_CompletionCount;
 	};
 
 
@@ -128,7 +128,8 @@ namespace enki
 		std::atomic<int32_t>                                     m_NumThreadsRunning;
 		std::atomic<int32_t>                                     m_NumThreadsActive;
 		uint32_t                                                 m_NumPartitions;
-		eventid_t                                                m_NewTaskEvent;
+		std::condition_variable                                  m_NewTaskEvent;
+		std::mutex												 m_NewTaskEventMutex;
 		bool                                                     m_bHaveThreads;
 
 		TaskScheduler( const TaskScheduler& nocopy );

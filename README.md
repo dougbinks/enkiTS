@@ -2,7 +2,7 @@
 
 ## enki Task Scheduler
 
-A permissively licensed C and C++ Task Scheulder for creating parallel programs.
+A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)

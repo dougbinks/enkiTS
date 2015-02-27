@@ -25,8 +25,6 @@ The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++
 
 * Documentation.
 * Add a profile header for support of various profiling libraries such as [ITT](https://software.intel.com/en-us/articles/intel-itt-api-open-source), [Remotery](https://github.com/dougbinks/Remotery), [InsightProfile](https://github.com/kayru/insightprofiler), [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) and potentially [Telemetry](http://www.radgametools.com/telemetry.htm).
-* Lambda support where compiler supports them.
-* Potential C++ 11 conversion (if performance the same)?
 * Benchmarking?
 
 

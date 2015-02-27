@@ -1,8 +1,8 @@
 # enkiTS
 
-## enkiTaskSystem
+## enki Task Scheduler
 
-A C and C++ Task System.
+A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
@@ -13,6 +13,13 @@ Note - this is a work in progress conversion from my code for [enkisoftware's](h
 As this was originally written before widespread decent C++11 support for atomics and threads, these are implemented here per-platform only supporting Windows, Linux and OSX on Intel x86 / x64. [A separate C++11 branch exists](https://github.com/dougbinks/enkiTS/tree/C++11) for those who would like to use it, but this currently has slightly slower performance under very high task throughput when there is low work per task.
 
 The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++11 branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11) )
+
+## Project Goals
+
+1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.
+1. *Fast, then scalable* - enkiTS is designed for consumer devices first, so performance on a low number of threads is important, followed by scalability.
+1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
+1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 
 ## To Do
 

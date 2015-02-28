@@ -21,6 +21,77 @@ The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++
 1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 
+ 
+## Usage
+
+C usage:
+```C
+#include "TaskScheduler_c.h"
+
+enkiTaskScheduler*	g_pTS;
+
+void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ ) {
+   /* Do something here, can issue tasks with g_pTS */
+}
+
+int main(int argc, const char * argv[]) {
+   enkiTaskSet* pTask;
+   g_pTS = enkiCreateTaskScheduler();
+	
+   // create a task, can re-use this to get allocation occuring on startup
+   pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
+
+   enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
+
+   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   enkiWaitForTaskSet( g_pTS, pTask );
+   return 0;
+}
+```
+
+C++ usage:
+```C
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+
+// define a task set, can ignore range if we only do one thing
+struct ParallelTaskSet : enki::ITaskSet {
+   virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum ) {
+      // do something here, can issue tasks with g_TS
+   }
+};
+
+int main(int argc, const char * argv[]) {
+   g_TS.Initialize();
+   enki::ParallelTask task; // default constructor has a set size of 1
+   g_TS.AddTaskSetToPipe( &task );
+
+   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   g_TS.WaitforTaskSet( &task );
+   return 0;
+}
+```
+
+C++ 11 usage (currently requires [C++11 branch](https://github.com/dougbinks/enkiTS/tree/C++11), or define own lambda wrapper taskset interface.
+```C
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+
+int main(int argc, const char * argv[]) {
+   g_TS.Initialize();
+
+   enki::TaskSet task( 1, []( enki::TaskSetPartition range, uint32_t threadnum  ) {
+         // do something here
+      }  );
+
+   g_TS.AddTaskSetToPipe( &task );
+   g_TS.WaitforTaskSet( &task );
+   return 0;
+}
+```
+
 ## To Do
 
 * Documentation.

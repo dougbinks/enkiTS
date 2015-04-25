@@ -77,7 +77,7 @@ namespace enki
         CloseHandle( eventid.event );
     }
 
-    inline void EventWait( eventid_t eventid, uint32_t milliseconds )
+    inline void EventWait( eventid_t& eventid, uint32_t milliseconds )
     {
         AtomicAdd( &eventid.countWaiters, 1 );
         DWORD retval = WaitForSingleObject( eventid.event, milliseconds );

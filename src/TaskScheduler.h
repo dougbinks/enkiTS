@@ -33,6 +33,8 @@ namespace enki
 	class  TaskScheduler;
 	class  TaskPipe;
 	struct ThreadArgs;
+	class  ThreadNum;
+
 
 	// Subclass ITaskSet to create tasks.
 	// TaskSets can be re-used, but check
@@ -123,8 +125,9 @@ namespace enki
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
 		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
-		// should only be called from thread which created the taskscheduler , or within a task
-		// if called with 0 it will try to run tasks, and return if none available.
+		// Should only be called from thread which created the taskscheduler,
+		// or within a task or user task thread, but safe to call from any.
+		// If called with 0 it will try to run tasks, and return if none available.
 		void            WaitforTaskSet( const ITaskSet* pTaskSet );
 
 		// Waits for all task sets to complete - not guaranteed to work unless we know we
@@ -141,23 +144,33 @@ namespace enki
 		// is guaranteed to be < GetNumTaskThreads()
 		uint32_t        GetNumTaskThreads() const;
 
+		bool TryRunTask();
+		void UserThreadRunTasks();
+		void PreUserThreadRunTasks();
+		void StopUserThreadRunTasks();
+
 	private:
+		friend class ThreadNum;
+
 		static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
 		void             WaitForTasks( uint32_t threadNum );
-		bool             TryRunTask(	   uint32_t threadNum );
+		bool             TryRunTask(   uint32_t threadNum );
 		void             StartThreads();
-		void             StopThreads( bool bWait_ );
+		void             Cleanup( bool bWait_ );
+
 
 		TaskPipe*                                                m_pPipesPerThread;
 
 		uint32_t                                                 m_NumThreads;
 		uint32_t												 m_NumEnkiThreads;
 		uint32_t												 m_NumUserThreads;
-		ThreadArgs*                                              m_pThreadNumStore;
+		ThreadArgs*                                              m_pThreadArgStore;
 		threadid_t*                                              m_pThreadIDs;
+		uint32_t*												 m_pUserThreadNumStack;
+		volatile int32_t                                         m_UserThreadStackIndex;
 		volatile bool                                            m_bRunning;
 		volatile int32_t                                         m_NumThreadsRunning;
-		volatile int32_t                                         m_NumThreadsActive;
+		volatile int32_t                                         m_NumThreadsWaiting;
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		bool                                                     m_bHaveThreads;

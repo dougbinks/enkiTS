@@ -58,41 +58,22 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	uint32_t threadNum				= args.threadNum;
 	TaskScheduler*  pTS				= args.pTaskScheduler;
     gtl_threadNum					= threadNum;
+
 	AtomicAdd( &pTS->m_NumThreadsActive, 1 );
-    
-    uint32_t spinCount = 0;
+
     while( pTS->m_bRunning )
     {
-        if(!pTS->TryRunTask( threadNum ) )
-        {
-            // no tasks, will spin then wait
-            ++spinCount;
-            if( spinCount > SPIN_COUNT )
-            {
-				bool bHaveTasks = false;
-				for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
-				{
-					if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
-					{
-						bHaveTasks = true;
-						break;
-					}
-				}
-				if( bHaveTasks )
-				{
-					// keep trying
-					spinCount = 0;
-				}
-				else
-				{
-					AtomicAdd( &pTS->m_NumThreadsActive, -1 );
-					EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
-					AtomicAdd( &pTS->m_NumThreadsActive, 1 );
-					spinCount = 0;
-				}
-            }
-        }
-    }
+		uint32_t spinCount = 0;
+		if( !pTS->TryRunTask( threadNum ) )
+		{
+			// no tasks, will spin then wait
+			++spinCount;
+			if( spinCount > SPIN_COUNT )
+			{
+				pTS->WaitForTasks( threadNum );
+			}
+		}
+   }
 	gtl_threadNum = NO_THREAD_NUM;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
@@ -178,7 +159,10 @@ void TaskScheduler::StopThreads( bool bWait_ )
 bool TaskScheduler::TryRunTask( uint32_t threadNum )
 {
 	// calling function should acquire a valid threadnum
-	if( threadNum > m_NumThreads ) { return false; }
+	if( threadNum > m_NumThreads )
+	{
+		return false;
+	}
 
     // check for tasks
     TaskSetInfo info;
@@ -205,9 +189,26 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
     }
 
     return bHaveTask;
-
 }
 
+void TaskScheduler::WaitForTasks( uint32_t threadNum )
+{
+	bool bHaveTasks = false;
+	for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+	{
+		if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+		{
+			bHaveTasks = true;
+			break;
+		}
+	}
+	if( !bHaveTasks )
+	{
+		AtomicAdd( &m_NumThreadsActive, -1 );
+		EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
+		AtomicAdd( &m_NumThreadsActive, 1 );
+	}
+}
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 {

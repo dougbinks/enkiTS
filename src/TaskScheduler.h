@@ -147,6 +147,7 @@ namespace enki
 		TaskPipe*                                                m_pPipesPerThread;
 
 		uint32_t                                                 m_NumThreads;
+		uint32_t												 m_NumEnkiThreads;
 		uint32_t												 m_NumUserThreads;
 		ThreadArgs*                                              m_pThreadNumStore;
 		threadid_t*                                              m_pThreadIDs;

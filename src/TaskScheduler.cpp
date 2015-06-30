@@ -30,7 +30,8 @@ static const uint32_t PIPESIZE_LOG2 = 8;
 static const uint32_t SPIN_COUNT = 100;
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
-static THREAD_LOCAL uint32_t                             gtl_threadNum       = 0;
+static const uint32_t									 NO_THREAD_NUM = 0xFFFFFFFF;
+static THREAD_LOCAL uint32_t                             gtl_threadNum = NO_THREAD_NUM;
 
 namespace enki 
 {
@@ -56,7 +57,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	ThreadArgs args					= *(ThreadArgs*)pArgs;
 	uint32_t threadNum				= args.threadNum;
 	TaskScheduler*  pTS				= args.pTaskScheduler;
-    gtl_threadNum      = threadNum;
+    gtl_threadNum					= threadNum;
 	AtomicAdd( &pTS->m_NumThreadsActive, 1 );
     
     uint32_t spinCount = 0;
@@ -92,6 +93,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             }
         }
     }
+	gtl_threadNum = NO_THREAD_NUM;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
     return 0;
@@ -109,18 +111,21 @@ void TaskScheduler::StartThreads()
     m_NewTaskEvent = EventCreate();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadNumStore = new ThreadArgs[m_NumThreads];
-    m_pThreadIDs      = new threadid_t[m_NumThreads];
-	m_pThreadNumStore[0].threadNum      = 0;
-	m_pThreadNumStore[0].pTaskScheduler = this;
-	m_pThreadIDs[0] = 0;
-    for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
-    {
-		m_pThreadNumStore[thread].threadNum      = thread;
-		m_pThreadNumStore[thread].pTaskScheduler = this;
-        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadNumStore[thread] );
-        ++m_NumThreadsRunning;
-    }
+	if( m_NumEnkiThreads )
+	{
+		m_pThreadNumStore = new ThreadArgs[m_NumEnkiThreads];
+		m_pThreadIDs      = new threadid_t[m_NumEnkiThreads];
+		m_pThreadNumStore[0].threadNum      = 0;
+		m_pThreadNumStore[0].pTaskScheduler = this;
+		m_pThreadIDs[0] = 0;
+		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
+		{
+			m_pThreadNumStore[thread].threadNum      = thread;
+			m_pThreadNumStore[thread].pTaskScheduler = this;
+			ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadNumStore[thread] );
+			++m_NumThreadsRunning;
+		}
+	}
 
     // ensure we have sufficient tasks to equally fill either all threads including main
     // or just the threads we've launched, this is outside the firstinit as we want to be able
@@ -149,12 +154,14 @@ void TaskScheduler::StopThreads( bool bWait_ )
             EventSignal( m_NewTaskEvent );
         }
 
-        for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
+        for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
         {
             ThreadTerminate( m_pThreadIDs[thread] );
         }
 
 		m_NumThreads = 0;
+		m_NumEnkiThreads = 0;
+		m_NumUserThreads = 0;
         delete[] m_pThreadNumStore;
         delete[] m_pThreadIDs;
         m_pThreadNumStore = 0;
@@ -165,10 +172,14 @@ void TaskScheduler::StopThreads( bool bWait_ )
 		m_NumThreadsActive = 0;
 		m_NumThreadsRunning = 0;
     }
+	gtl_threadNum = NO_THREAD_NUM;
 }
 
 bool TaskScheduler::TryRunTask( uint32_t threadNum )
 {
+	// calling function should acquire a valid threadnum
+	if( threadNum > m_NumThreads ) { return false; }
+
     // check for tasks
     TaskSetInfo info;
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &info );
@@ -292,6 +303,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 TaskScheduler::TaskScheduler()
 		: m_pPipesPerThread(NULL)
 		, m_NumThreads(0)
+		, m_NumEnkiThreads(0)
 		, m_NumUserThreads(0)
 		, m_pThreadNumStore(NULL)
 		, m_pThreadIDs(NULL)
@@ -315,7 +327,7 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 {
 	assert( numThreads_ );
 
-	InitializeWithUserThreads( 1, numThreads_ );
+	InitializeWithUserThreads( 1, numThreads_ - 1 );
 }
 
 void   TaskScheduler::Initialize()
@@ -330,10 +342,14 @@ void TaskScheduler::InitializeWithUserThreads( uint32_t numUserThreads_, uint32_
 	StopThreads( true ); // Stops threads, waiting for them.
     delete[] m_pPipesPerThread;
 
-	m_NumThreads	 = numThreads_;
+	m_NumThreads	 = numThreads_ + numUserThreads_;
+	m_NumEnkiThreads = numThreads_;
 	m_NumUserThreads = numUserThreads_;
 
     m_pPipesPerThread = new TaskPipe[ m_NumThreads ];
+
+	// set this thread to have a valid threadnum
+	gtl_threadNum = m_NumEnkiThreads;
 
     StartThreads();
 }

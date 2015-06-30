@@ -75,18 +75,45 @@ namespace enki
 		TaskScheduler();
 		~TaskScheduler();
 
-		// Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
+		// Before adding tasks call one of:
+		//  Initialize(),
+		//  Initialize( numThreads_ ),
+		//  InitializeWithUserThreads(),
+		//  InitializeWithUserThreads( numUserThreads_, numThreads_ )
 
 		// Initialize() will create GetNumHardwareThreads()-1 threads, which is
 		// sufficient to fill the system when including the main thread.
 		// Initialize can be called multiple times - it will wait for completion
 		// before re-initializing.
+		// Equivalent to Initialize( GetNumHardwareThreads() );
 		void			Initialize();
 
-		// Initialize( numThreads_ ) - numThreads_ (must be > 0)
-		// will create numThreads_-1 threads, as thread 0 is
+		// Initialize( numThreads_ ).
+		// numThreads_ must be > 0.
+		// Will create numThreads_-1 task threads, as one thread is
 		// the thread on which the initialize was called.
+		// Equivalent to InitializeWithUserThreads( 1, numThreads_ - 1 );
 		void			Initialize( uint32_t numThreads_ );
+
+
+		// Initialize( numUserThreads_, numThreads_ ).
+		// This version is intended for use with other task systems
+		// or user created threads.
+		// Will create sufficient space in internal structures
+		// for GetNumHardwareThreads() user task functions.
+		// This version will create no EnkiTS held threads of it's own.
+		// Equivalent to InitializeWithUserThreads( GetNumHardwareThreads(), 0 );
+		void			InitializeWithUserThreads();
+
+		// Initialize( numUserThreads_, numThreads_ ).
+		// numUserThreads_ must be > 0.
+		// This version is intended for use with other task systems
+		// or user created threads.
+		// Will create numThreads_-1 task threads, as thread 0 is
+		// the thread on which the initialize was called.
+		// Additionally, will create internal structures sufficient to run
+		// numUserThreads_ task functions.
+		void			InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ );
 
 
 		// Adds the TaskSet to pipe and returns if the pipe is not full.
@@ -120,6 +147,7 @@ namespace enki
 		TaskPipe*                                                m_pPipesPerThread;
 
 		uint32_t                                                 m_NumThreads;
+		uint32_t												 m_NumUserThreads;
 		ThreadArgs*                                              m_pThreadNumStore;
 		threadid_t*                                              m_pThreadIDs;
 		volatile bool                                            m_bRunning;

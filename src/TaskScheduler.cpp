@@ -292,6 +292,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 TaskScheduler::TaskScheduler()
 		: m_pPipesPerThread(NULL)
 		, m_NumThreads(0)
+		, m_NumUserThreads(0)
 		, m_pThreadNumStore(NULL)
 		, m_pThreadIDs(NULL)
 		, m_bRunning(false)
@@ -313,17 +314,31 @@ TaskScheduler::~TaskScheduler()
 void    TaskScheduler::Initialize( uint32_t numThreads_ )
 {
 	assert( numThreads_ );
-    StopThreads( true ); // Stops threads, waiting for them.
+
+	InitializeWithUserThreads( 1, numThreads_ );
+}
+
+void   TaskScheduler::Initialize()
+{
+	Initialize( GetNumHardwareThreads() );
+}
+
+void TaskScheduler::InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ )
+{
+	assert( numUserThreads_ );
+
+	StopThreads( true ); // Stops threads, waiting for them.
     delete[] m_pPipesPerThread;
 
-	m_NumThreads = numThreads_;
+	m_NumThreads	 = numThreads_;
+	m_NumUserThreads = numUserThreads_;
 
     m_pPipesPerThread = new TaskPipe[ m_NumThreads ];
 
     StartThreads();
 }
 
-void   TaskScheduler::Initialize()
+void TaskScheduler::InitializeWithUserThreads( )
 {
-	Initialize( GetNumHardwareThreads() );
+	InitializeWithUserThreads( GetNumHardwareThreads(), 0 );
 }

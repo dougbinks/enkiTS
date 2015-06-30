@@ -110,7 +110,7 @@ void TaskScheduler::StartThreads()
 
     m_NewTaskEvent = EventCreate();
 
-    // we create one less thread than m_NumThreads as the main thread counts as one
+    // m_NumEnkiThreads stores the number of internal threads required.
 	if( m_NumEnkiThreads )
 	{
 		m_pThreadNumStore = new ThreadArgs[m_NumEnkiThreads];

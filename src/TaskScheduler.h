@@ -54,6 +54,7 @@ namespace enki
 		// i.e. neighbouring values should be close together.
 		// threadnum should not be used for changing processing of data, it's intended purpose
 		// is to allow per-thread data buckets for output.
+		// threadnum < TaskScheduler::GetNumTaskThreads()
 		virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) = 0;
 
 		// Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
@@ -134,8 +135,10 @@ namespace enki
 		// are in a situation where tasks aren't being continuosly added.
 		void            WaitforAllAndShutdown();
 
-		// Returns the number of threads created for running tasks + 1
-		// to account for the main thread.
+		// Returns the total maximum number of threads which could be used for running tasks.
+		// This includes both user task threads and enkiTS internally created threads.
+		// Useful for creating thread-safe tables as task function parameter threadnum
+		// is guaranteed to be < GetNumTaskThreads()
 		uint32_t        GetNumTaskThreads() const;
 
 	private:

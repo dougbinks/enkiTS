@@ -161,7 +161,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 			++spinCount;
 			if( spinCount > SPIN_COUNT )
 			{
-				pTS->WaitForTasks( threadNum );
+				pTS->WaitForTasks<false>( threadNum );
 			}
 		}
 		else
@@ -212,8 +212,11 @@ void TaskScheduler::Cleanup( bool bWait_ )
     // wait for them threads quit before deleting data
 	if( m_bRunning )
 	{
-		m_bRunning = false;
-		m_bUserThreadsCanRun = false;
+		{
+			std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
+			m_bRunning = false;
+			m_bUserThreadsCanRun = false;
+		}
 		while( bWait_ && m_NumThreadsRunning )
 		{
 			// keep firing event to ensure all threads pick up state of m_bRunning
@@ -274,6 +277,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
     return bHaveTask;
 }
 
+template<bool ISUSERTASK>
 void TaskScheduler::WaitForTasks( uint32_t threadNum )
 {
 	bool bHaveTasks = false;
@@ -287,8 +291,14 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 	}
 	if( !bHaveTasks )
 	{
-		++m_NumThreadsWaiting;
 		std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
+
+		// check potential event variables after lock held
+		if( !m_bRunning || ( ISUSERTASK && !m_bUserThreadsCanRun ) )
+		{
+			return;
+		}
+		++m_NumThreadsWaiting;
 		m_NewTaskEvent.wait( lk );
 		--m_NumThreadsWaiting;
 	}
@@ -422,7 +432,7 @@ void	TaskScheduler::UserThreadRunTasks()
 			++spinCount;
 			if( spinCount > SPIN_COUNT )
 			{
-				WaitForTasks( threadNum.m_ThreadNum );
+				WaitForTasks<true>( threadNum.m_ThreadNum );
 			}
 		}
 		else
@@ -434,7 +444,10 @@ void	TaskScheduler::UserThreadRunTasks()
 
 void	TaskScheduler::StopUserThreadRunTasks()
 {
-	m_bUserThreadsCanRun = false;
+	{
+		std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
+		m_bUserThreadsCanRun = false;
+	}
 	m_NewTaskEvent.notify_all();
 }
 

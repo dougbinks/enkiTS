@@ -197,6 +197,7 @@ namespace enki
 		friend class ThreadNum;
 
 		static void		 TaskingThreadFunction( const ThreadArgs& args_ );
+		template<bool ISUSERTASK>
 		void             WaitForTasks( uint32_t threadNum );
 		bool             TryRunTask( uint32_t threadNum );
 		void             StartThreads();

@@ -159,6 +159,6 @@ int main(int argc, const char * argv[])
 
 	}
 	printf("\nAverage Speed Up for %d Hardware Threads Serial / Parallel: %f\n", numThreads, avSpeedUp );
-
+	g_TSActual.WaitforAllAndShutdown(); // we ensure outer task system shuts down first
 	return 0;
 }

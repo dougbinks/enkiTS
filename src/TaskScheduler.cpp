@@ -137,7 +137,6 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 
 void TaskScheduler::StartThreads()
 {
-
     m_bRunning = true;
 
     m_NewTaskEvent = EventCreate();
@@ -169,48 +168,45 @@ void TaskScheduler::StartThreads()
 	{
 		m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
 	}
-
-    m_bHaveThreads = true;
 }
 
 void TaskScheduler::Cleanup( bool bWait_ )
 {
-    if( m_bHaveThreads )
-    {
-        // wait for them threads quit before deleting data
-        m_bRunning = false;
+    // wait for them threads quit before deleting data
+	if( m_bRunning )
+	{
+		m_bRunning = false;
 		m_bUserThreadsCanRun = false;
-        while( bWait_ && m_NumThreadsRunning )
-        {
-            // keep firing event to ensure all threads pick up state of m_bRunning
-            EventSignal( m_NewTaskEvent );
-        }
+		while( bWait_ && m_NumThreadsRunning )
+		{
+			// keep firing event to ensure all threads pick up state of m_bRunning
+			EventSignal( m_NewTaskEvent );
+		}
 
-        for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
-        {
-            ThreadTerminate( m_pThreadIDs[thread] );
-        }
+		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
+		{
+			ThreadTerminate( m_pThreadIDs[thread] );
+		}
 
 		m_NumThreads = 0;
 		m_NumEnkiThreads = 0;
 		m_NumUserThreads = 0;
-        delete[] m_pThreadArgStore;
-        delete[] m_pThreadIDs;
-        m_pThreadArgStore = 0;
-        m_pThreadIDs = 0;
-        EventClose( m_NewTaskEvent );
-    }
+		delete[] m_pThreadArgStore;
+		delete[] m_pThreadIDs;
+		m_pThreadArgStore = 0;
+		m_pThreadIDs = 0;
+		EventClose( m_NewTaskEvent );
 
-    m_bHaveThreads = false;
-	m_NumThreadsWaiting = 0;
-	m_NumThreadsRunning = 0;
-	m_UserThreadStackIndex = 0;
+		m_NumThreadsWaiting = 0;
+		m_NumThreadsRunning = 0;
+		m_UserThreadStackIndex = 0;
 
-    delete[] m_pPipesPerThread;
-	m_pPipesPerThread = 0;
+		delete[] m_pPipesPerThread;
+		m_pPipesPerThread = 0;
 
-	delete[] m_pUserThreadNumStack;
-	m_pUserThreadNumStack = 0;
+		delete[] m_pUserThreadNumStack;
+		m_pUserThreadNumStack = 0;
+	}
 }
 
 bool TaskScheduler::TryRunTask( uint32_t threadNum )
@@ -423,7 +419,6 @@ TaskScheduler::TaskScheduler()
 		, m_NumThreadsRunning(0)
 		, m_NumThreadsWaiting(0)
 		, m_NumPartitions(0)
-		, m_bHaveThreads(false)
 		, m_bUserThreadsCanRun(false)
 {
 }

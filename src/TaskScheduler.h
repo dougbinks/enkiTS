@@ -199,7 +199,6 @@ namespace enki
 		volatile int32_t                                         m_NumThreadsWaiting;
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
-		bool                                                     m_bHaveThreads;
 		volatile bool											 m_bUserThreadsCanRun;
 
 		TaskScheduler( const TaskScheduler& nocopy );

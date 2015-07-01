@@ -179,6 +179,7 @@ void TaskScheduler::Cleanup( bool bWait_ )
     {
         // wait for them threads quit before deleting data
         m_bRunning = false;
+		m_bUserThreadsCanRun = false;
         while( bWait_ && m_NumThreadsRunning )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
@@ -364,15 +365,49 @@ void    TaskScheduler::WaitforAllAndShutdown()
     Cleanup( true );
 }
 
+uint32_t TaskScheduler::GetNumTaskThreads() const
+{
+    return m_NumThreads;
+}
+
 bool	TaskScheduler::TryRunTask()
 {
 	ThreadNum threadNum( this );
 	return TryRunTask( threadNum.m_ThreadNum );
 }
 
-uint32_t        TaskScheduler::GetNumTaskThreads() const
+void	TaskScheduler::PreUserThreadRunTasks()
 {
-    return m_NumThreads;
+	m_bUserThreadsCanRun = true;
+}
+
+void	TaskScheduler::UserThreadRunTasks()
+{
+	ThreadNum threadNum(this);
+
+	uint32_t spinCount = 0;
+    while( m_bRunning && m_bUserThreadsCanRun)
+    {
+		if( !TryRunTask( threadNum.m_ThreadNum ) )
+		{
+			// no tasks, will spin then wait
+			++spinCount;
+			if( spinCount > SPIN_COUNT )
+			{
+				WaitForTasks( threadNum.m_ThreadNum );
+			}
+		}
+		else
+		{
+			spinCount = 0;
+		}
+   }
+}
+
+void	TaskScheduler::StopUserThreadRunTasks()
+{
+	m_bUserThreadsCanRun = false;
+	EventSignal( m_NewTaskEvent );	// wake up any sleeping threads.
 }
 
 TaskScheduler::TaskScheduler()
@@ -389,6 +424,7 @@ TaskScheduler::TaskScheduler()
 		, m_NumThreadsWaiting(0)
 		, m_NumPartitions(0)
 		, m_bHaveThreads(false)
+		, m_bUserThreadsCanRun(false)
 {
 }
 

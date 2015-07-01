@@ -75,6 +75,11 @@ namespace enki
 	class TaskScheduler
 	{
 	public:
+		// TaskScheduler is not a singleton, but usual case is to have only one.
+		// It is safe to have multiple task schedulers,
+		// but member functions on one instance should not be called from within a task
+		// running on another instance.
+		// If you don't understand the above, make your life easy and have only one.
 		TaskScheduler();
 		~TaskScheduler();
 
@@ -125,8 +130,7 @@ namespace enki
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
 		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
-		// Should only be called from thread which created the taskscheduler,
-		// or within a task or user task thread, but safe to call from any.
+		// This is safe to call from any thread.
 		// If called with 0 it will try to run tasks, and return if none available.
 		void            WaitforTaskSet( const ITaskSet* pTaskSet );
 
@@ -144,10 +148,32 @@ namespace enki
 		// is guaranteed to be < GetNumTaskThreads()
 		uint32_t        GetNumTaskThreads() const;
 
-		bool TryRunTask();
-		void UserThreadRunTasks();
-		void PreUserThreadRunTasks();
-		void StopUserThreadRunTasks();
+		// TryRunTask will try to run a single task from the pipe.
+		// Returns true if it ran a task, false if not.
+		// Safe to run on any thread.
+		bool			TryRunTask();
+
+		// PreUserThreadRunTasks sets an internal state which controls
+		// the lifetime of UserThreadRunTasks().
+		// Calling this sets UserThreadRunTasks() to run continuously
+		// until  StopUserThreadRunTasks() is called.
+		void			PreUserThreadRunTasks();
+
+		// Runs tasks. Lifetime controlled by PreUserThreadRunTasks() and
+		// StopUserThreadRunTasks(). Will exit immediatly if
+		// PreUserThreadRunTasks() has not been called.
+		void			UserThreadRunTasks();
+
+		// StopUserThreadRunTasks sets an internal state which controls
+		// the lifetime of UserThreadRunTasks().
+		// Calling this sets UserThreadRunTasks() to exit as soon
+		// as it has finished the current task.
+		// If you want all tasks to complete, call WaitforAll()
+		// before calling this function.
+		// StopUserThreadRunTasks() will return immediatly,
+		// it will not wait for all UserThreadRunTasks() functions
+		// to exit.
+		void			StopUserThreadRunTasks();
 
 	private:
 		friend class ThreadNum;
@@ -174,6 +200,7 @@ namespace enki
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		bool                                                     m_bHaveThreads;
+		volatile bool											 m_bUserThreadsCanRun;
 
 		TaskScheduler( const TaskScheduler& nocopy );
 		TaskScheduler& operator=( const TaskScheduler& nocopy );

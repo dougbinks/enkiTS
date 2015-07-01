@@ -254,11 +254,6 @@ void TaskScheduler::Cleanup( bool bWait_ )
            m_NewTaskEvent.notify_all();
 		}
 
-		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
-		{
-			delete m_pThreads[thread];
-		}
-
 		m_NumThreads = 0;
 		m_NumEnkiThreads = 0;
 		m_NumUserThreads = 0;

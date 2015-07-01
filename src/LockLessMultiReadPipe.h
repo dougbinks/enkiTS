@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "Atomics.h"
 #include <atomic>
 #include <string.h>
 
@@ -57,7 +56,7 @@ namespace enki
         // Should only be used very prudently.
         bool IsPipeEmpty() const
         {
-            return 0 == m_WriteIndex - m_ReadIndex;
+            return 0 == m_WriteIndex.load( std::memory_order_relaxed ) - m_ReadIndex.load( std::memory_order_relaxed );
         }
 
 		void Clear()
@@ -78,9 +77,9 @@ namespace enki
 
         // read and write indexes allow fast access to the pipe, but actual access
         // controlled by the access flags. 
-        volatile uint32_t BASE_ALIGN(4) m_WriteIndex;
-        volatile uint32_t               m_Flags[  ms_cSize ];
-        volatile uint32_t BASE_ALIGN(4) m_ReadIndex;
+        std::atomic<uint32_t>			m_WriteIndex;
+        std::atomic<uint32_t>			m_Flags[  ms_cSize ];
+        std::atomic<uint32_t>			m_ReadIndex;
     };
 
     template<uint8_t cSizeLog2, typename T> inline
@@ -99,12 +98,12 @@ namespace enki
         uint32_t actualReadIndex;
 		
         // We get hold of read index for consistency
-		uint32_t readIndexToUse  = m_ReadIndex;
+		uint32_t readIndexToUse  = m_ReadIndex.load( std::memory_order_relaxed );
 		while(true)
         {
 
-			uint32_t writeIndex = m_WriteIndex;
-			uint32_t readIndex  = m_ReadIndex;
+			uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
+			uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
 			 // power of two sizes ensures we can use a simple calc without modulus
 			uint32_t numInPipe = writeIndex - readIndex;
 			if( 0 == numInPipe )
@@ -118,7 +117,8 @@ namespace enki
 
             // Multiple potential readers mean we should check if the data is valid,
             // using an atomic compare exchange
-            uint32_t previous = AtomicCompareAndSwap( &m_Flags[  actualReadIndex ], FLAG_INVALID, FLAG_CAN_READ );
+            uint32_t previous = FLAG_CAN_READ;
+			m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
             if( FLAG_CAN_READ == previous )
             {
                break;
@@ -129,13 +129,13 @@ namespace enki
         // we update the read index using an atomic add, as we've only read one piece of data.
         // this ensure consistency of the read index, and the above loop ensures readers
         // only read from unread data
-        AtomicAdd(  (volatile int32_t*)&m_ReadIndex, 1 );
+		m_ReadIndex.fetch_add(1, std::memory_order_relaxed );
  
-        BASE_MEMORYBARRIER_ACQUIRE();
+        std::atomic_thread_fence( std::memory_order_acquire );
         // now read data, ensuring we do so after above reads & CAS
         *pOut = m_Buffer[ actualReadIndex ];
 
-        m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
+        m_Flags[  actualReadIndex ].store( FLAG_CAN_WRITE, std::memory_order_relaxed );
 
 
         return true;
@@ -146,8 +146,8 @@ namespace enki
     {
          // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
-        uint32_t writeIndex = m_WriteIndex;
-        uint32_t readIndex  = m_ReadIndex;
+        uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
+        uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
 
         // power of two sizes ensures we can use a simple calc without modulus
         uint32_t numInPipe = writeIndex - readIndex;
@@ -161,7 +161,8 @@ namespace enki
 
         // Multiple potential readers mean we should check if the data is valid,
         // using an atomic compare exchange - which acts as a form of lock (so not quite lockless really).
-        uint32_t previous = AtomicCompareAndSwap( &m_Flags[  actualReadIndex ], FLAG_INVALID, FLAG_CAN_READ );
+        uint32_t previous = FLAG_CAN_READ;
+		m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
         if( FLAG_CAN_READ != previous )
         {
             // this case should only be reachable if a reader has read from the back, so we now have no
@@ -174,11 +175,9 @@ namespace enki
 
 		m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
 
-		BASE_MEMORYBARRIER_RELEASE();
+        std::atomic_thread_fence( std::memory_order_release );
 
-        // 32-bit aligned stores are atomic, and writer owns the write index
-        --writeIndex;
-        m_WriteIndex = writeIndex;
+        m_WriteIndex.fetch_sub(1, std::memory_order_relaxed);
         return true;
    }
 
@@ -191,7 +190,7 @@ namespace enki
         // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
-        uint32_t readIndex  = m_ReadIndex;
+        uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
 
         // power of two sizes ensures we can use a simple calc without modulus
         uint32_t numInPipe = writeIndex - readIndex;
@@ -205,7 +204,7 @@ namespace enki
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;
 
         // a reader may still be reading this item, as there are multiple readers
-        while( m_Flags[ actualWriteIndex ] != FLAG_CAN_WRITE ) 
+        if( m_Flags[ actualWriteIndex ].load(std::memory_order_relaxed)  != FLAG_CAN_WRITE ) 
 		{
 			return false; // still being read, so have caught up with tail. 
 		}
@@ -214,15 +213,13 @@ namespace enki
         // as we are the only writer we can update the data without atomics
         //  whilst the write index has not been updated
         m_Buffer[ actualWriteIndex ] = in;
-        m_Flags[  actualWriteIndex ] = FLAG_CAN_READ;
+        m_Flags[  actualWriteIndex ].store( FLAG_CAN_READ, std::memory_order_relaxed );
 
         // We need to ensure the above writes occur prior to updating the write index,
         // otherwise another thread might read before it's finished
-        BASE_MEMORYBARRIER_RELEASE();
+        std::atomic_thread_fence( std::memory_order_release );
 
-        // 32-bit aligned stores are atomic, and the writer controls the write index
-        ++writeIndex;
-        m_WriteIndex = writeIndex;
+        m_WriteIndex.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
 

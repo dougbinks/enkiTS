@@ -99,7 +99,7 @@ static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-	uint32_t maxThreads = GetNumHardwareThreads();
+	uint32_t maxThreads = std::thread::hardware_concurrency();
 	double* avSpeedUps = new double[ maxThreads ];
 
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )

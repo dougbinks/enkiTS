@@ -92,7 +92,7 @@ static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-	uint32_t maxThreads = GetNumHardwareThreads();
+	uint32_t maxThreads = std::thread::hardware_concurrency();
 	double* times = new double[ maxThreads ];
 	double* stdev = new double[ maxThreads ];
 
@@ -150,6 +150,7 @@ int main(int argc, const char * argv[])
 		times[numThreads-1] = avTime;
 		stdev[numThreads-1] = sqrt(RUNS * avTime2 - (RUNS * avTime)*(RUNS * avTime)) / RUNS;
 	}
+
 
 	printf("\nHardware Threads, Time, std, MTasks/s, Perf Multiplier\n" );
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )

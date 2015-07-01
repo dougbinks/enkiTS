@@ -22,17 +22,23 @@
 #include "LockLessMultiReadPipe.h"
 
 
-
 using namespace enki;
 
 
 static const uint32_t PIPESIZE_LOG2 = 8;
 static const uint32_t SPIN_COUNT = 100;
 
+#ifdef _MSC_VER
+#if _MSC_VER <= 1800
+#define thread_local __declspec(thread)
+#endif
+#endif
+
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static const uint32_t									 NO_THREAD_NUM = 0xFFFFFFFF;
-static THREAD_LOCAL uint32_t                             gtl_threadNum = NO_THREAD_NUM;
-static THREAD_LOCAL enki::TaskScheduler*                 gtl_pCurrTS   = NULL;
+static thread_local uint32_t                             gtl_threadNum = NO_THREAD_NUM;
+static thread_local enki::TaskScheduler*                 gtl_pCurrTS   = NULL;
+
 
 namespace enki 
 {
@@ -64,21 +70,21 @@ namespace enki
 			// acquire thread id
 			if( m_ThreadNum == NO_THREAD_NUM || m_pPrevTS != m_pTS )
 			{
-				int32_t threadcount = AtomicAdd( &m_pTS->m_NumThreadsRunning, 1 );
+
+				int32_t threadcount = m_pTS->m_NumThreadsRunning++;
 				if( threadcount < (int32_t)m_pTS->m_NumThreads )
 				{
 					m_PrevThreadNum = m_ThreadNum;
-					int32_t index = AtomicAdd( &m_pTS->m_UserThreadStackIndex, 1 );
+					int32_t index = m_pTS->m_UserThreadStackIndex++;
 					assert( index < (int32_t)m_pTS->m_NumUserThreads );
 
-					volatile uint32_t* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
+					std::atomic<uint32_t>* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
 					while(true)
 					{
 						m_ThreadNum = *pStackPointer;
 						if( NO_THREAD_NUM != m_ThreadNum )
 						{
-							uint32_t old = AtomicCompareAndSwap( pStackPointer, NO_THREAD_NUM, m_ThreadNum );
-							if( old == m_ThreadNum )
+							if(  pStackPointer->compare_exchange_strong( m_ThreadNum, NO_THREAD_NUM ) )
 							{
 								break;
 							}
@@ -92,7 +98,7 @@ namespace enki
 				}
 				else
 				{
-					AtomicAdd( &m_pTS->m_NumThreadsRunning, -1 );
+					--m_pTS->m_NumThreadsRunning;
 				}
 			}
 		}
@@ -103,21 +109,21 @@ namespace enki
 			{
 				gtl_threadNum = m_PrevThreadNum;
 				gtl_pCurrTS   = m_pPrevTS;
-				int32_t index = AtomicAdd( &m_pTS->m_UserThreadStackIndex, -1 ) - 1;
+				int32_t index = --m_pTS->m_UserThreadStackIndex;
 				assert( index < (int32_t)m_pTS->m_NumUserThreads );
 				assert( index >= 0 );
 
-				volatile uint32_t* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
+				std::atomic<uint32_t>* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
+				uint32_t desired = NO_THREAD_NUM;
 				while(true)
 				{
-					uint32_t old = AtomicCompareAndSwap( pStackPointer, m_ThreadNum, NO_THREAD_NUM );
-					if( old == NO_THREAD_NUM )
+					if( pStackPointer->compare_exchange_strong( desired, m_ThreadNum ) )
 					{
 						break;
 					}
 				}
 
-				AtomicAdd( &m_pTS->m_NumThreadsRunning, -1 );
+				--m_pTS->m_NumThreadsRunning;
 			}
 		}
 
@@ -139,18 +145,16 @@ namespace enki
 
 
 
-THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
+void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 {
-	ThreadArgs args					= *(ThreadArgs*)pArgs;
-	uint32_t threadNum				= args.threadNum;
-	TaskScheduler*  pTS				= args.pTaskScheduler;
+	uint32_t threadNum				= args_.threadNum;
+	TaskScheduler*  pTS				= args_.pTaskScheduler;
     gtl_threadNum					= threadNum;
 	gtl_pCurrTS						= pTS;
-
-    AtomicAdd( &pTS->m_NumThreadsRunning, 1 );
-
-	uint32_t spinCount = 0;
-    while( pTS->m_bRunning )
+	pTS->m_NumThreadsRunning.fetch_add(1, std::memory_order_relaxed );
+    
+    uint32_t spinCount = 0;
+    while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
     {
 		if( !pTS->TryRunTask( threadNum ) )
 		{
@@ -165,11 +169,45 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 		{
 			spinCount = 0;
 		}
-   }
-	gtl_threadNum = NO_THREAD_NUM;
+		/*
+        if(!pTS->TryRunTask( threadNum ) )
+        {
+            // no tasks, will spin then wait
+            ++spinCount;
+            if( spinCount > SPIN_COUNT )
+            {
+				bool bHaveTasks = false;
+				for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
+				{
+					if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
+					{
+						bHaveTasks = true;
+						break;
+					}
+				}
+				if( bHaveTasks )
+				{
+					// keep trying
+					spinCount = 0;
+				}
+				else
+				{
 
-    AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
-    return 0;
+					pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
+					std::unique_lock<std::mutex> lk( pTS->m_NewTaskEventMutex );
+					pTS->m_NewTaskEvent.wait( lk );
+					pTS->m_NumThreadsActive.fetch_add( 1, std::memory_order_relaxed );
+					spinCount = 0;
+				}
+            }
+        }
+		*/
+    }
+
+    pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_relaxed );
+	gtl_threadNum = NO_THREAD_NUM;
+	gtl_pCurrTS   = NULL;
+    return;
 }
 
 
@@ -177,21 +215,16 @@ void TaskScheduler::StartThreads()
 {
     m_bRunning = true;
 
-    m_NewTaskEvent = EventCreate();
-
     // m_NumEnkiThreads stores the number of internal threads required.
 	if( m_NumEnkiThreads )
 	{
 		m_pThreadArgStore = new ThreadArgs[m_NumEnkiThreads];
-		m_pThreadIDs      = new threadid_t[m_NumEnkiThreads];
-		m_pThreadArgStore[0].threadNum      = 0;
-		m_pThreadArgStore[0].pTaskScheduler = this;
-		m_pThreadIDs[0] = 0;
+		m_pThreads      = new std::thread*[m_NumEnkiThreads];
 		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
 		{
 			m_pThreadArgStore[thread].threadNum      = thread;
 			m_pThreadArgStore[thread].pTaskScheduler = this;
-			ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadArgStore[thread] );
+			m_pThreads[thread] = new std::thread( TaskingThreadFunction, m_pThreadArgStore[thread] );
 		}
 	}
 
@@ -218,23 +251,21 @@ void TaskScheduler::Cleanup( bool bWait_ )
 		while( bWait_ && m_NumThreadsRunning )
 		{
 			// keep firing event to ensure all threads pick up state of m_bRunning
-			EventSignal( m_NewTaskEvent );
+           m_NewTaskEvent.notify_all();
 		}
 
 		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
 		{
-			ThreadTerminate( m_pThreadIDs[thread] );
+			delete m_pThreads[thread];
 		}
 
 		m_NumThreads = 0;
 		m_NumEnkiThreads = 0;
 		m_NumUserThreads = 0;
 		delete[] m_pThreadArgStore;
-		delete[] m_pThreadIDs;
+		delete[] m_pThreads;
 		m_pThreadArgStore = 0;
-		m_pThreadIDs = 0;
-		EventClose( m_NewTaskEvent );
-
+		m_pThreads = 0;
 		m_NumThreadsWaiting = 0;
 		m_NumThreadsRunning = 0;
 		m_UserThreadStackIndex = 0;
@@ -276,7 +307,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
     {
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         info.pTask->ExecuteRange( info.partition, threadNum );
-        AtomicAdd( &info.pTask->m_CompletionCount, -1 );
+        info.pTask->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
     }
 
     return bHaveTask;
@@ -295,9 +326,10 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 	}
 	if( !bHaveTasks )
 	{
-		AtomicAdd( &m_NumThreadsWaiting, 1 );
-		EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
-		AtomicAdd( &m_NumThreadsWaiting, -1 );
+		++m_NumThreadsWaiting;
+		std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
+		m_NewTaskEvent.wait( lk );
+		--m_NumThreadsWaiting;
 	}
 }
 
@@ -309,15 +341,16 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     info.partition.end = pTaskSet->m_SetSize;
 
     // no one owns the task as yet, so just add to count
-    pTaskSet->m_CompletionCount = 0;
+    pTaskSet->m_CompletionCount.store( 0, std::memory_order_relaxed );
 	ThreadNum threadNum( this );
 	if( threadNum.m_ThreadNum == NO_THREAD_NUM )
 	{
 		// just run in this thread
-		info.pTask->m_CompletionCount += 1;
-        info.pTask->ExecuteRange( info.partition, threadNum.m_ThreadNum );
+		++pTaskSet->m_CompletionCount;
+        pTaskSet->ExecuteRange( info.partition, threadNum.m_ThreadNum );
         --pTaskSet->m_CompletionCount;
 	}
+
 
     // divide task up and add to pipe
     uint32_t numToRun = info.pTask->m_SetSize / m_NumPartitions;
@@ -334,23 +367,23 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         rangeLeft -= numToRun;
 
         // add the partition to the pipe
-        AtomicAdd( &info.pTask->m_CompletionCount, +1 );
-        if( !m_pPipesPerThread[ threadNum.m_ThreadNum ].WriterTryWriteFront( info ) )
+
+        info.pTask->m_CompletionCount.fetch_add( 1, std::memory_order_relaxed );
+        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( info ) )
         {
-			if( m_NumThreadsWaiting > 0 )
+			if( m_NumThreadsWaiting.load( std::memory_order_relaxed ) > 0 )
 			{
-				EventSignal( m_NewTaskEvent );
+				m_NewTaskEvent.notify_all();
 			}
             info.pTask->ExecuteRange( info.partition, threadNum.m_ThreadNum );
-            --pTaskSet->m_CompletionCount;
+            pTaskSet->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
         }
     }
 
-	if( m_NumThreadsWaiting > 0 )
+	if( m_NumThreadsWaiting.load( std::memory_order_relaxed )  )
 	{
-		EventSignal( m_NewTaskEvent );
+		m_NewTaskEvent.notify_all();
 	}
-
 }
 
 void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
@@ -358,7 +391,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 	ThreadNum threadNum( this );
 	if( pTaskSet )
 	{
-		while( pTaskSet->m_CompletionCount )
+		while( !pTaskSet->GetIsComplete() )
 		{
 			TryRunTask( threadNum.m_ThreadNum );
 			// should add a spin then wait for task completion event.
@@ -378,7 +411,7 @@ void    TaskScheduler::WaitforAll()
 	if( threadNum.m_ThreadNum != NO_THREAD_NUM ) { amRunningThread = 1; }
 
     bool bHaveTasks = true;
-    while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning - amRunningThread ) )
+    while( bHaveTasks || ( m_NumThreadsWaiting.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) - amRunningThread ) )
     {
         TryRunTask( threadNum.m_ThreadNum );
         bHaveTasks = false;
@@ -441,7 +474,7 @@ void	TaskScheduler::UserThreadRunTasks()
 void	TaskScheduler::StopUserThreadRunTasks()
 {
 	m_bUserThreadsCanRun = false;
-	EventSignal( m_NewTaskEvent );	// wake up any sleeping threads.
+	m_NewTaskEvent.notify_all();
 }
 
 TaskScheduler::TaskScheduler()
@@ -450,10 +483,10 @@ TaskScheduler::TaskScheduler()
 		, m_NumEnkiThreads(0)
 		, m_NumUserThreads(0)
 		, m_pThreadArgStore(NULL)
-		, m_pThreadIDs(NULL)
 		, m_pUserThreadNumStack(NULL)
 		, m_UserThreadStackIndex(0)
 		, m_bRunning(false)
+		, m_pThreads(NULL)
 		, m_NumThreadsRunning(0)
 		, m_NumThreadsWaiting(0)
 		, m_NumPartitions(0)
@@ -475,7 +508,7 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 
 void   TaskScheduler::Initialize()
 {
-	Initialize( GetNumHardwareThreads() );
+	Initialize( std::thread::hardware_concurrency() );
 }
 
 void TaskScheduler::InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ )
@@ -489,7 +522,7 @@ void TaskScheduler::InitializeWithUserThreads( uint32_t numUserThreads_, uint32_
 	m_NumUserThreads = numUserThreads_;
 
     m_pPipesPerThread = new TaskPipe[ m_NumThreads ];
-	m_pUserThreadNumStack = new uint32_t[ m_NumUserThreads ];
+	m_pUserThreadNumStack = new std::atomic<uint32_t>[ m_NumUserThreads ];
 	for( uint32_t i = 0; i < m_NumUserThreads; ++i )
 	{
 		// user thread nums start at m_NumEnkiThreads
@@ -502,5 +535,5 @@ void TaskScheduler::InitializeWithUserThreads( uint32_t numUserThreads_, uint32_
 
 void TaskScheduler::InitializeWithUserThreads( )
 {
-	InitializeWithUserThreads( GetNumHardwareThreads(), 0 );
+	InitializeWithUserThreads( std::thread::hardware_concurrency(), 0 );
 }

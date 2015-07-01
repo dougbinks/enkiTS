@@ -74,7 +74,6 @@ namespace enki
 				int32_t threadcount = m_pTS->m_NumThreadsRunning++;
 				if( threadcount < (int32_t)m_pTS->m_NumThreads )
 				{
-					m_PrevThreadNum = m_ThreadNum;
 					int32_t index = m_pTS->m_UserThreadStackIndex++;
 					assert( index < (int32_t)m_pTS->m_NumUserThreads );
 
@@ -169,39 +168,6 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 		{
 			spinCount = 0;
 		}
-		/*
-        if(!pTS->TryRunTask( threadNum ) )
-        {
-            // no tasks, will spin then wait
-            ++spinCount;
-            if( spinCount > SPIN_COUNT )
-            {
-				bool bHaveTasks = false;
-				for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
-				{
-					if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
-					{
-						bHaveTasks = true;
-						break;
-					}
-				}
-				if( bHaveTasks )
-				{
-					// keep trying
-					spinCount = 0;
-				}
-				else
-				{
-
-					pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
-					std::unique_lock<std::mutex> lk( pTS->m_NewTaskEventMutex );
-					pTS->m_NewTaskEvent.wait( lk );
-					pTS->m_NumThreadsActive.fetch_add( 1, std::memory_order_relaxed );
-					spinCount = 0;
-				}
-            }
-        }
-		*/
     }
 
     pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_relaxed );

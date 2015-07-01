@@ -76,10 +76,7 @@ namespace enki
 	{
 	public:
 		// TaskScheduler is not a singleton, but usual case is to have only one.
-		// It is safe to have multiple task schedulers,
-		// but member functions on one instance should not be called from within a task
-		// running on another instance.
-		// If you don't understand the above, make your life easy and have only one.
+		// It is safe to have multiple task schedulers.
 		TaskScheduler();
 		~TaskScheduler();
 

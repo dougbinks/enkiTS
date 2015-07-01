@@ -32,6 +32,7 @@ static const uint32_t SPIN_COUNT = 100;
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static const uint32_t									 NO_THREAD_NUM = 0xFFFFFFFF;
 static THREAD_LOCAL uint32_t                             gtl_threadNum = NO_THREAD_NUM;
+static THREAD_LOCAL enki::TaskScheduler*                 gtl_pCurrTS   = NULL;
 
 namespace enki 
 {
@@ -57,17 +58,36 @@ namespace enki
 			: m_pTS( pTaskScheduler )
 			, m_bNeedsRelease( false )
 			, m_ThreadNum( gtl_threadNum )
+			, m_PrevThreadNum( gtl_threadNum )
+			, m_pPrevTS( gtl_pCurrTS )
 		{
 			// acquire thread id
-			if( m_ThreadNum == NO_THREAD_NUM )
+			if( m_ThreadNum == NO_THREAD_NUM || m_pPrevTS != m_pTS )
 			{
-				int32_t userthreadcount = AtomicAdd( &m_pTS->m_NumThreadsRunning, 1 );
-				if( userthreadcount < (int32_t)m_pTS->m_NumThreads )
+				int32_t threadcount = AtomicAdd( &m_pTS->m_NumThreadsRunning, 1 );
+				if( threadcount < (int32_t)m_pTS->m_NumThreads )
 				{
+					m_PrevThreadNum = m_ThreadNum;
 					int32_t index = AtomicAdd( &m_pTS->m_UserThreadStackIndex, 1 );
 					assert( index < (int32_t)m_pTS->m_NumUserThreads );
-					m_ThreadNum = m_pTS->m_pUserThreadNumStack[ index ];
+
+					volatile uint32_t* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
+					while(true)
+					{
+						m_ThreadNum = *pStackPointer;
+						if( NO_THREAD_NUM != m_ThreadNum )
+						{
+							uint32_t old = AtomicCompareAndSwap( pStackPointer, NO_THREAD_NUM, m_ThreadNum );
+							if( old == m_ThreadNum )
+							{
+								break;
+							}
+						}
+					}
+
+
 					gtl_threadNum = m_ThreadNum;
+					gtl_pCurrTS   = m_pTS;
 					m_bNeedsRelease = true;
 				}
 				else
@@ -76,13 +96,27 @@ namespace enki
 				}
 			}
 		}
+
 		~ThreadNum()
 		{
 			if( m_bNeedsRelease )
 			{
-				gtl_threadNum = NO_THREAD_NUM;
+				gtl_threadNum = m_PrevThreadNum;
+				gtl_pCurrTS   = m_pPrevTS;
 				int32_t index = AtomicAdd( &m_pTS->m_UserThreadStackIndex, -1 ) - 1;
-				m_pTS->m_pUserThreadNumStack[ index ] = m_ThreadNum;
+				assert( index < (int32_t)m_pTS->m_NumUserThreads );
+				assert( index >= 0 );
+
+				volatile uint32_t* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
+				while(true)
+				{
+					uint32_t old = AtomicCompareAndSwap( pStackPointer, m_ThreadNum, NO_THREAD_NUM );
+					if( old == NO_THREAD_NUM )
+					{
+						break;
+					}
+				}
+
 				AtomicAdd( &m_pTS->m_NumThreadsRunning, -1 );
 			}
 		}
@@ -94,6 +128,9 @@ namespace enki
 
 		bool			m_bNeedsRelease;
 		TaskScheduler*	m_pTS;
+
+		uint32_t		m_PrevThreadNum;
+		TaskScheduler*  m_pPrevTS;
 	};
 
 }
@@ -108,6 +145,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	uint32_t threadNum				= args.threadNum;
 	TaskScheduler*  pTS				= args.pTaskScheduler;
     gtl_threadNum					= threadNum;
+	gtl_pCurrTS						= pTS;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, 1 );
 
@@ -212,7 +250,7 @@ void TaskScheduler::Cleanup( bool bWait_ )
 bool TaskScheduler::TryRunTask( uint32_t threadNum )
 {
 	// calling function should acquire a valid threadnum
-	if( threadNum > m_NumThreads )
+	if( threadNum >= m_NumThreads )
 	{
 		return false;
 	}

@@ -338,8 +338,12 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 void    TaskScheduler::WaitforAll()
 {
 	ThreadNum threadNum( this );
+
+	int32_t amRunningThread = 0;
+	if( threadNum.m_ThreadNum != NO_THREAD_NUM ) { amRunningThread = 1; }
+
     bool bHaveTasks = true;
-    while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning - 1 ) )
+    while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning - amRunningThread ) )
     {
         TryRunTask( threadNum.m_ThreadNum );
         bHaveTasks = false;

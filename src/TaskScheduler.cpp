@@ -111,9 +111,9 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 
     AtomicAdd( &pTS->m_NumThreadsRunning, 1 );
 
+	uint32_t spinCount = 0;
     while( pTS->m_bRunning )
     {
-		uint32_t spinCount = 0;
 		if( !pTS->TryRunTask( threadNum ) )
 		{
 			// no tasks, will spin then wait
@@ -122,6 +122,10 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 			{
 				pTS->WaitForTasks( threadNum );
 			}
+		}
+		else
+		{
+			spinCount = 0;
 		}
    }
 	gtl_threadNum = NO_THREAD_NUM;
@@ -335,7 +339,7 @@ void    TaskScheduler::WaitforAll()
 {
 	ThreadNum threadNum( this );
     bool bHaveTasks = true;
-    while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning ) )
+    while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning - 1 ) )
     {
         TryRunTask( threadNum.m_ThreadNum );
         bHaveTasks = false;

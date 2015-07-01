@@ -113,9 +113,9 @@ namespace enki
 				assert( index >= 0 );
 
 				std::atomic<uint32_t>* pStackPointer = &m_pTS->m_pUserThreadNumStack[ index ];
-				uint32_t desired = NO_THREAD_NUM;
 				while(true)
 				{
+					uint32_t desired = NO_THREAD_NUM;
 					if( pStackPointer->compare_exchange_strong( desired, m_ThreadNum ) )
 					{
 						break;

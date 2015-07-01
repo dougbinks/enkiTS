@@ -67,7 +67,6 @@ namespace enki
 				int32_t threadcount = AtomicAdd( &m_pTS->m_NumThreadsRunning, 1 );
 				if( threadcount < (int32_t)m_pTS->m_NumThreads )
 				{
-					m_PrevThreadNum = m_ThreadNum;
 					int32_t index = AtomicAdd( &m_pTS->m_UserThreadStackIndex, 1 );
 					assert( index < (int32_t)m_pTS->m_NumUserThreads );
 
@@ -184,9 +183,6 @@ void TaskScheduler::StartThreads()
 	{
 		m_pThreadArgStore = new ThreadArgs[m_NumEnkiThreads];
 		m_pThreadIDs      = new threadid_t[m_NumEnkiThreads];
-		m_pThreadArgStore[0].threadNum      = 0;
-		m_pThreadArgStore[0].pTaskScheduler = this;
-		m_pThreadIDs[0] = 0;
 		for( uint32_t thread = 0; thread < m_NumEnkiThreads; ++thread )
 		{
 			m_pThreadArgStore[thread].threadNum      = thread;
@@ -314,8 +310,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 	if( threadNum.m_ThreadNum == NO_THREAD_NUM )
 	{
 		// just run in this thread
-		info.pTask->m_CompletionCount += 1;
-        info.pTask->ExecuteRange( info.partition, threadNum.m_ThreadNum );
+		++pTaskSet->m_CompletionCount;
+        pTaskSet->ExecuteRange( info.partition, threadNum.m_ThreadNum );
         --pTaskSet->m_CompletionCount;
 	}
 

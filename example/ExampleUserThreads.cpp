@@ -136,6 +136,7 @@ int main(int argc, const char * argv[])
 
 		g_TSUser.StopUserThreadRunTasks();
 		tParallel.Stop();
+		g_TSActual.WaitforAll();	// this is done after timer as not essential to runs.
 
 		printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), m_ParallelReductionSumTaskSet.m_FinalSum );
 
@@ -160,5 +161,6 @@ int main(int argc, const char * argv[])
 	}
 	printf("\nAverage Speed Up for %d Hardware Threads Serial / Parallel: %f\n", numThreads, avSpeedUp );
 	g_TSActual.WaitforAllAndShutdown(); // we ensure outer task system shuts down first
+	g_TSUser.WaitforAllAndShutdown();
 	return 0;
 }

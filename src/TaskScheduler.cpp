@@ -320,6 +320,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 		++pTaskSet->m_CompletionCount;
         pTaskSet->ExecuteRange( info.partition, threadNum.m_ThreadNum );
         --pTaskSet->m_CompletionCount;
+		return;
 	}
 
 
@@ -340,7 +341,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         // add the partition to the pipe
 
         info.pTask->m_CompletionCount.fetch_add( 1, std::memory_order_relaxed );
-        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( info ) )
+        if( !m_pPipesPerThread[ threadNum.m_ThreadNum ].WriterTryWriteFront( info ) )
         {
 			if( m_NumThreadsWaiting.load( std::memory_order_relaxed ) > 0 )
 			{

@@ -313,6 +313,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 		++pTaskSet->m_CompletionCount;
         pTaskSet->ExecuteRange( info.partition, threadNum.m_ThreadNum );
         --pTaskSet->m_CompletionCount;
+		return;
 	}
 
     // divide task up and add to pipe

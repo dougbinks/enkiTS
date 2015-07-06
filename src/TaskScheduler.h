@@ -167,9 +167,9 @@ namespace enki
 		// as it has finished the current task.
 		// If you want all tasks to complete, call WaitforAll()
 		// before calling this function.
-		// StopUserThreadRunTasks() will return immediatly,
-		// it will not wait for all UserThreadRunTasks() functions
-		// to exit.
+		// StopUserThreadRunTasks() may return immediatly,
+		// it is not guaranteed to wait for all UserThreadRunTasks() functions
+		// to exit (the non C++11 implementation currently does).
 		void			StopUserThreadRunTasks();
 
 	private:

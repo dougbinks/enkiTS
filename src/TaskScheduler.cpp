@@ -440,13 +440,19 @@ void	TaskScheduler::StopUserThreadRunTasks()
 	m_bUserThreadsCanRun = false;
 	ThreadNum threadNum(this);
 
-	uint32_t amUserThread = 0;
-	if( threadNum.m_ThreadNum != NO_THREAD_NUM && threadNum.m_ThreadNum >= m_NumEnkiThreads ) { amUserThread = 1; }
-	uint32_t callCount = 0;
+	int32_t amUserThread    = 0;
+	int32_t amRunningThread = 0;
+	if( threadNum.m_ThreadNum != NO_THREAD_NUM ) {
+		amRunningThread = 1;
+		if( threadNum.m_ThreadNum >= m_NumEnkiThreads ) { 
+			amUserThread = 1;
+		}
+	}
+
 	do
 	{
 		EventSignal( m_NewTaskEvent );	// wake up any sleeping threads.
-	} while( m_UserThreadStackIndex > amUserThread );
+	} while( m_NumThreadsWaiting && ( m_UserThreadStackIndex > amUserThread ) );
 }
 
 TaskScheduler::TaskScheduler()

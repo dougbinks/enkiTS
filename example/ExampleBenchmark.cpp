@@ -135,7 +135,7 @@ int main(int argc, const char * argv[])
 			}
 			else
 			{
-				printf(" no errors found.\n", numTasks - numTasksDone );
+				printf(" no errors found.\n" );
 			}
 
 			if( run >= WARMUPS )

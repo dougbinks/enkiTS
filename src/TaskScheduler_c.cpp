@@ -19,6 +19,8 @@
 #include "TaskScheduler_c.h"
 #include "TaskScheduler.h"
 
+#include <assert.h>
+
 using namespace enki;
 
 struct enkiTaskScheduler : TaskScheduler

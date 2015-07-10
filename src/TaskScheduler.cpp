@@ -257,14 +257,16 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
 
     if( m_NumThreads )
     {
-        uint32_t checkOtherThread = 0;
-        while( !bHaveTask && checkOtherThread < m_NumThreads )
+		// Most usual use-case is adding tasks from main thread, so check that first.
+		// User thread implementation adds this to end, so reverse iterate.
+        uint32_t checkOtherThread = m_NumThreads;
+        while( !bHaveTask && checkOtherThread > 0 )
         {
+            --checkOtherThread;
 			if( checkOtherThread != threadNum )
 			{
 				bHaveTask = m_pPipesPerThread[ checkOtherThread ].ReaderTryReadBack( &info );
 			}
-            ++checkOtherThread;
         }
     }
         

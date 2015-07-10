@@ -63,9 +63,10 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 	pTS->m_NumThreadsActive.fetch_add(1, std::memory_order_relaxed );
     
     uint32_t spinCount = 0;
+	uint32_t hintPipeToCheck_io = threadNum + 1;	// does not need to be clamped.
     while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
     {
-        if(!pTS->TryRunTask( threadNum ) )
+        if(!pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
         {
             // no tasks, will spin then wait
             ++spinCount;
@@ -165,27 +166,32 @@ void TaskScheduler::StopThreads( bool bWait_ )
     }
 }
 
-bool TaskScheduler::TryRunTask( uint32_t threadNum )
+bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ )
 {
     // check for tasks
     TaskSetInfo info;
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &info );
 
+	uint32_t threadToCheck = hintPipeToCheck_io_;
     if( m_NumThreads )
     {
-        uint32_t checkOtherThread = 0;
-        while( !bHaveTask && checkOtherThread < m_NumThreads )
+		uint32_t checkCount = 0;
+        while( !bHaveTask && checkCount < m_NumThreads )
         {
-			if( checkOtherThread != threadNum )
+			threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
+			if( threadToCheck != threadNum )
 			{
-				bHaveTask = m_pPipesPerThread[ checkOtherThread ].ReaderTryReadBack( &info );
+				bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &info );
 			}
-            ++checkOtherThread;
+			++checkCount;
         }
     }
         
     if( bHaveTask )
     {
+		// update hint, will preserve value unless actually got task from another thread.
+		hintPipeToCheck_io_ = threadToCheck;
+
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         info.pTask->ExecuteRange( info.partition, threadNum );
         info.pTask->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
@@ -242,26 +248,28 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
 void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 {
+	uint32_t hintPipeToCheck_io = gtl_threadNum + 1;	// does not need to be clamped.
 	if( pTaskSet )
 	{
 		while( !pTaskSet->GetIsComplete() )
 		{
-			TryRunTask( gtl_threadNum );
+			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
 			// should add a spin then wait for task completion event.
 		}
 	}
 	else
 	{
-			TryRunTask( gtl_threadNum );
+			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
 	}
 }
 
 void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
+ 	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
     while( bHaveTasks || m_NumThreadsActive.load( std::memory_order_relaxed ) )
     {
-        TryRunTask( gtl_threadNum );
+        TryRunTask( gtl_threadNum, hintPipeToCheck_io );
         bHaveTasks = false;
         for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
         {

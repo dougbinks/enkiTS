@@ -134,7 +134,7 @@ namespace enki
 
 	private:
 		static void  TaskingThreadFunction( const ThreadArgs& args_ );
-		bool             TryRunTask( uint32_t threadNum );
+		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             StopThreads( bool bWait_ );
 

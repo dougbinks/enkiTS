@@ -153,9 +153,10 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 	pTS->m_NumThreadsRunning.fetch_add(1, std::memory_order_relaxed );
     
     uint32_t spinCount = 0;
+	uint32_t hintPipeToCheck_io = threadNum + 1;	// does not need to be clamped.
     while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
     {
-		if( !pTS->TryRunTask( threadNum ) )
+		if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
 		{
 			// no tasks, will spin then wait
 			++spinCount;
@@ -242,7 +243,7 @@ void TaskScheduler::Cleanup( bool bWait_ )
 	}
 }
 
-bool TaskScheduler::TryRunTask( uint32_t threadNum )
+bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ )
 {
 	// calling function should acquire a valid threadnum
 	if( threadNum >= m_NumThreads )
@@ -254,23 +255,26 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum )
     TaskSetInfo info;
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &info );
 
+	uint32_t threadToCheck = hintPipeToCheck_io_;
     if( m_NumThreads )
     {
-		// Most usual use-case is adding tasks from main thread, so check that first.
-		// User thread implementation adds this to end, so reverse iterate.
-        uint32_t checkOtherThread = m_NumThreads;
-        while( !bHaveTask && checkOtherThread > 0 )
+		uint32_t checkCount = 0;
+        while( !bHaveTask && checkCount < m_NumThreads )
         {
-            --checkOtherThread;
-			if( checkOtherThread != threadNum )
+			threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
+			if( threadToCheck != threadNum )
 			{
-				bHaveTask = m_pPipesPerThread[ checkOtherThread ].ReaderTryReadBack( &info );
+				bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &info );
 			}
+			++checkCount;
         }
     }
         
     if( bHaveTask )
     {
+		// update hint, will preserve value unless actually got task from another thread.
+		hintPipeToCheck_io_ = threadToCheck;
+
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         info.pTask->ExecuteRange( info.partition, threadNum );
         info.pTask->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
@@ -363,17 +367,18 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 {
 	ThreadNum threadNum( this );
+	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
 	if( pTaskSet )
 	{
 		while( !pTaskSet->GetIsComplete() )
 		{
-			TryRunTask( threadNum.m_ThreadNum );
+			TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
 			// should add a spin then wait for task completion event.
 		}
 	}
 	else
 	{
-			TryRunTask( threadNum.m_ThreadNum );
+			TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
 	}
 }
 
@@ -385,9 +390,10 @@ void    TaskScheduler::WaitforAll()
 	if( threadNum.m_ThreadNum != NO_THREAD_NUM ) { amRunningThread = 1; }
 
     bool bHaveTasks = true;
-    while( bHaveTasks || ( m_NumThreadsWaiting.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) - amRunningThread ) )
+ 	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
+   while( bHaveTasks || ( m_NumThreadsWaiting.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) - amRunningThread ) )
     {
-        TryRunTask( threadNum.m_ThreadNum );
+        TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
         bHaveTasks = false;
         for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
         {
@@ -414,7 +420,8 @@ uint32_t TaskScheduler::GetNumTaskThreads() const
 bool	TaskScheduler::TryRunTask()
 {
 	ThreadNum threadNum( this );
-	return TryRunTask( threadNum.m_ThreadNum );
+	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
+	return TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
 }
 
 void	TaskScheduler::PreUserThreadRunTasks()
@@ -427,9 +434,10 @@ void	TaskScheduler::UserThreadRunTasks()
 	ThreadNum threadNum(this);
 
 	uint32_t spinCount = 0;
+	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
     while( m_bRunning && m_bUserThreadsCanRun)
     {
-		if( !TryRunTask( threadNum.m_ThreadNum ) )
+		if( !TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io ) )
 		{
 			// no tasks, will spin then wait
 			++spinCount;

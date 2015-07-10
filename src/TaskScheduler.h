@@ -199,7 +199,7 @@ namespace enki
 		static void		 TaskingThreadFunction( const ThreadArgs& args_ );
 		template<bool ISUSERTASK>
 		void             WaitForTasks( uint32_t threadNum );
-		bool             TryRunTask( uint32_t threadNum );
+		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             Cleanup( bool bWait_ );
 

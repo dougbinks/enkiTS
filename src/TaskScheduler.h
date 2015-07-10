@@ -177,7 +177,7 @@ namespace enki
 
 		static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
 		void             WaitForTasks( uint32_t threadNum );
-		bool             TryRunTask(   uint32_t threadNum );
+		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             Cleanup( bool bWait_ );
 

@@ -14,6 +14,8 @@ As this was originally written before widespread decent C++11 support for atomic
 
 The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++11 branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11) )
 
+For further examples, see https://github.com/dougbinks/enkiTSExamples
+
 ## Project Goals
 
 1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.

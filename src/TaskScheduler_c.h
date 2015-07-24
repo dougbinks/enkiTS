@@ -30,16 +30,19 @@ typedef struct enkiTaskSet		 enkiTaskSet;
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
 
 
-// Create a task scheduler - will create GetNumHardwareThreads()-1 threads, which is
+// Create a new task scheduler
+enkiTaskScheduler*	enkiNewTaskScheduler();
+
+// Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
 // Initialize can be called multiple times - it will wait for completion
 // before re-initializing.
-enkiTaskScheduler*	enkiCreateTaskScheduler();
+void	            enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ );
 
-// Create a task scheduler with numThreads_ (must be > 0)
+// Initialize a task scheduler with numThreads_ (must be > 0)
 // will create numThreads_-1 threads, as thread 0 is
 // the thread on which the initialize was called.
-enkiTaskScheduler*	enkiCreateTaskSchedulerNumThreads( uint32_t numThreads_ );
+void	            enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ );
 
 
 // Delete a task scheduler

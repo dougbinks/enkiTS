@@ -40,18 +40,20 @@ struct enkiTaskSet : ITaskSet
 	void* pArgs;
 };
 
-enkiTaskScheduler*	enkiCreateTaskScheduler()
+enkiTaskScheduler*	enkiNewTaskScheduler()
 {
 	enkiTaskScheduler* pETS = new enkiTaskScheduler();
-	pETS->Initialize();
-	return pETS;
+    return pETS;
 }
 
-enkiTaskScheduler*	enkiCreateTaskSchedulerNumThreads( uint32_t numThreads_ )
+void	            enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
-	enkiTaskScheduler* pETS = new enkiTaskScheduler();
-	pETS->Initialize( numThreads_ );
-	return pETS;
+    pETS_->Initialize();
+}
+
+void	            enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
+{
+    pETS_->Initialize( numThreads_ );
 }
 
 void				enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )

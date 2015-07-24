@@ -391,7 +391,7 @@ void    TaskScheduler::WaitforAll()
 
     bool bHaveTasks = true;
  	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
-   while( bHaveTasks || ( m_NumThreadsWaiting.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) - amRunningThread ) )
+    while( bHaveTasks || ( m_NumThreadsWaiting.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) - amRunningThread ) )
     {
         TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
         bHaveTasks = false;

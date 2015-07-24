@@ -55,6 +55,20 @@ namespace enki
 	};
 }
 
+static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
+{
+    if( func_ != nullptr )
+    {
+        func_(threadnum_);
+    }
+}
+
+ProfilerCallbacks* TaskScheduler::GetProfilerCallbacks()
+{
+    return &m_ProfilerCallbacks;
+}
+
+
 void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 {
 	uint32_t threadNum				= args_.threadNum;
@@ -62,6 +76,8 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     gtl_threadNum      = threadNum;
 	pTS->m_NumThreadsActive.fetch_add(1, std::memory_order_relaxed );
     
+    SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
+
     uint32_t spinCount = 0;
 	uint32_t hintPipeToCheck_io = threadNum + 1;	// does not need to be clamped.
     while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
@@ -88,18 +104,20 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 				}
 				else
 				{
-
-					pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
+                    SafeCallback( pTS->m_ProfilerCallbacks.waitStart, threadNum );
+                    pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
 					std::unique_lock<std::mutex> lk( pTS->m_NewTaskEventMutex );
 					pTS->m_NewTaskEvent.wait( lk );
 					pTS->m_NumThreadsActive.fetch_add( 1, std::memory_order_relaxed );
-					spinCount = 0;
+                    SafeCallback( pTS->m_ProfilerCallbacks.waitStop, threadNum );
+                    spinCount = 0;
 				}
             }
         }
     }
 
     pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_relaxed );
+    SafeCallback( pTS->m_ProfilerCallbacks.threadStop, threadNum );
     return;
 }
 

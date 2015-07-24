@@ -22,7 +22,6 @@
 #include <assert.h>
 
 #include "Atomics.h"
-#include <atomic>
 #include <string.h>
 
 

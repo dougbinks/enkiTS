@@ -95,3 +95,10 @@ uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 {
 	return pETS_->GetNumTaskThreads();
 }
+
+enkiProfilerCallbacks*	enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
+{
+    assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks) );
+    return (enkiProfilerCallbacks*)pETS_->GetProfilerCallbacks();
+}
+

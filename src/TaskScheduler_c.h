@@ -69,7 +69,18 @@ void				enkiWaitForAll( enkiTaskScheduler* pETS_ );
 // get number of threads
 uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
 
+// TaskScheduler implements several callbacks intended for profilers
+typedef void (*enkiProfilerCallbackFunc)( uint32_t threadnum_ );
+struct enkiProfilerCallbacks
+{
+    enkiProfilerCallbackFunc threadStart;
+    enkiProfilerCallbackFunc threadStop;
+    enkiProfilerCallbackFunc waitStart;
+    enkiProfilerCallbackFunc waitStop;
+};
 
+// Get the callback structure so it can be set 
+struct enkiProfilerCallbacks*	enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ );
 
 #ifdef __cplusplus
 }

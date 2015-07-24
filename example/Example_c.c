@@ -85,7 +85,8 @@ int main(int argc, const char * argv[])
 {
 	uint64_t inMax_outSum, i, serialSum, max;
 
-	pETS = enkiCreateTaskScheduler();
+	pETS = enkiNewTaskScheduler();
+    enkiInitTaskScheduler( pETS );
 
 	pPSumTask			= enkiCreateTaskSet( pETS, ParallelSumTaskSetFunc );
 	pPSumReductionTask	= enkiCreateTaskSet( pETS, ParallelReductionSumTaskSet );

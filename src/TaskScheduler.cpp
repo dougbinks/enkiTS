@@ -134,8 +134,18 @@ namespace enki
 
 }
 
+static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
+{
+	if( func_ )
+	{
+		func_(threadnum_);
+	}
+}
 
-
+ProfilerCallbacks* TaskScheduler::GetProfilerCallbacks()
+{
+	return &m_ProfilerCallbacks;
+}
 
 
 THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
@@ -147,6 +157,8 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	gtl_pCurrTS						= pTS;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, 1 );
+
+    SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
 
 	uint32_t spinCount = 0;
 	uint32_t hintPipeToCheck_io = threadNum + 1;	// does not need to be clamped.
@@ -169,6 +181,8 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	gtl_threadNum = NO_THREAD_NUM;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
+	SafeCallback( pTS->m_ProfilerCallbacks.threadStop, threadNum );
+
     return 0;
 }
 
@@ -297,10 +311,12 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 	}
 	if( !bHaveTasks )
 	{
-		AtomicAdd( &m_NumThreadsWaiting, 1 );
+        SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
+        AtomicAdd( &m_NumThreadsWaiting, 1 );
 		EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
 		AtomicAdd( &m_NumThreadsWaiting, -1 );
-	}
+        SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
+    }
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
@@ -480,6 +496,7 @@ TaskScheduler::TaskScheduler()
 		, m_NumPartitions(0)
 		, m_bUserThreadsCanRun(false)
 {
+	memset(&m_ProfilerCallbacks, 0, sizeof(m_ProfilerCallbacks));
 }
 
 TaskScheduler::~TaskScheduler()

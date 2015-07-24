@@ -71,6 +71,15 @@ namespace enki
 		volatile int32_t        m_CompletionCount;
 	};
 
+	// TaskScheduler implements several callbacks intended for profilers
+	typedef void (*ProfilerCallbackFunc)( uint32_t threadnum_ );
+	struct ProfilerCallbacks
+	{
+		ProfilerCallbackFunc threadStart;
+		ProfilerCallbackFunc threadStop;
+		ProfilerCallbackFunc waitStart;
+		ProfilerCallbackFunc waitStop;
+	};
 
 	class TaskScheduler
 	{
@@ -172,6 +181,10 @@ namespace enki
 		// to exit (the non C++11 implementation currently does).
 		void			StopUserThreadRunTasks();
 
+        // Returns the ProfilerCallbacks structure so that it can be modified to
+		// set the callbacks.
+		ProfilerCallbacks* GetProfilerCallbacks();
+
 	private:
 		friend class ThreadNum;
 
@@ -197,6 +210,7 @@ namespace enki
 		uint32_t                                                 m_NumPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		volatile bool											 m_bUserThreadsCanRun;
+		ProfilerCallbacks										 m_ProfilerCallbacks;
 
 		TaskScheduler( const TaskScheduler& nocopy );
 		TaskScheduler& operator=( const TaskScheduler& nocopy );

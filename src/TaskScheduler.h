@@ -41,15 +41,16 @@ namespace enki
 	class ITaskSet
 	{
 	public:
-		ITaskSet()
-			: m_CompletionCount(0)
-			, m_SetSize(1)
-		{}
+        ITaskSet()
+            : m_SetSize(1)
+            , m_CompletionCount(0)
+        {}
 
-		ITaskSet( uint32_t setSize_ )
-			: m_CompletionCount(0)
-			, m_SetSize( setSize_ )
-		{}
+        ITaskSet( uint32_t setSize_ )
+            : m_SetSize( setSize_ )
+            , m_CompletionCount(0)
+        {}
+
 		// Execute range should be overloaded to process tasks. It will be called with a
 		// range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
 		// The range values should be mapped so that linearly processing them in order is cache friendly

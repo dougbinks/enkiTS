@@ -47,8 +47,8 @@ if(ENKITS_BUILD_EXAMPLES)
 	add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
 	target_link_libraries(TaskThroughput enkiTS )
 
-	add_executable( ExampleUserThreads example/ExampleUserThreads.cpp example/Timer.h )
-	target_link_libraries(ExampleUserThreads enkiTS )
+	add_executable( UserThreads example/UserThreads.cpp example/Timer.h )
+	target_link_libraries(UserThreads enkiTS )
 
 	
 if( ENKITS_BUILD_C_INTERFACE )

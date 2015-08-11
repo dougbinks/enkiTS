@@ -41,8 +41,8 @@ if(ENKITS_BUILD_EXAMPLES)
     		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
 	endif()
 
-	add_executable( ExampleUserThreads example/ExampleUserThreads.cpp example/Timer.h )
-	target_link_libraries(ExampleUserThreads enkiTS )
+	add_executable( UserThreads example/UserThreads.cpp example/Timer.h )
+	target_link_libraries(UserThreads enkiTS )
 
 	add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
 	target_link_libraries(ParallelSum enkiTS )

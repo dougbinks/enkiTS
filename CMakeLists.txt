@@ -40,17 +40,17 @@ if(ENKITS_BUILD_EXAMPLES)
 	if(WIN32)
     		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
 	endif()
-	add_executable( Example example/Example.cpp example/Timer.h )
-	target_link_libraries(Example enkiTS )
+	add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
+	target_link_libraries(ParallelSum enkiTS )
+		
+	add_executable( LambdaTask example/LambdaTask.cpp example/Timer.h )
+	target_link_libraries(LambdaTask enkiTS )
 	
-	add_executable( ExampleBenchmark example/ExampleBenchmark.cpp example/Timer.h )
-	target_link_libraries(ExampleBenchmark enkiTS )
-	
-	add_executable( ExampleLambda example/ExampleLambda.cpp example/Timer.h )
-	target_link_libraries(ExampleLambda enkiTS )
-	
+	add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
+	target_link_libraries(TaskThroughput enkiTS )
+
 if( ENKITS_BUILD_C_INTERFACE )
-	add_executable( Example_c example/Example_c.c )
-	target_link_libraries(Example_c enkiTS )
+	add_executable( ParallelSum_c example/ParallelSum_c.c )
+	target_link_libraries(ParallelSum_c enkiTS )
 endif()	
 endif()

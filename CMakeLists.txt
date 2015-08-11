@@ -44,8 +44,8 @@ if(ENKITS_BUILD_EXAMPLES)
 	add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
 	target_link_libraries(ParallelSum enkiTS )
 	
-	add_executable( ParallelSumBenchmark example/ParallelSumBenchmark.cpp example/Timer.h )
-	target_link_libraries(ParallelSumBenchmark enkiTS )
+	add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
+	target_link_libraries(TaskThroughput enkiTS )
 
 if( ENKITS_BUILD_C_INTERFACE )
 	add_executable( ParallelSum_c example/ParallelSum_c.c )

@@ -16,6 +16,14 @@ The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
+## Building
+
+On Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
+
+1. `mkdir build`
+2. `cmake ..`
+3. either run `make` or open `enkiTS.sln`
+
 ## Project Goals
 
 1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.

@@ -7,6 +7,10 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
 * [C++ 11 version  on Branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11)
+* [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
+* [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
+
+The user thread versions may get rolled into the C++11 and standard branches with defines controlling whether to include User Thread API.
 
 Note - this is a work in progress conversion from my code for [enkisoftware's](http://www.enkisoftware.com/) Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 

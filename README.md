@@ -7,6 +7,10 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
 * [C++ 11 version  on Branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11)
+* [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
+* [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
+
+The user thread versions may get rolled into the C++11 and standard branches with defines controlling whether to include User Thread API.
 
 Note - this is a work in progress conversion from my code for [enkisoftware's](http://www.enkisoftware.com/) Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 
@@ -15,6 +19,14 @@ As this was originally written before widespread decent C++11 support for atomic
 The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++11 branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11) )
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
+
+## Building
+
+On Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
+
+1. `mkdir build`
+2. `cmake ..`
+3. either run `make` or open `enkiTS.sln`
 
 ## Project Goals
 

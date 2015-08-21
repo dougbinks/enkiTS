@@ -116,6 +116,8 @@ void TaskScheduler::StartThreads()
 	m_pThreadNumStore[0].threadNum      = 0;
 	m_pThreadNumStore[0].pTaskScheduler = this;
 	m_pThreadIDs[0] = 0;
+    m_NumThreadsActive = 1; // acount for main thread
+    m_NumThreadsRunning = 1;// acount for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
 		m_pThreadNumStore[thread].threadNum      = thread;
@@ -145,7 +147,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
     {
         // wait for them threads quit before deleting data
         m_bRunning = false;
-        while( bWait_ && m_NumThreadsRunning )
+        while( bWait_ && m_NumThreadsRunning > 1 )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
             EventSignal( m_NewTaskEvent );
@@ -290,7 +292,7 @@ void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
  	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
-    while( bHaveTasks || m_NumThreadsActive)
+    while( bHaveTasks || m_NumThreadsActive > 1 )
     {
         TryRunTask( gtl_threadNum, hintPipeToCheck_io );
         bHaveTasks = false;

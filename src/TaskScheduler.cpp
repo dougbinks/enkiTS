@@ -84,30 +84,12 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
-				bool bHaveTasks = false;
-				for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
-				{
-					if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
-					{
-						bHaveTasks = true;
-						break;
-					}
-				}
-				if( bHaveTasks )
-				{
-					// keep trying
-					spinCount = 0;
-				}
-				else
-				{
-                    SafeCallback( pTS->m_ProfilerCallbacks.waitStart, threadNum );
-                    AtomicAdd( &pTS->m_NumThreadsActive, -1 );
-					EventWait( pTS->m_NewTaskEvent, EVENTWAIT_INFINITE );
-					AtomicAdd( &pTS->m_NumThreadsActive, 1 );
-                    SafeCallback( pTS->m_ProfilerCallbacks.waitStop, threadNum );
-                    spinCount = 0;
-				}
+				pTS->WaitForTasks( threadNum );
             }
+        }
+        else
+        {
+            spinCount = 0;
         }
     }
 
@@ -222,6 +204,26 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
 }
 
+void TaskScheduler::WaitForTasks( uint32_t threadNum )
+{
+    bool bHaveTasks = false;
+    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+    {
+        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+        {
+            bHaveTasks = true;
+            break;
+        }
+    }
+    if( !bHaveTasks )
+    {
+        SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
+        AtomicAdd( &m_NumThreadsActive, -1 );
+        EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
+        AtomicAdd( &m_NumThreadsActive, +1 );
+        SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
+    }
+}
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 {

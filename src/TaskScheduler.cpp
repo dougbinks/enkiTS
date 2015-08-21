@@ -230,13 +230,14 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet->m_SetSize;
 
-    // no one owns the task as yet, so just add to count
-    pTaskSet->m_CompletionCount = 0;
+    // set completion to -1 to guarantee it won't be found complete until all subtasks added
+    pTaskSet->m_CompletionCount = -1;
 
     // divide task up and add to pipe
     uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
     if( rangeToRun == 0 ) { rangeToRun = 1; }
     uint32_t rangeLeft = subTask.partition.end - subTask.partition.start ;
+    int32_t numAdded = 0;
     while( rangeLeft )
     {
         if( rangeToRun > rangeLeft )
@@ -248,17 +249,16 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         rangeLeft -= rangeToRun;
 
         // add the partition to the pipe
-        AtomicAdd( &pTaskSet->m_CompletionCount, +1 );
+        ++numAdded;
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask ) )
         {
-			if( m_NumThreadsActive < m_NumThreadsRunning )
-			{
-				EventSignal( m_NewTaskEvent );
-			}
-            --pTaskSet->m_CompletionCount;
             subTask.pTask->ExecuteRange( subTask.partition, gtl_threadNum );
+            --numAdded;
         }
     }
+
+    // increment completion count by number added plus one to account for start value
+    AtomicAdd( &pTaskSet->m_CompletionCount, numAdded + 1 );
 
 	if( m_NumThreadsActive < m_NumThreadsRunning )
 	{

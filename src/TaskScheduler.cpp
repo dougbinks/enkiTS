@@ -199,7 +199,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-        AtomicAdd( &subTask.pTask->m_CompletionCount, -1 );
+        AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
     }
 
     return bHaveTask;
@@ -234,8 +234,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet->m_SetSize;
 
-    // set completion to -1 to guarantee it won't be found complete until all subtasks added
-    pTaskSet->m_CompletionCount = -1;
+    // set running count to -1 to guarantee it won't be found complete until all subtasks added
+    pTaskSet->m_RunningCount = -1;
 
     // divide task up and add to pipe
     uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
@@ -261,8 +261,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         }
     }
 
-    // increment completion count by number added plus one to account for start value
-    AtomicAdd( &pTaskSet->m_CompletionCount, numAdded + 1 );
+    // increment running count by number added plus one to account for start value
+    AtomicAdd( &pTaskSet->m_RunningCount, numAdded + 1 );
 
 	if( m_NumThreadsActive < m_NumThreadsRunning )
 	{
@@ -276,7 +276,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 	uint32_t hintPipeToCheck_io = gtl_threadNum + 1;	// does not need to be clamped.
 	if( pTaskSet )
 	{
-		while( pTaskSet->m_CompletionCount )
+		while( pTaskSet->m_RunningCount )
 		{
 			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
 			// should add a spin then wait for task completion event.

@@ -36,14 +36,14 @@ static THREAD_LOCAL enki::TaskScheduler*                 gtl_pCurrTS   = NULL;
 
 namespace enki 
 {
-	struct TaskSetInfo
+	struct SubTaskSet
 	{
 		ITaskSet*           pTask;
 		TaskSetPartition    partition;
 	};
 
 	// we derive class TaskPipe rather than typedef to get forward declaration working easily
-	class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::TaskSetInfo> {};
+	class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::SubTaskSet> {};
 
 	struct ThreadArgs
 	{
@@ -267,8 +267,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 	}
 
     // check for tasks
-    TaskSetInfo info;
-    bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &info );
+    SubTaskSet subTask;
+    bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &subTask );
 
 	uint32_t threadToCheck = hintPipeToCheck_io_;
     if( m_NumThreads )
@@ -279,7 +279,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 			threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
 			if( threadToCheck != threadNum )
 			{
-				bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &info );
+				bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
 			}
 			++checkCount;
         }
@@ -291,8 +291,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 		hintPipeToCheck_io_ = threadToCheck;
 
         // the task has already been divided up by AddTaskSetToPipe, so just run it
-        info.pTask->ExecuteRange( info.partition, threadNum );
-        AtomicAdd( &info.pTask->m_CompletionCount, -1 );
+        subTask.pTask->ExecuteRange( subTask.partition, threadNum );
+        AtomicAdd( &subTask.pTask->m_CompletionCount, -1 );
     }
 
     return bHaveTask;
@@ -321,10 +321,10 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 {
-    TaskSetInfo info;
-    info.pTask = pTaskSet;
-    info.partition.start = 0;
-    info.partition.end = pTaskSet->m_SetSize;
+    SubTaskSet subTask;
+    subTask.pTask = pTaskSet;
+    subTask.partition.start = 0;
+    subTask.partition.end = pTaskSet->m_SetSize;
 
     // no one owns the task as yet, so just add to count
     pTaskSet->m_CompletionCount = 0;
@@ -333,35 +333,36 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 	{
 		// just run in this thread
 		++pTaskSet->m_CompletionCount;
-        pTaskSet->ExecuteRange( info.partition, threadNum.m_ThreadNum );
+        pTaskSet->ExecuteRange( subTask.partition, threadNum.m_ThreadNum );
         --pTaskSet->m_CompletionCount;
 		return;
 	}
 
     // divide task up and add to pipe
-    uint32_t numToRun = info.pTask->m_SetSize / m_NumPartitions;
-    if( numToRun == 0 ) { numToRun = 1; }
-    uint32_t rangeLeft = info.partition.end - info.partition.start ;
+    uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
+    if( rangeToRun == 0 ) { rangeToRun = 1; }
+    uint32_t rangeLeft = subTask.partition.end - subTask.partition.start ;
     while( rangeLeft )
     {
-        if( numToRun > rangeLeft )
+        if( rangeToRun > rangeLeft )
         {
-            numToRun = rangeLeft;
+            rangeToRun = rangeLeft;
         }
-        info.partition.start = pTaskSet->m_SetSize - rangeLeft;
-        info.partition.end = info.partition.start + numToRun;
-        rangeLeft -= numToRun;
+        subTask.partition.start = pTaskSet->m_SetSize - rangeLeft;
+        subTask.partition.end = subTask.partition.start + rangeToRun;
+        rangeLeft -= rangeToRun;
 
         // add the partition to the pipe
-        AtomicAdd( &info.pTask->m_CompletionCount, +1 );
-        if( !m_pPipesPerThread[ threadNum.m_ThreadNum ].WriterTryWriteFront( info ) )
+        AtomicAdd( &pTaskSet->m_CompletionCount, +1 );
+        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask ) )
+
         {
 			if( m_NumThreadsWaiting > 0 )
 			{
 				EventSignal( m_NewTaskEvent );
 			}
-            info.pTask->ExecuteRange( info.partition, threadNum.m_ThreadNum );
             --pTaskSet->m_CompletionCount;
+            subTask.pTask->ExecuteRange( subTask.partition, gtl_threadNum );
         }
     }
 

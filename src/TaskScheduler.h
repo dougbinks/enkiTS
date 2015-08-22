@@ -44,12 +44,12 @@ namespace enki
 	public:
         ITaskSet()
             : m_SetSize(1)
-            , m_CompletionCount(0)
+            , m_RunningCount(0)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
-            , m_CompletionCount(0)
+            , m_RunningCount(0)
         {}
 
 		// Execute range should be overloaded to process tasks. It will be called with a
@@ -65,11 +65,11 @@ namespace enki
 
 		bool                    GetIsComplete() const
 		{
-			return 0 == m_CompletionCount.load( std::memory_order_relaxed );
+			return 0 == m_RunningCount.load( std::memory_order_relaxed );
 		}
 	private:
 		friend class           TaskScheduler;
-		std::atomic<int32_t>   m_CompletionCount;
+		std::atomic<int32_t>   m_RunningCount;
 	};
 
 	// A utility task set for creating tasks based on std::func.

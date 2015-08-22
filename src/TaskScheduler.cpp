@@ -212,7 +212,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-        subTask.pTask->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
+        subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_relaxed );
     }
 
     return bHaveTask;
@@ -228,7 +228,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     subTask.partition.end = pTaskSet->m_SetSize;
 
     // set completion to -1 to guarantee it won't be found complete until all subtasks added
-    pTaskSet->m_CompletionCount.store( -1, std::memory_order_relaxed );
+    pTaskSet->m_RunningCount.store( -1, std::memory_order_relaxed );
 
     // divide task up and add to pipe
     uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
@@ -255,7 +255,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     }
 
     // increment completion count by number added plus one to account for start value
-    pTaskSet->m_CompletionCount.fetch_add( numAdded + 1, std::memory_order_relaxed );
+    pTaskSet->m_RunningCount.fetch_add( numAdded + 1, std::memory_order_relaxed );
 
     if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
 	{

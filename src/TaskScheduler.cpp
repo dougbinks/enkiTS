@@ -227,13 +227,14 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet->m_SetSize;
 
-    // no one owns the task as yet, so just add to count
-    pTaskSet->m_CompletionCount.store( 0, std::memory_order_relaxed );
+    // set completion to -1 to guarantee it won't be found complete until all subtasks added
+    pTaskSet->m_CompletionCount.store( -1, std::memory_order_relaxed );
 
     // divide task up and add to pipe
     uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
     if( rangeToRun == 0 ) { rangeToRun = 1; }
     uint32_t rangeLeft = subTask.partition.end - subTask.partition.start ;
+    int32_t numAdded = 0;
     while( rangeLeft )
     {
         if( rangeToRun > rangeLeft )
@@ -245,19 +246,18 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         rangeLeft -= rangeToRun;
 
         // add the partition to the pipe
-        pTaskSet->m_CompletionCount.fetch_add( 1, std::memory_order_relaxed );
+        ++numAdded;
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask ) )
         {
-			if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
-			{
-				m_NewTaskEvent.notify_all();
-			}
-            pTaskSet->m_CompletionCount.fetch_sub(1,std::memory_order_relaxed );
             subTask.pTask->ExecuteRange( subTask.partition, gtl_threadNum );
+            --numAdded;
         }
     }
 
-	if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
+    // increment completion count by number added plus one to account for start value
+    pTaskSet->m_CompletionCount.fetch_add( numAdded + 1, std::memory_order_relaxed );
+
+    if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
 	{
 		m_NewTaskEvent.notify_all();
 	}

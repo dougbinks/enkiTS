@@ -177,7 +177,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 		{
 			spinCount = 0;
 		}
-   }
+    }
 	gtl_threadNum = NO_THREAD_NUM;
 
     AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
@@ -292,7 +292,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
         // the task has already been divided up by AddTaskSetToPipe, so just run it
         subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-        AtomicAdd( &subTask.pTask->m_CompletionCount, -1 );
+        AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
     }
 
     return bHaveTask;
@@ -327,13 +327,13 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
     subTask.partition.end = pTaskSet->m_SetSize;
 
     // set completion to -1 to guarantee it won't be found complete until all subtasks added
-    pTaskSet->m_CompletionCount = -1;
+    pTaskSet->m_RunningCount = -1;
     ThreadNum threadNum( this );
 	if( threadNum.m_ThreadNum == NO_THREAD_NUM )
 	{
 		// just run in this thread
         pTaskSet->ExecuteRange( subTask.partition, threadNum.m_ThreadNum );
-        pTaskSet->m_CompletionCount = 0;
+        pTaskSet->m_RunningCount = 0;
 		return;
 	}
 
@@ -362,8 +362,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
         }
     }
 
-    // increment completion count by number added plus one to account for start value
-    AtomicAdd( &pTaskSet->m_CompletionCount, numAdded + 1 );
+    // increment running count by number added plus one to account for start value
+    AtomicAdd( &pTaskSet->m_RunningCount, numAdded + 1 );
 
     if( m_NumThreadsWaiting > 0 )
 	{
@@ -378,7 +378,7 @@ void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 	uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;	// does not need to be clamped.
 	if( pTaskSet )
 	{
-		while( pTaskSet->m_CompletionCount )
+		while( pTaskSet->m_RunningCount )
 		{
 			TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
 			// should add a spin then wait for task completion event.

@@ -43,12 +43,12 @@ namespace enki
 	public:
         ITaskSet()
             : m_SetSize(1)
-            , m_CompletionCount(0)
+            , m_RunningCount(0)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
-            , m_CompletionCount(0)
+            , m_RunningCount(0)
         {}
 
 		// Execute range should be overloaded to process tasks. It will be called with a
@@ -65,11 +65,11 @@ namespace enki
 
 		bool                    GetIsComplete()
 		{
-			return 0 == m_CompletionCount;
+			return 0 == m_RunningCount;
 		}
 	private:
 		friend class           TaskScheduler;
-		volatile int32_t        m_CompletionCount;
+		volatile int32_t        m_RunningCount;
 	};
 
 	// TaskScheduler implements several callbacks intended for profilers
@@ -190,7 +190,7 @@ namespace enki
 		friend class ThreadNum;
 
 		static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
-		void             WaitForTasks( uint32_t threadNum );
+        void             WaitForTasks( uint32_t threadNum );
 		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             Cleanup( bool bWait_ );

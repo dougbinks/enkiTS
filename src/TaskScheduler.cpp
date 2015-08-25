@@ -28,11 +28,16 @@ using namespace enki;
 static const uint32_t PIPESIZE_LOG2 = 8;
 static const uint32_t SPIN_COUNT = 100;
 
+// thread_local not well supported yet by C++11 compilers.
 #ifdef _MSC_VER
-#if _MSC_VER <= 1800
-#define thread_local __declspec(thread)
+    #if _MSC_VER <= 1800
+        #define thread_local __declspec(thread)
+    #endif
+#elif __APPLE__
+        // Apple thread_local currently not implemented despite it being in Clang.
+        #define thread_local __thread
 #endif
-#endif
+
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static thread_local uint32_t                             gtl_threadNum       = 0;

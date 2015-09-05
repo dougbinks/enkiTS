@@ -271,18 +271,15 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &subTask );
 
 	uint32_t threadToCheck = hintPipeToCheck_io_;
-    if( m_NumThreads )
+	uint32_t checkCount = 0;
+    while( !bHaveTask && checkCount < m_NumThreads )
     {
-		uint32_t checkCount = 0;
-        while( !bHaveTask && checkCount < m_NumThreads )
-        {
-			threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
-			if( threadToCheck != threadNum )
-			{
-				bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
-			}
-			++checkCount;
-        }
+		threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
+		if( threadToCheck != threadNum )
+		{
+			bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
+		}
+		++checkCount;
     }
         
     if( bHaveTask )

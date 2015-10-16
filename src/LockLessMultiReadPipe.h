@@ -204,7 +204,7 @@ namespace enki
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;
 
         // a reader may still be reading this item, as there are multiple readers
-        while( m_Flags[ actualWriteIndex ] != FLAG_CAN_WRITE ) 
+        if( m_Flags[ actualWriteIndex ] != FLAG_CAN_WRITE ) 
 		{
 			return false; // still being read, so have caught up with tail. 
 		}

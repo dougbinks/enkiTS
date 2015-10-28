@@ -159,10 +159,10 @@ namespace enki
          // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
-        uint32_t readIndex  = m_ReadIndex;
+        uint32_t readCount  = m_ReadCount;
 
         // power of two sizes ensures we can use a simple calc without modulus
-        uint32_t numInPipe = writeIndex - readIndex;
+        uint32_t numInPipe = writeIndex - readCount;
         if( 0 == numInPipe )
         {
             return false;
@@ -203,18 +203,6 @@ namespace enki
         // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
-
-        /*
-        uint32_t readIndex  = m_ReadIndex;
-
-        // power of two sizes ensures we can use a simple calc without modulus
-        uint32_t numInPipe = writeIndex - readIndex;
-        if( numInPipe >= ms_cSize )
-        {
-            assert( numInPipe == ms_cSize ); // should not have more
-            return false;
-        }
-        */
 
         // power of two sizes ensures we can perform AND for a modulus
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;

@@ -56,14 +56,13 @@ namespace enki
         // Should only be used very prudently.
         bool IsPipeEmpty() const
         {
-            return 0 == m_WriteIndex - m_ReadCount;
+            return 0 == m_WriteIndex - m_ReadIndex;
         }
 
 		void Clear()
 		{
 			m_WriteIndex = 0;
 			m_ReadIndex = 0;
-            m_ReadCount = 0;
 			memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
 		}
 
@@ -79,7 +78,6 @@ namespace enki
         // read and write indexes allow fast access to the pipe, but actual access
         // controlled by the access flags. 
         volatile uint32_t BASE_ALIGN(4) m_WriteIndex;
-        volatile uint32_t BASE_ALIGN(4) m_ReadCount;
         volatile uint32_t               m_Flags[  ms_cSize ];
         volatile uint32_t BASE_ALIGN(4) m_ReadIndex;
     };
@@ -88,7 +86,6 @@ namespace enki
         LockLessMultiReadPipe<cSizeLog2,T>::LockLessMultiReadPipe()
         : m_WriteIndex(0)
         , m_ReadIndex(0)
-        , m_ReadCount(0)
     {
         assert( cSizeLog2 < 32 );
         memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
@@ -105,21 +102,14 @@ namespace enki
 		while(true)
         {
 
-            uint32_t writeIndex = m_WriteIndex;
-            uint32_t readCount  = m_ReadCount;
-            // power of two sizes ensures we can use a simple calc without modulus
-            uint32_t numInPipe = writeIndex - readCount;
-            if( 0 == numInPipe )
-            {
-                uint32_t readIndex = m_ReadIndex;
-                if( readCount != readIndex )
-                {
-                    // move forward readIndex to readCount if still at prev value
-                    AtomicCompareAndSwap( &m_ReadIndex, readCount, readIndex );
-                }
-                return false;
-            }
-
+			uint32_t writeIndex = m_WriteIndex;
+			uint32_t readIndex  = m_ReadIndex;
+			 // power of two sizes ensures we can use a simple calc without modulus
+			uint32_t numInPipe = writeIndex - readIndex;
+			if( 0 == numInPipe )
+			{
+				return false;
+			}
 
  
             // power of two sizes ensures we can perform AND for a modulus
@@ -138,13 +128,14 @@ namespace enki
         // we update the read index using an atomic add, as we've only read one piece of data.
         // this ensure consistency of the read index, and the above loop ensures readers
         // only read from unread data
-        AtomicAdd(  (volatile int32_t*)&m_ReadCount, 1 );
+        AtomicAdd(  (volatile int32_t*)&m_ReadIndex, 1 );
  
         BASE_MEMORYBARRIER_ACQUIRE();
         // now read data, ensuring we do so after above reads & CAS
         *pOut = m_Buffer[ actualReadIndex ];
 
         m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
+
 
         return true;
     }

@@ -119,7 +119,7 @@ namespace enki
                 }
                 return false;
             }
-            if( readIndexToUse >= writeIndex )
+            if( readIndexToUse > writeIndex )
             {
                 // move back to start
                 readIndexToUse = m_ReadIndex;

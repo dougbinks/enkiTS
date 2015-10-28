@@ -165,7 +165,7 @@ namespace enki
         {
             // this case should only be reachable if a reader has read from the back, so we now have no
             // data in the pipe and should exit
-            return false;
+            return ReaderTryReadBack( pOut );
         }
  
        // now read data, ensuring we do so after above reads & CAS
@@ -190,6 +190,8 @@ namespace enki
         // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
+
+        /*
         uint32_t readIndex  = m_ReadIndex;
 
         // power of two sizes ensures we can use a simple calc without modulus
@@ -199,7 +201,8 @@ namespace enki
             assert( numInPipe == ms_cSize ); // should not have more
             return false;
         }
- 
+        */
+
         // power of two sizes ensures we can perform AND for a modulus
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;
 

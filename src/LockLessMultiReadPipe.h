@@ -119,11 +119,7 @@ namespace enki
                 }
                 return false;
             }
-            if( readIndexToUse > writeIndex )
-            {
-                // move back to start
-                readIndexToUse = m_ReadIndex;
-            }
+
 
  
             // power of two sizes ensures we can perform AND for a modulus

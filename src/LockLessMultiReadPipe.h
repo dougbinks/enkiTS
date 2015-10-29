@@ -56,15 +56,16 @@ namespace enki
         // Should only be used very prudently.
         bool IsPipeEmpty() const
         {
-            return 0 == m_WriteIndex.load( std::memory_order_relaxed ) - m_ReadIndex.load( std::memory_order_relaxed );
+            return 0 == m_WriteIndex.load( std::memory_order_relaxed ) - m_ReadCount.load( std::memory_order_relaxed );
         }
 
-		void Clear()
-		{
-			m_WriteIndex = 0;
-			m_ReadIndex = 0;
-			memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
-		}
+        void Clear()
+        {
+            m_WriteIndex = 0;
+            m_ReadIndex = 0;
+            m_ReadCount = 0;
+            memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
+        }
 
     private:
         const static uint32_t           ms_cSize        = ( 1 << cSizeLog2 );
@@ -78,6 +79,7 @@ namespace enki
         // read and write indexes allow fast access to the pipe, but actual access
         // controlled by the access flags. 
         std::atomic<uint32_t>			m_WriteIndex;
+        std::atomic<uint32_t>			m_ReadCount;
         std::atomic<uint32_t>			m_Flags[  ms_cSize ];
         std::atomic<uint32_t>			m_ReadIndex;
     };
@@ -86,6 +88,7 @@ namespace enki
         LockLessMultiReadPipe<cSizeLog2,T>::LockLessMultiReadPipe()
         : m_WriteIndex(0)
         , m_ReadIndex(0)
+        , m_ReadCount(0)
     {
         assert( cSizeLog2 < 32 );
         memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
@@ -94,49 +97,51 @@ namespace enki
     template<uint8_t cSizeLog2, typename T> inline
         bool LockLessMultiReadPipe<cSizeLog2,T>::ReaderTryReadBack(   T* pOut )
     {
- 
+
         uint32_t actualReadIndex;
-		
+
         // We get hold of read index for consistency
-		uint32_t readIndexToUse  = m_ReadIndex.load( std::memory_order_relaxed );
-		while(true)
+        uint32_t readIndexToUse  = m_ReadIndex.load( std::memory_order_relaxed );
+        while(true)
         {
 
-			uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
-			uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
-			 // power of two sizes ensures we can use a simple calc without modulus
-			uint32_t numInPipe = writeIndex - readIndex;
-			if( 0 == numInPipe )
-			{
-				return false;
-			}
+            uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
+            uint32_t readCount  = m_ReadCount.load( std::memory_order_relaxed );
+            // power of two sizes ensures we can use a simple calc without modulus
+            uint32_t numInPipe = writeIndex - readCount;
+            if( 0 == numInPipe )
+            {
+                return false;
+            }
+            if( readIndexToUse >= writeIndex )
+            {
+                readIndexToUse = m_ReadIndex.load( std::memory_order_relaxed );
+            }
 
- 
             // power of two sizes ensures we can perform AND for a modulus
             actualReadIndex    = readIndexToUse & ms_cIndexMask;
 
             // Multiple potential readers mean we should check if the data is valid,
             // using an atomic compare exchange
             uint32_t previous = FLAG_CAN_READ;
-			m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
+            m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
             if( FLAG_CAN_READ == previous )
             {
-               break;
+                break;
             }
-			++readIndexToUse;
+            ++readIndexToUse;
         }
- 
+
         // we update the read index using an atomic add, as we've only read one piece of data.
         // this ensure consistency of the read index, and the above loop ensures readers
         // only read from unread data
-		m_ReadIndex.fetch_add(1, std::memory_order_relaxed );
- 
+        m_ReadCount.fetch_add(1, std::memory_order_relaxed );
+
         std::atomic_thread_fence( std::memory_order_acquire );
         // now read data, ensuring we do so after above reads & CAS
         *pOut = m_Buffer[ actualReadIndex ];
 
         m_Flags[  actualReadIndex ].store( FLAG_CAN_WRITE, std::memory_order_relaxed );
-
 
         return true;
     }
@@ -144,42 +149,44 @@ namespace enki
     template<uint8_t cSizeLog2, typename T> inline
         bool LockLessMultiReadPipe<cSizeLog2,T>::WriterTryReadFront(  T* pOut )
     {
-         // We get hold of both values for consistency and to reduce false sharing
+        // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
-        uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
-
+        uint32_t readCount  = m_ReadCount.load( std::memory_order_relaxed );
         // power of two sizes ensures we can use a simple calc without modulus
-        uint32_t numInPipe = writeIndex - readIndex;
+        uint32_t numInPipe = writeIndex - readCount;
         if( 0 == numInPipe )
         {
+            uint32_t readIndex  = m_ReadIndex.load( std::memory_order_acquire );
+            if( readIndex != readCount )
+            {
+                m_ReadIndex.compare_exchange_strong( readIndex, readCount, std::memory_order_relaxed );
+            }
             return false;
         }
- 
+
         // power of two sizes ensures we can perform AND for a modulus
         uint32_t actualReadIndex    = (writeIndex-1) & ms_cIndexMask;
 
         // Multiple potential readers mean we should check if the data is valid,
         // using an atomic compare exchange - which acts as a form of lock (so not quite lockless really).
         uint32_t previous = FLAG_CAN_READ;
-		m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
+        m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
         if( FLAG_CAN_READ != previous )
         {
-            // this case should only be reachable if a reader has read from the back, so we now have no
-            // data in the pipe and should exit
-            return false;
+            return ReaderTryReadBack( pOut );
         }
- 
-       // now read data, ensuring we do so after above reads & CAS
-        *pOut = m_Buffer[ actualReadIndex ];
-
-		m_Flags[  actualReadIndex ] = FLAG_CAN_WRITE;
-
-        std::atomic_thread_fence( std::memory_order_release );
 
         m_WriteIndex.fetch_sub(1, std::memory_order_relaxed);
+
+        std::atomic_thread_fence( std::memory_order_acquire );
+        // now read data, ensuring we do so after above reads & CAS
+        *pOut = m_Buffer[ actualReadIndex ];
+
+        m_Flags[  actualReadIndex ].store( FLAG_CAN_WRITE, std::memory_order_relaxed );
+
         return true;
-   }
+    }
 
 
     template<uint8_t cSizeLog2, typename T> inline
@@ -190,25 +197,15 @@ namespace enki
         // We get hold of both values for consistency and to reduce false sharing
         // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
-        uint32_t readIndex  = m_ReadIndex.load( std::memory_order_relaxed );
 
-        // power of two sizes ensures we can use a simple calc without modulus
-        uint32_t numInPipe = writeIndex - readIndex;
-        if( numInPipe >= ms_cSize )
-        {
-            assert( numInPipe == ms_cSize ); // should not have more
-            return false;
-        }
- 
         // power of two sizes ensures we can perform AND for a modulus
         uint32_t actualWriteIndex    = writeIndex & ms_cIndexMask;
 
         // a reader may still be reading this item, as there are multiple readers
         if( m_Flags[ actualWriteIndex ].load(std::memory_order_relaxed)  != FLAG_CAN_WRITE ) 
-		{
-			return false; // still being read, so have caught up with tail. 
-		}
-
+        {
+            return false; // still being read, so have caught up with tail. 
+        }
 
         // as we are the only writer we can update the data without atomics
         //  whilst the write index has not been updated

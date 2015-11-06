@@ -100,14 +100,16 @@ namespace enki
 
         uint32_t actualReadIndex;
 
-        // We get hold of read index for consistency
-        uint32_t readIndexToUse  = m_ReadIndex;
+        uint32_t readCount  = m_ReadCount;
+
+        // We get hold of read index for consistency,
+        // and do first pass starting at read count
+        uint32_t readIndexToUse  = readCount;
 
 
         while(true)
         {
 
-            uint32_t readCount  = m_ReadCount;
             uint32_t writeIndex = m_WriteIndex;
             // power of two sizes ensures we can use a simple calc without modulus
             uint32_t numInPipe = writeIndex - readCount;
@@ -133,6 +135,9 @@ namespace enki
                 break;
             }
             ++readIndexToUse;
+
+            //update known readcount
+            readCount  = m_ReadCount;
         }
 
         // we update the read index using an atomic add, as we've only read one piece of data.
@@ -152,35 +157,35 @@ namespace enki
     template<uint8_t cSizeLog2, typename T> inline
         bool LockLessMultiReadPipe<cSizeLog2,T>::WriterTryReadFront(  T* pOut )
     {
-        // We get hold of both values for consistency and to reduce false sharing
-        // impacting more than one access
         uint32_t writeIndex = m_WriteIndex;
-        uint32_t readCount  = m_ReadCount;
-
-        // power of two sizes ensures we can use a simple calc without modulus
-        uint32_t numInPipe = writeIndex - readCount;
-        if( 0 == numInPipe )
-        {
-            uint32_t readIndex = m_ReadIndex;
-            if( readCount != readIndex )
-            {
-                // move forward readIndex to readCount if still at prev value
-                AtomicCompareAndSwap( &m_ReadIndex, readCount, readIndex );
-            }
-            return false;
-        }
-
-        // power of two sizes ensures we can perform AND for a modulus
-        uint32_t actualReadIndex    = (writeIndex-1) & ms_cIndexMask;
+        uint32_t frontReadIndex  = writeIndex;
 
         // Multiple potential readers mean we should check if the data is valid,
         // using an atomic compare exchange - which acts as a form of lock (so not quite lockless really).
-        uint32_t previous = AtomicCompareAndSwap( &m_Flags[  actualReadIndex ], FLAG_INVALID, FLAG_CAN_READ );
-        if( FLAG_CAN_READ != previous )
+        uint32_t previous = FLAG_INVALID;
+        uint32_t actualReadIndex = 0;
+        while( true )
         {
-            // this case should only be reachable if a reader has read from the back, so we now have no
-            // data in the pipe and should exit
-            return ReaderTryReadBack( pOut );
+            // power of two sizes ensures we can use a simple calc without modulus
+            uint32_t readCount = m_ReadCount;
+            uint32_t numInPipe = writeIndex - readCount;
+            if( 0 == numInPipe || 0 == frontReadIndex )
+            {
+                // frontReadIndex can get to 0 here if that item was just being read by another thread.
+                m_ReadIndex = readCount;
+                return false;
+            }
+            --frontReadIndex;
+            actualReadIndex = frontReadIndex & ms_cIndexMask;
+            previous = AtomicCompareAndSwap( &m_Flags[  actualReadIndex ], FLAG_INVALID, FLAG_CAN_READ );
+            if( FLAG_CAN_READ == previous )
+            {
+                break;
+            }
+            else if( m_ReadIndex >= frontReadIndex  )
+            {
+                return false;
+            }
         }
 
         // now read data, ensuring we do so after above reads & CAS
@@ -191,8 +196,8 @@ namespace enki
         BASE_MEMORYBARRIER_RELEASE();
 
         // 32-bit aligned stores are atomic, and writer owns the write index
-        --writeIndex;
-        m_WriteIndex = writeIndex;
+        // we only move one back as this is as many as we have read, not where we have read from.
+        --m_WriteIndex;
         return true;
     }
 

@@ -100,15 +100,16 @@ namespace enki
 
         uint32_t actualReadIndex;
 
+        uint32_t readCount  = m_ReadCount;
+
         // We get hold of read index for consistency,
         // and do first pass starting at read count
-        uint32_t readIndexToUse  = m_ReadCount;
+        uint32_t readIndexToUse  = readCount;
 
 
         while(true)
         {
 
-            uint32_t readCount  = m_ReadCount;
             uint32_t writeIndex = m_WriteIndex;
             // power of two sizes ensures we can use a simple calc without modulus
             uint32_t numInPipe = writeIndex - readCount;
@@ -134,6 +135,9 @@ namespace enki
                 break;
             }
             ++readIndexToUse;
+
+            //update known readcount
+            readCount  = m_ReadCount;
         }
 
         // we update the read index using an atomic add, as we've only read one piece of data.

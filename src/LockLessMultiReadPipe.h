@@ -99,14 +99,15 @@ namespace enki
     {
 
         uint32_t actualReadIndex;
+        uint32_t readCount  = m_ReadCount.load( std::memory_order_relaxed );
 
         // We get hold of read index for consistency
-        uint32_t readIndexToUse  = m_ReadIndex.load( std::memory_order_relaxed );
+        // and do first pass starting at read count
+        uint32_t readIndexToUse  = readCount;
         while(true)
         {
 
             uint32_t writeIndex = m_WriteIndex.load( std::memory_order_relaxed );
-            uint32_t readCount  = m_ReadCount.load( std::memory_order_relaxed );
             // power of two sizes ensures we can use a simple calc without modulus
             uint32_t numInPipe = writeIndex - readCount;
             if( 0 == numInPipe )
@@ -130,6 +131,9 @@ namespace enki
                 break;
             }
             ++readIndexToUse;
+
+            // Update read count
+            readCount  = m_ReadCount.load( std::memory_order_relaxed );
         }
 
         // we update the read index using an atomic add, as we've only read one piece of data.

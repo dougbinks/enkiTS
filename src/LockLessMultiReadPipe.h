@@ -100,8 +100,9 @@ namespace enki
 
         uint32_t actualReadIndex;
 
-        // We get hold of read index for consistency
-        uint32_t readIndexToUse  = m_ReadIndex;
+        // We get hold of read index for consistency,
+        // and do first pass starting at read count
+        uint32_t readIndexToUse  = m_ReadCount;
 
 
         while(true)

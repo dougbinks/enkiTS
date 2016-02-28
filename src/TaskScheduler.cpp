@@ -48,6 +48,8 @@ namespace enki
 		uint32_t		threadNum;
 		TaskScheduler*  pTaskScheduler;
 	};
+
+    class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTaskSet> {};
 }
 
 
@@ -173,6 +175,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
 bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ )
 {
+    // Run any tasks for this thread
+    RunPinnedTasks( threadNum );
+
     // check for tasks
     SubTaskSet subTask;
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &subTask );
@@ -208,7 +213,7 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     bool bHaveTasks = false;
     for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
     {
-        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() && !m_pPinnedTaskListPerThread[ thread ].IsListEmpty() )
         {
             bHaveTasks = true;
             break;
@@ -268,6 +273,37 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
 }
 
+void TaskScheduler::AddTaskSetForThread(IPinnedTaskSet * pTaskSet, uint32_t threadNum)
+{
+    m_pPinnedTaskListPerThread[ threadNum ].WriterWriteFront( pTaskSet );
+    if( m_NumThreadsActive < m_NumThreadsRunning )
+    {
+        EventSignal( m_NewTaskEvent );
+    }
+}
+
+void TaskScheduler::RunPinnedTasks()
+{
+    uint32_t threadNum = gtl_threadNum;
+    RunPinnedTasks( threadNum );
+}
+
+void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
+{
+    IPinnedTaskSet* pPinnedTaskSet = NULL;
+    do
+    {
+        pPinnedTaskSet = m_pPinnedTaskListPerThread[ threadNum ].ReaderReadBack();
+        if( pPinnedTaskSet )
+        {
+            TaskSetPartition partition;
+            partition.start = 0;
+            partition.end = pPinnedTaskSet->m_SetSize;
+            pPinnedTaskSet->ExecuteRange( partition, threadNum );
+        }
+    } while( pPinnedTaskSet );
+}
+
 void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
 {
 	uint32_t hintPipeToCheck_io = gtl_threadNum + 1;	// does not need to be clamped.
@@ -310,6 +346,9 @@ void    TaskScheduler::WaitforAllAndShutdown()
     StopThreads(true);
 	delete[] m_pPipesPerThread;
     m_pPipesPerThread = 0;
+
+    delete[] m_pPinnedTaskListPerThread;
+    m_pPinnedTaskListPerThread = 0;
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const
@@ -319,7 +358,8 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 
 TaskScheduler::TaskScheduler()
 		: m_pPipesPerThread(NULL)
-		, m_NumThreads(0)
+        , m_pPinnedTaskListPerThread(NULL)
+        , m_NumThreads(0)
 		, m_pThreadNumStore(NULL)
 		, m_pThreadIDs(NULL)
 		, m_bRunning(false)
@@ -336,7 +376,10 @@ TaskScheduler::~TaskScheduler()
     StopThreads( true ); // Stops threads, waiting for them.
 
     delete[] m_pPipesPerThread;
-    m_pPipesPerThread = 0;
+    m_pPipesPerThread = NULL;
+
+    delete[] m_pPinnedTaskListPerThread;
+    m_pPinnedTaskListPerThread = NULL;
 }
 
 void    TaskScheduler::Initialize( uint32_t numThreads_ )
@@ -344,10 +387,12 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 	assert( numThreads_ );
     StopThreads( true ); // Stops threads, waiting for them.
     delete[] m_pPipesPerThread;
+    delete[] m_pPinnedTaskListPerThread;
 
 	m_NumThreads = numThreads_;
 
-    m_pPipesPerThread = new TaskPipe[ m_NumThreads ];
+    m_pPipesPerThread          = new TaskPipe[ m_NumThreads ];
+    m_pPinnedTaskListPerThread = new PinnedTaskList[ m_NumThreads ];
 
     StartThreads();
 }

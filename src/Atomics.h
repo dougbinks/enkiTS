@@ -64,7 +64,28 @@ namespace enki
         #else
             return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
         #endif      
-    }	
+    }
+
+    inline void* AtomicCompareAndSwapPtr( void* volatile* pDest, void* swapTo, void* compareWith )
+    {
+#ifdef _WIN32
+        // assumes two's complement - unsigned / signed conversion leads to same bit pattern
+        return _InterlockedCompareExchangePointer( pDest, swapTo, compareWith );
+#else
+        return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
+#endif      
+    }
+
+    // exchange ptr and return previous value
+    inline void* AtomicExchangePtr( void* volatile* pDest, void* swapTo )
+    {
+#ifdef _WIN32
+        // assumes two's complement - unsigned / signed conversion leads to same bit pattern
+        return _InterlockedExchangePointer( pDest, swapTo );
+#else
+        return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
+#endif      
+    }
 
     // Atomically performs: tmp = *pDest; *pDest += value; return tmp;
     inline int32_t AtomicAdd( volatile int32_t* pDest, int32_t value )

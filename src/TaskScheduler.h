@@ -32,10 +32,11 @@ namespace enki
 
 	class  TaskScheduler;
 	class  TaskPipe;
+    class  PinnedTaskList;
 	struct ThreadArgs;
 
 	// Subclass ITaskSet to create tasks.
-	// TaskSets can be re-used, but check
+	// TaskSets can be re-used, but check completion first.
 	class ITaskSet
 	{
 	public:
@@ -68,6 +69,22 @@ namespace enki
 		friend class           TaskScheduler;
 		volatile int32_t        m_RunningCount;
 	};
+
+    // Subclass IPinnedTaskSet to create tasks which cab be run on a given thread only.
+    class IPinnedTaskSet : public ITaskSet
+    {
+    public:
+        IPinnedTaskSet() {}
+
+        IPinnedTaskSet( uint32_t setSize_ )
+            : ITaskSet( setSize_ )
+        {}
+
+        // IPinnedTaskSet needs to be non abstract for intrusive list functionality.
+        // Should never be called.
+        virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) { assert(false); }
+        IPinnedTaskSet* volatile pNext;
+    };
 
 	// TaskScheduler implements several callbacks intended for profilers
 	typedef void (*ProfilerCallbackFunc)( uint32_t threadnum_ );
@@ -104,6 +121,13 @@ namespace enki
 		// should only be called from main thread, or within a task
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
+        // Thread 0 is main thread, otherwise use threadNum
+        void            AddTaskSetForThread( IPinnedTaskSet* pTaskSet, uint32_t threadNum );
+
+        // This function will run any ITaskSetAffinity* for current thread, but not run other
+        // Main thread should call this or use a wait to ensure it's tasks are run.
+        void            RunPinnedTasks();
+
 		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
 		// should only be called from thread which created the taskscheduler , or within a task
 		// if called with 0 it will try to run tasks, and return if none available.
@@ -128,11 +152,13 @@ namespace enki
 	private:
 		static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
         void             WaitForTasks( uint32_t threadNum );
-		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
+        void             RunPinnedTasks( uint32_t threadNum );
+        bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             StopThreads( bool bWait_ );
 
-		TaskPipe*                                                m_pPipesPerThread;
+        TaskPipe*                                                m_pPipesPerThread;
+        PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
 		uint32_t                                                 m_NumThreads;
 		ThreadArgs*                                              m_pThreadNumStore;

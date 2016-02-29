@@ -275,6 +275,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
 void TaskScheduler::AddTaskSetForThread(IPinnedTaskSet * pTaskSet, uint32_t threadNum)
 {
+    pTaskSet->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ threadNum ].WriterWriteFront( pTaskSet );
     if( m_NumThreadsActive < m_NumThreadsRunning )
     {
@@ -300,6 +301,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
             partition.start = 0;
             partition.end = pPinnedTaskSet->m_SetSize;
             pPinnedTaskSet->ExecuteRange( partition, threadNum );
+            pPinnedTaskSet->m_RunningCount = 0;
         }
     } while( pPinnedTaskSet );
 }

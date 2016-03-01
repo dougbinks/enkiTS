@@ -213,11 +213,15 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     bool bHaveTasks = false;
     for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
     {
-        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() && !m_pPinnedTaskListPerThread[ thread ].IsListEmpty() )
+        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
         {
             bHaveTasks = true;
             break;
         }
+    }
+    if( !bHaveTasks && !m_pPinnedTaskListPerThread[ threadNum ].IsListEmpty() )
+    {
+        bHaveTasks = true;
     }
     if( !bHaveTasks )
     {

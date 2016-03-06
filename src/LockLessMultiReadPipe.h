@@ -166,7 +166,7 @@ namespace enki
             uint32_t numInPipe = writeIndex - readCount;
             if( 0 == numInPipe )
             {
-                m_ReadIndex.store( readCount, std::memory_order_acquire );
+                m_ReadIndex.store( readCount, std::memory_order_release );
                 return false;
             }
             --frontReadIndex;

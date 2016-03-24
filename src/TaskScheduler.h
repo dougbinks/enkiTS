@@ -74,15 +74,19 @@ namespace enki
     class IPinnedTaskSet : public ITaskSet
     {
     public:
-        IPinnedTaskSet() {}
+        IPinnedTaskSet()                      : threadNum(0) {}  // default is to run a task on main thread
+        IPinnedTaskSet( uint32_t threadNum_ ) : threadNum(threadNum_) {}  // default is to run a task on main thread
 
-        IPinnedTaskSet( uint32_t setSize_ )
-            : ITaskSet( setSize_ )
+        IPinnedTaskSet( uint32_t threadNum_, uint32_t setSize_ )
+            : threadNum(threadNum_), ITaskSet( setSize_ )
         {}
 
         // IPinnedTaskSet needs to be non abstract for intrusive list functionality.
         // Should never be called.
         virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) { assert(false); }
+
+
+        uint32_t                 threadNum; // thread to run this pinned task on
         IPinnedTaskSet* volatile pNext;
     };
 
@@ -122,7 +126,7 @@ namespace enki
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
         // Thread 0 is main thread, otherwise use threadNum
-        void            AddTaskSetForThread( IPinnedTaskSet* pTaskSet, uint32_t threadNum );
+        void            AddTaskSetPinned( IPinnedTaskSet* pTaskSet );
 
         // This function will run any ITaskSetAffinity* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.

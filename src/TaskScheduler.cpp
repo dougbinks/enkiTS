@@ -277,10 +277,10 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
 }
 
-void TaskScheduler::AddTaskSetForThread(IPinnedTaskSet * pTaskSet, uint32_t threadNum)
+void TaskScheduler::AddTaskSetPinned(IPinnedTaskSet * pTaskSet)
 {
     pTaskSet->m_RunningCount = 1;
-    m_pPinnedTaskListPerThread[ threadNum ].WriterWriteFront( pTaskSet );
+    m_pPinnedTaskListPerThread[ pTaskSet->threadNum ].WriterWriteFront( pTaskSet );
     if( m_NumThreadsActive < m_NumThreadsRunning )
     {
         EventSignal( m_NewTaskEvent );

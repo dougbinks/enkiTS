@@ -72,7 +72,7 @@ namespace enki
        #ifdef _WIN32
             return _InterlockedExchangeAdd( (long*)pDest, value );
         #else
-            return __sync_add_and_fetch( pDest, value );
+            return __sync_fetch_and_add( pDest, value );
         #endif      
     }
 

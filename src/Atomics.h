@@ -83,7 +83,7 @@ namespace enki
         // assumes two's complement - unsigned / signed conversion leads to same bit pattern
         return _InterlockedExchangePointer( pDest, swapTo );
 #else
-        return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
+        return __sync_lock_test_and_set( pDest, swapTo );
 #endif      
     }
 

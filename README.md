@@ -60,7 +60,7 @@ int main(int argc, const char * argv[]) {
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
    enkiWaitForTaskSet( g_pTS, pTask );
    
-    enkiDeleteTaskSet( pTask );
+   enkiDeleteTaskSet( pTask );
    
    return 0;
 }

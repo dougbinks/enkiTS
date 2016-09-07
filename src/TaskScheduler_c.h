@@ -48,6 +48,9 @@ void				enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );
 // Create a task set.
 enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
 
+// Delete a task set.
+void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
+
 // schedule the task
 void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ );
 

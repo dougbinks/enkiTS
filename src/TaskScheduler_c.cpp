@@ -64,6 +64,11 @@ enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange 
 	return new enkiTaskSet( taskFunc_ );
 }
 
+void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
+{
+	delete pTaskSet_;
+}
+
 void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
 {
 	assert( pTaskSet_ );

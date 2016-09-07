@@ -52,13 +52,16 @@ int main(int argc, const char * argv[]) {
    enkiTaskSet* pTask;
    g_pTS = enkiNewTaskScheduler();
 	
-   // create a task, can re-use this to get allocation occuring on startup
+   // create a task, can re-use this to get allocation occurring on startup
    pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
 
    enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
 
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
    enkiWaitForTaskSet( g_pTS, pTask );
+   
+    enkiDeleteTaskSet( pTask );
+   
    return 0;
 }
 ```

@@ -106,5 +106,8 @@ int main(int argc, const char * argv[])
 
 	printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
 
+	enkiDeleteTaskSet( pPSumTask );
+	enkiDeleteTaskSet( pPSumReductionTask );
+
 	enkiDeleteTaskScheduler( pETS );
 }

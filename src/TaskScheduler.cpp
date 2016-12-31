@@ -175,7 +175,11 @@ void TaskScheduler::StopThreads( bool bWait_ )
            m_NewTaskEvent.notify_all();
         }
 
-
+		for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
+		{
+			m_pThreads[thread]->detach();
+			delete m_pThreads[thread];
+		}
 
 		m_NumThreads = 0;
         delete[] m_pThreadNumStore;

@@ -227,6 +227,12 @@ void TaskScheduler::Cleanup( bool bWait_ )
 		{
 			// keep firing event to ensure all threads pick up state of m_bRunning
            m_NewTaskEvent.notify_all();
+        }
+
+		for( uint32_t thread = 1; thread < m_NumEnkiThreads; ++thread )
+		{
+			m_pThreads[thread]->detach();
+			delete m_pThreads[thread];
 		}
 
 		m_NumThreads = 0;

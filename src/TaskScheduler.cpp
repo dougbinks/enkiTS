@@ -26,8 +26,9 @@
 using namespace enki;
 
 
-static const uint32_t PIPESIZE_LOG2 = 8;
-static const uint32_t SPIN_COUNT = 100;
+static const uint32_t PIPESIZE_LOG2              = 8;
+static const uint32_t SPIN_COUNT                 = 100;
+static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static THREAD_LOCAL uint32_t                             gtl_threadNum       = 0;
@@ -132,10 +133,16 @@ void TaskScheduler::StartThreads()
 	if( 1 == m_NumThreads )
 	{
 		m_NumPartitions = 1;
+		m_NumInitialPartitions = 1;
 	}
 	else
 	{
 		m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
+		m_NumInitialPartitions = m_NumThreads - 1;
+		if( m_NumInitialPartitions > MAX_NUM_INITIAL_PARTITIONS )
+		{
+			m_NumInitialPartitions = MAX_NUM_INITIAL_PARTITIONS;
+		}
 	}
 
     m_bHaveThreads = true;
@@ -194,9 +201,18 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 		// update hint, will preserve value unless actually got task from another thread.
 		hintPipeToCheck_io_ = threadToCheck;
 
-        // the task has already been divided up by AddTaskSetToPipe, so just run it
-        subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-        AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
+		uint32_t partitionSize = subTask.partition.end - subTask.partition.start;
+		if( subTask.pTask->m_RangeToRun < partitionSize )
+		{
+			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, -1 );
+		}
+		else
+		{
+
+			// the task has already been divided up by AddTaskSetToPipe, so just run it
+			subTask.pTask->ExecuteRange( subTask.partition, threadNum );
+			AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
+		}
     }
 
     return bHaveTask;
@@ -224,47 +240,63 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     }
 }
 
-void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
+void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
+	uint32_t rangeToSplit_, int32_t runningCountOffset_ )
 {
-    SubTaskSet subTask;
-    subTask.pTask = pTaskSet;
-    subTask.partition.start = 0;
-    subTask.partition.end = pTaskSet->m_SetSize;
-
-    // set running count to -1 to guarantee it won't be found complete until all subtasks added
-    pTaskSet->m_RunningCount = -1;
-
-    // divide task up and add to pipe
-    uint32_t rangeToRun = subTask.pTask->m_SetSize / m_NumPartitions;
-    if( rangeToRun == 0 ) { rangeToRun = 1; }
-    uint32_t rangeLeft = subTask.partition.end - subTask.partition.start ;
+    uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
+	uint32_t rangeEnd  = subTask_.partition.end;
     int32_t numAdded = 0;
     while( rangeLeft )
     {
-        if( rangeToRun > rangeLeft )
+        if( rangeToSplit_ > rangeLeft )
         {
-            rangeToRun = rangeLeft;
+            rangeToSplit_ = rangeLeft;
         }
-        subTask.partition.start = pTaskSet->m_SetSize - rangeLeft;
-        subTask.partition.end = subTask.partition.start + rangeToRun;
-        rangeLeft -= rangeToRun;
+        subTask_.partition.start = rangeEnd - rangeLeft;
+        subTask_.partition.end = subTask_.partition.start + rangeToSplit_;
 
         // add the partition to the pipe
         ++numAdded;
-        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask ) )
+        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask_ ) )
         {
-            subTask.pTask->ExecuteRange( subTask.partition, gtl_threadNum );
+			// alter range to run the appropriate fraction
+			if( subTask_.pTask->m_RangeToRun < rangeToSplit_ )
+			{
+				subTask_.partition.end = subTask_.partition.start + subTask_.pTask->m_RangeToRun;
+			}
+            subTask_.pTask->ExecuteRange( subTask_.partition, threadNum_ );
             --numAdded;
         }
+
+		rangeLeft = rangeEnd - subTask_.partition.end;
     }
 
-    // increment running count by number added plus one to account for start value
-    AtomicAdd( &pTaskSet->m_RunningCount, numAdded + 1 );
+    // increment running count by number added
+    AtomicAdd( &subTask_.pTask->m_RunningCount, numAdded + runningCountOffset_ );
 
 	if( m_NumThreadsActive < m_NumThreadsRunning )
 	{
 		EventSignal( m_NewTaskEvent );
 	}
+}
+
+void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
+{
+	// set running count to -1 to guarantee it won't be found complete until all subtasks added
+    pTaskSet->m_RunningCount = -1;
+
+    // divide task up and add to pipe
+    pTaskSet->m_RangeToRun = pTaskSet->m_SetSize / m_NumPartitions;
+    if( pTaskSet->m_RangeToRun == 0 ) { pTaskSet->m_RangeToRun = 1; }
+
+	uint32_t rangeToSplit = pTaskSet->m_SetSize / m_NumInitialPartitions;
+	if( rangeToSplit == 0 ) { rangeToSplit = 1; }
+
+    SubTaskSet subTask;
+    subTask.pTask = pTaskSet;
+    subTask.partition.start = 0;
+    subTask.partition.end = pTaskSet->m_SetSize;
+	SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit, 1 );
 
 }
 

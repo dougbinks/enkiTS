@@ -33,6 +33,7 @@ namespace enki
 	class  TaskScheduler;
 	class  TaskPipe;
 	struct ThreadArgs;
+	struct SubTaskSet;
 
 	// Subclass ITaskSet to create tasks.
 	// TaskSets can be re-used, but check
@@ -42,11 +43,13 @@ namespace enki
         ITaskSet()
             : m_SetSize(1)
             , m_RunningCount(0)
+			, m_RangeToRun(1)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
             , m_RunningCount(0)
+			, m_RangeToRun(1)
         {}
 
 		// Execute range should be overloaded to process tasks. It will be called with a
@@ -67,6 +70,7 @@ namespace enki
 	private:
 		friend class           TaskScheduler;
 		volatile int32_t        m_RunningCount;
+		uint32_t                m_RangeToRun;
 	};
 
 	// TaskScheduler implements several callbacks intended for profilers
@@ -131,6 +135,8 @@ namespace enki
 		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             StopThreads( bool bWait_ );
+		void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
+										  uint32_t rangeToSplit_, int32_t runningCountOffset_ );
 
 		TaskPipe*                                                m_pPipesPerThread;
 
@@ -141,6 +147,7 @@ namespace enki
 		volatile int32_t                                         m_NumThreadsRunning;
 		volatile int32_t                                         m_NumThreadsActive;
 		uint32_t                                                 m_NumPartitions;
+		uint32_t                                                 m_NumInitialPartitions;
 		eventid_t                                                m_NewTaskEvent;
 		bool                                                     m_bHaveThreads;
 		ProfilerCallbacks										 m_ProfilerCallbacks;

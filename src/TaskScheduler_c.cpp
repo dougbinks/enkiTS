@@ -81,6 +81,17 @@ void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, 
 	pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
+void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler * pETS_, enkiTaskSet * pTaskSet_, void * pArgs_, uint32_t setSize_, uint32_t minRange_)
+{
+	assert( pTaskSet_ );
+	assert( pTaskSet_->taskFun );
+
+	pTaskSet_->m_SetSize = setSize_;
+	pTaskSet_->m_MinRange = minRange_;
+	pTaskSet_->pArgs = pArgs_;
+	pETS_->AddTaskSetToPipe( pTaskSet_ );
+}
+
 int				enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
 	assert( pTaskSet_ );

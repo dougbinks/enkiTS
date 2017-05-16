@@ -296,17 +296,16 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
     // divide task up and add to pipe
     pTaskSet->m_RangeToRun = pTaskSet->m_SetSize / m_NumPartitions;
-    if( pTaskSet->m_RangeToRun == 0 ) { pTaskSet->m_RangeToRun = 1; }
+    if( pTaskSet->m_RangeToRun < pTaskSet->m_MinRange ) { pTaskSet->m_RangeToRun = pTaskSet->m_MinRange; }
 
 	uint32_t rangeToSplit = pTaskSet->m_SetSize / m_NumInitialPartitions;
-	if( rangeToSplit == 0 ) { rangeToSplit = 1; }
+	if( rangeToSplit < pTaskSet->m_MinRange ) { rangeToSplit = pTaskSet->m_MinRange; }
 
     SubTaskSet subTask;
     subTask.pTask = pTaskSet;
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet->m_SetSize;
 	SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit, 1 );
-
 }
 
 void TaskScheduler::AddTaskSetPinned(IPinnedTaskSet * pTaskSet)

@@ -43,14 +43,23 @@ namespace enki
 	public:
         ITaskSet()
             : m_SetSize(1)
+			, m_MinRange(1)
             , m_RunningCount(0)
 			, m_RangeToRun(1)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
+			, m_MinRange(1)
             , m_RunningCount(0)
 			, m_RangeToRun(1)
+        {}
+
+		ITaskSet( uint32_t setSize_, uint32_t minRange_ )
+            : m_SetSize( setSize_ )
+			, m_MinRange( minRange_ )
+            , m_RunningCount(0)
+			, m_RangeToRun(minRange_)
         {}
 
 		// Execute range should be overloaded to process tasks. It will be called with a
@@ -63,6 +72,14 @@ namespace enki
 
 		// Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
 		uint32_t                m_SetSize;
+
+		// Minimum size of of TaskSetPartition range when splitting a task set into partitions.
+		// This should be set to a value which results in computation effort of at least 10k
+		// clock cycles to minimize tast scheduler overhead.
+		// NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
+		// of m_MinRange.
+		// Also known as grain size in literature.
+		uint32_t                m_MinRange;
 
 		bool                    GetIsComplete()
 		{

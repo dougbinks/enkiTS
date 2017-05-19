@@ -53,6 +53,24 @@ namespace enki
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTaskSet> {};
 }
 
+namespace
+{
+	SubTaskSet       SplitTask( SubTaskSet& subTask_, uint32_t rangeToSplit_ )
+	{
+		SubTaskSet splitTask = subTask_;
+		uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
+
+        if( rangeToSplit_ > rangeLeft )
+        {
+            rangeToSplit_ = rangeLeft;
+        }
+        splitTask.partition.end = subTask_.partition.start + rangeToSplit_;
+		subTask_.partition.start = splitTask.partition.end;
+		return splitTask;
+	}
+
+}
+
 
 static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
 {
@@ -209,7 +227,10 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 		uint32_t partitionSize = subTask.partition.end - subTask.partition.start;
 		if( subTask.pTask->m_RangeToRun < partitionSize )
 		{
-			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, -1 );
+			SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
+			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, 0 );
+			subTask.pTask->ExecuteRange( taskToRun.partition, threadNum );
+			AtomicAdd( &taskToRun.pTask->m_RunningCount, -1 );
 		}
 		else
 		{
@@ -252,32 +273,24 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
 	uint32_t rangeToSplit_, int32_t runningCountOffset_ )
 {
-    uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
-	uint32_t rangeEnd  = subTask_.partition.end;
     int32_t numAdded = 0;
-    while( rangeLeft )
+    while( subTask_.partition.start != subTask_.partition.end )
     {
-        if( rangeToSplit_ > rangeLeft )
-        {
-            rangeToSplit_ = rangeLeft;
-        }
-        subTask_.partition.start = rangeEnd - rangeLeft;
-        subTask_.partition.end = subTask_.partition.start + rangeToSplit_;
+        SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
 
         // add the partition to the pipe
         ++numAdded;
-        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( subTask_ ) )
+        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( taskToAdd ) )
         {
 			// alter range to run the appropriate fraction
-			if( subTask_.pTask->m_RangeToRun < rangeToSplit_ )
+			if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
 			{
-				subTask_.partition.end = subTask_.partition.start + subTask_.pTask->m_RangeToRun;
+				taskToAdd.partition.end = taskToAdd.partition.start + taskToAdd.pTask->m_RangeToRun;
+				subTask_.partition.start = taskToAdd.partition.end;
 			}
-            subTask_.pTask->ExecuteRange( subTask_.partition, threadNum_ );
+            taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
             --numAdded;
         }
-
-		rangeLeft = rangeEnd - subTask_.partition.end;
     }
 
     // increment running count by number added

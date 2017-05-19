@@ -54,8 +54,19 @@ enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange 
 // Delete a task set.
 void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
 
-// schedule the task
-void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ );
+// Schedule the task
+void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+										   void* pArgs_, uint32_t setSize_ );
+
+// Schedule the task with a minimum range.
+// This should be set to a value which results in computation effort of at least 10k
+// clock cycles to minimize tast scheduler overhead.
+// NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
+// of m_MinRange.
+// Also known as grain size in literature.
+void				enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+												  void* pArgs_, uint32_t setSize_, uint32_t minRange_ );
+
 
 // Check if TaskSet is complete. Doesn't wait. Returns 1 if complete, 0 if not.
 int					enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );

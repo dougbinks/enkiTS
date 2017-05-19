@@ -224,7 +224,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 		{
 			SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
 			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, 0 );
-			subTask.pTask->ExecuteRange( taskToRun.partition, threadNum );
+			taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
 			AtomicAdd( &taskToRun.pTask->m_RunningCount, -1 );
 		}
 		else

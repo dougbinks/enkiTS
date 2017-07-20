@@ -67,7 +67,7 @@ namespace enki
     inline eventid_t EventCreate()
     {
         eventid_t ret;
-        ret.event = ::CreateEvent( NULL, TRUE, FALSE, NULL );
+        ret.event = CreateSemaphore(NULL, 0, MAXLONG, NULL );
         ret.countWaiters = 0;
         return ret;
     }
@@ -82,18 +82,14 @@ namespace enki
         AtomicAdd( &eventid.countWaiters, 1 );
         DWORD retval = WaitForSingleObject( eventid.event, milliseconds );
         int32_t prev = AtomicAdd( &eventid.countWaiters, -1 );
-        if( 1 == prev )
-        {
-            // we were the last to awaken, so reset event.
-           ResetEvent( eventid.event );
-        }
+
         assert( retval != WAIT_FAILED );
         assert( prev != 0 );
     }
 
     inline void EventSignal( eventid_t eventid )
     {
-        SetEvent( eventid.event );
+        ReleaseSemaphore( eventid.event, eventid.countWaiters, NULL );
     }
 }
 

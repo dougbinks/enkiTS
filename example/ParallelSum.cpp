@@ -142,6 +142,12 @@ int main(int argc, const char * argv[])
 				avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
 			}
 
+			if( sum != parallelReductionSumTaskSet.m_FinalSum )
+			{
+				printf( "ERROR: sums do not match\n" );
+				return -1;
+			}
+
 			printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sum );
 			printf("Speed Up Serial / Parallel: %f\n\n", tSerial.GetTimeMS()  / tParallel.GetTimeMS() );
 

@@ -116,21 +116,21 @@ int main(int argc, const char * argv[])
 			Timer tParallel;
 			tParallel.Start();
 
-			ParallelReductionSumTaskSet m_ParallelReductionSumTaskSet( 10 * 1024 * 1024 );
+			ParallelReductionSumTaskSet parallelReductionSumTaskSet( 10 * 1024 * 1024 );
 
-			g_TS.AddTaskSetToPipe( &m_ParallelReductionSumTaskSet );
+			g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
 
-			g_TS.WaitforTaskSet( &m_ParallelReductionSumTaskSet );
+			g_TS.WaitforTaskSet( &parallelReductionSumTaskSet );
 
 			tParallel.Stop();
 
 
-			printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), m_ParallelReductionSumTaskSet.m_FinalSum );
+			printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), parallelReductionSumTaskSet.m_FinalSum );
 
 			Timer tSerial;
 			tSerial.Start();
 			uint64_t sum = 0;
-			for( uint64_t i = 0; i < (uint64_t)m_ParallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
+			for( uint64_t i = 0; i < (uint64_t)parallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
 			{
 				sum += i + 1;
 			}
@@ -140,6 +140,12 @@ int main(int argc, const char * argv[])
 			if( run >= WARMUPS )
 			{
 				avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
+			}
+
+			if( sum != parallelReductionSumTaskSet.m_FinalSum )
+			{
+				printf( "ERROR: sums do not match\n" );
+				return -1;
 			}
 
 			printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sum );

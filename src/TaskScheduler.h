@@ -174,6 +174,7 @@ namespace enki
 		void            StopThreads( bool bWait_ );
 		void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
 										  uint32_t rangeToSplit_, int32_t runningCountOffset_ );
+		void             WakeThreads();
 
 		TaskPipe*                                                m_pPipesPerThread;
 

@@ -248,6 +248,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, 0 );
 			taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
 			taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_relaxed );
+
 		}
 		else
 		{
@@ -262,6 +263,14 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 }
 
 
+void TaskScheduler::WakeThreads()
+{
+    if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
+	{
+		m_NewTaskEvent.notify_all();
+	}
+}
+
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
 	uint32_t rangeToSplit_, int32_t runningCountOffset_ )
 {
@@ -274,6 +283,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
         ++numAdded;
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( taskToAdd ) )
         {
+			if( numAdded > 1 )
+			{
+				WakeThreads();
+			}
 			// alter range to run the appropriate fraction
 			if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
 			{
@@ -288,11 +301,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
 	// increment completion count by number added plus runningCountOffset_ to account for start value
     subTask_.pTask->m_RunningCount.fetch_add( numAdded + runningCountOffset_, std::memory_order_relaxed );
 
-
-    if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
-	{
-		m_NewTaskEvent.notify_all();
-	}
+	WakeThreads();
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )

@@ -270,6 +270,14 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     }
 }
 
+void TaskScheduler::WakeThreads()
+{
+	if( m_NumThreadsActive < m_NumThreadsRunning )
+	{
+		EventSignal( m_NewTaskEvent );
+	}
+}
+
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
 	uint32_t rangeToSplit_, int32_t runningCountOffset_ )
 {
@@ -282,6 +290,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
         ++numAdded;
         if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( taskToAdd ) )
         {
+			if( numAdded > 1 )
+			{
+				WakeThreads();
+			}
 			// alter range to run the appropriate fraction
 			if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
 			{
@@ -296,10 +308,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
     // increment running count by number added
     AtomicAdd( &subTask_.pTask->m_RunningCount, numAdded + runningCountOffset_ );
 
-	if( m_NumThreadsActive < m_NumThreadsRunning )
-	{
-		EventSignal( m_NewTaskEvent );
-	}
+	WakeThreads();
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )

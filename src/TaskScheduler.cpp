@@ -334,10 +334,7 @@ void TaskScheduler::AddTaskSetPinned(IPinnedTaskSet * pTaskSet)
 {
     pTaskSet->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTaskSet->threadNum ].WriterWriteFront( pTaskSet );
-    if( m_NumThreadsActive < m_NumThreadsRunning )
-    {
-        EventSignal( m_NewTaskEvent );
-    }
+    WakeThreads();
 }
 
 void TaskScheduler::RunPinnedTasks()

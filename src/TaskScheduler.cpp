@@ -91,7 +91,6 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 	uint32_t threadNum				= args.threadNum;
 	TaskScheduler*  pTS				= args.pTaskScheduler;
     gtl_threadNum      = threadNum;
-	AtomicAdd( &pTS->m_NumThreadsActive, 1 );
 
 	SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
     
@@ -137,7 +136,7 @@ void TaskScheduler::StartThreads()
 	m_pThreadNumStore[0].threadNum      = 0;
 	m_pThreadNumStore[0].pTaskScheduler = this;
 	m_pThreadIDs[0] = 0;
-    m_NumThreadsActive = 1; // acount for main thread
+    m_NumThreadsWaiting = 0;
     m_NumThreadsRunning = 1;// acount for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
@@ -193,7 +192,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         EventClose( m_NewTaskEvent );
 
         m_bHaveThreads = false;
-		m_NumThreadsActive = 0;
+		m_NumThreadsWaiting = 0;
 		m_NumThreadsRunning = 0;
     }
 }
@@ -263,16 +262,16 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-        AtomicAdd( &m_NumThreadsActive, -1 );
+        AtomicAdd( &m_NumThreadsWaiting, +1 );
         EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
-        AtomicAdd( &m_NumThreadsActive, +1 );
+        AtomicAdd( &m_NumThreadsWaiting, -1 );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
 }
 
 void TaskScheduler::WakeThreads()
 {
-	if( m_NumThreadsActive < m_NumThreadsRunning )
+	if( m_NumThreadsWaiting )
 	{
 		EventSignal( m_NewTaskEvent );
 	}
@@ -381,7 +380,8 @@ void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
  	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
-    while( bHaveTasks || m_NumThreadsActive > 1 )
+	uint32_t threadsRunning = m_NumThreadsRunning - 1;
+    while( bHaveTasks || m_NumThreadsWaiting < threadsRunning )
     {
         TryRunTask( gtl_threadNum, hintPipeToCheck_io );
         bHaveTasks = false;
@@ -420,7 +420,7 @@ TaskScheduler::TaskScheduler()
 		, m_pThreadIDs(NULL)
 		, m_bRunning(false)
 		, m_NumThreadsRunning(0)
-		, m_NumThreadsActive(0)
+		, m_NumThreadsWaiting(0)
 		, m_NumPartitions(0)
 		, m_bHaveThreads(false)
 {

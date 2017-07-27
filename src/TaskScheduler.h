@@ -183,7 +183,7 @@ namespace enki
 		std::thread**											 m_pThreads;
 		std::atomic<int32_t>                                     m_bRunning;
 		std::atomic<int32_t>                                     m_NumThreadsRunning;
-		std::atomic<int32_t>                                     m_NumThreadsActive;
+		std::atomic<int32_t>                                     m_NumThreadsWaiting;
 		uint32_t                                                 m_NumPartitions;
 		std::condition_variable                                  m_NewTaskEvent;
 		std::mutex												 m_NewTaskEventMutex;

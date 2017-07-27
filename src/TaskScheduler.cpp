@@ -98,7 +98,6 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 	uint32_t threadNum				= args_.threadNum;
 	TaskScheduler*  pTS				= args_.pTaskScheduler;
     gtl_threadNum      = threadNum;
-	pTS->m_NumThreadsActive.fetch_add(1, std::memory_order_relaxed );
     
     SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
 
@@ -129,10 +128,10 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 				else
 				{
                     SafeCallback( pTS->m_ProfilerCallbacks.waitStart, threadNum );
-                    pTS->m_NumThreadsActive.fetch_sub( 1, std::memory_order_relaxed );
+					pTS->m_NumThreadsWaiting.fetch_add( 1, std::memory_order_relaxed );
 					std::unique_lock<std::mutex> lk( pTS->m_NewTaskEventMutex );
 					pTS->m_NewTaskEvent.wait( lk );
-					pTS->m_NumThreadsActive.fetch_add( 1, std::memory_order_relaxed );
+                    pTS->m_NumThreadsWaiting.fetch_sub( 1, std::memory_order_relaxed );
                     SafeCallback( pTS->m_ProfilerCallbacks.waitStop, threadNum );
                     spinCount = 0;
 				}
@@ -159,6 +158,7 @@ void TaskScheduler::StartThreads()
     m_pThreads		  = new std::thread*[m_NumThreads];
 	m_pThreadNumStore[0].threadNum      = 0;
 	m_pThreadNumStore[0].pTaskScheduler = this;
+	m_NumThreadsRunning = 1; // account for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
 		m_pThreadNumStore[thread].threadNum      = thread;
@@ -194,7 +194,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
     {
         // wait for them threads quit before deleting data
         m_bRunning = 0;
-        while( bWait_ && m_NumThreadsRunning )
+        while( bWait_ && m_NumThreadsRunning > 1)
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
            m_NewTaskEvent.notify_all();
@@ -213,7 +213,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         m_pThreads = 0;
 
         m_bHaveThreads = false;
-		m_NumThreadsActive = 0;
+		m_NumThreadsWaiting = 0;
 		m_NumThreadsRunning = 0;
     }
 }
@@ -265,7 +265,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
 void TaskScheduler::WakeThreads()
 {
-    if( m_NumThreadsActive.load( std::memory_order_relaxed ) < m_NumThreadsRunning.load( std::memory_order_relaxed ) )
+    if( m_NumThreadsWaiting.load( std::memory_order_relaxed ) )
 	{
 		m_NewTaskEvent.notify_all();
 	}
@@ -344,7 +344,8 @@ void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
  	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
-    while( bHaveTasks || m_NumThreadsActive.load( std::memory_order_relaxed ) )
+	int32_t numThreadsRunning = m_NumThreadsRunning.load( std::memory_order_relaxed ) - 1; // account for this thread
+    while( bHaveTasks || m_NumThreadsWaiting.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         TryRunTask( gtl_threadNum, hintPipeToCheck_io );
         bHaveTasks = false;
@@ -379,7 +380,7 @@ TaskScheduler::TaskScheduler()
 		, m_pThreads(NULL)
 		, m_bRunning(0)
 		, m_NumThreadsRunning(0)
-		, m_NumThreadsActive(0)
+		, m_NumThreadsWaiting(0)
 		, m_NumPartitions(0)
 		, m_bHaveThreads(false)
 {

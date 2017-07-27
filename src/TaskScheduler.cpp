@@ -341,7 +341,7 @@ void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
  	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
-	uint32_t threadsRunning = m_NumThreadsRunning - 1;
+	int32_t threadsRunning = m_NumThreadsRunning - 1;
     while( bHaveTasks || m_NumThreadsWaiting < threadsRunning )
     {
         TryRunTask( gtl_threadNum, hintPipeToCheck_io );

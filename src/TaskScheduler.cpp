@@ -27,6 +27,7 @@ using namespace enki;
 
 static const uint32_t PIPESIZE_LOG2              = 8;
 static const uint32_t SPIN_COUNT                 = 100;
+static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 10;
 static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
 
 // thread_local not well supported yet by C++11 compilers.
@@ -163,6 +164,15 @@ namespace
 		return splitTask;
 	}
 
+	inline void Pause()
+	{
+	#if defined _WIN32 && defined _M_X86
+		_mm_pause();
+	#elif defined __i386__
+		asm("pause");
+	#else
+	#endif
+	}
 }
 
 static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
@@ -196,6 +206,15 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 			if( spinCount > SPIN_COUNT )
 			{
 				pTS->WaitForTasks<false>( threadNum );
+			}
+			else
+			{
+				uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+				while( spinBackoffCount )
+				{
+					Pause();
+					--spinBackoffCount;
+				}
 			}
 		}
 		else

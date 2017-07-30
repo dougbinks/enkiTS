@@ -51,7 +51,7 @@ namespace enki
 		TaskScheduler*  pTaskScheduler;
 	};
 
-    class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTaskSet> {};
+    class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 }
 
 namespace
@@ -348,10 +348,10 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 	SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit, 1 );
 }
 
-void TaskScheduler::AddTaskSetPinned(IPinnedTaskSet * pTaskSet)
+void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
-    pTaskSet->m_RunningCount = 1;
-    m_pPinnedTaskListPerThread[ pTaskSet->threadNum ].WriterWriteFront( pTaskSet );
+    pTask_->m_RunningCount = 1;
+    m_pPinnedTaskListPerThread[ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeThreads();
 }
 
@@ -363,27 +363,24 @@ void TaskScheduler::RunPinnedTasks()
 
 void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
 {
-    IPinnedTaskSet* pPinnedTaskSet = NULL;
+    IPinnedTask* pPinnedTaskSet = NULL;
     do
     {
         pPinnedTaskSet = m_pPinnedTaskListPerThread[ threadNum ].ReaderReadBack();
         if( pPinnedTaskSet )
         {
-            TaskSetPartition partition;
-            partition.start = 0;
-            partition.end = pPinnedTaskSet->m_SetSize;
-            pPinnedTaskSet->ExecuteRange( partition, threadNum );
+            pPinnedTaskSet->Execute();
             pPinnedTaskSet->m_RunningCount = 0;
         }
     } while( pPinnedTaskSet );
 }
 
-void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
+void    TaskScheduler::WaitforTaskSet( const ICompletable* pCompletable_ )
 {
 	uint32_t hintPipeToCheck_io = gtl_threadNum + 1;	// does not need to be clamped.
-	if( pTaskSet )
+	if( pCompletable_ )
 	{
-		while( pTaskSet->m_RunningCount )
+		while( pCompletable_->m_RunningCount )
 		{
 			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
 			// should add a spin then wait for task completion event.

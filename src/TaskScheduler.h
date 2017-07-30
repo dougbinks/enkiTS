@@ -36,29 +36,38 @@ namespace enki
 	struct ThreadArgs;
 	struct SubTaskSet;
 
+	// ICompletable is a base class used to check for completion.
+	// Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
+	class ICompletable
+	{
+    public:
+		ICompletable() :        m_RunningCount(0) {}
+		bool                    GetIsComplete() { return 0 == m_RunningCount; }
+	private:
+		friend class            TaskScheduler;
+		volatile int32_t        m_RunningCount;
+	};
+
 	// Subclass ITaskSet to create tasks.
 	// TaskSets can be re-used, but check completion first.
-	class ITaskSet
+	class ITaskSet : public ICompletable
 	{
 	public:
         ITaskSet()
             : m_SetSize(1)
 			, m_MinRange(1)
-            , m_RunningCount(0)
 			, m_RangeToRun(1)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
 			, m_MinRange(1)
-            , m_RunningCount(0)
 			, m_RangeToRun(1)
         {}
 
 		ITaskSet( uint32_t setSize_, uint32_t minRange_ )
             : m_SetSize( setSize_ )
 			, m_MinRange( minRange_ )
-            , m_RunningCount(0)
 			, m_RangeToRun(minRange_)
         {}
 
@@ -81,34 +90,26 @@ namespace enki
 		// Also known as grain size in literature.
 		uint32_t                m_MinRange;
 
-		bool                    GetIsComplete()
-		{
-			return 0 == m_RunningCount;
-		}
 	private:
-		friend class           TaskScheduler;
-		volatile int32_t        m_RunningCount;
+		friend class            TaskScheduler;
 		uint32_t                m_RangeToRun;
 	};
 
-    // Subclass IPinnedTaskSet to create tasks which cab be run on a given thread only.
-    class IPinnedTaskSet : public ITaskSet
+    // Subclass IPinnedTask to create tasks which cab be run on a given thread only.
+    class IPinnedTask : public ICompletable
     {
     public:
-        IPinnedTaskSet()                      : threadNum(0) {}  // default is to run a task on main thread
-        IPinnedTaskSet( uint32_t threadNum_ ) : threadNum(threadNum_) {}  // default is to run a task on main thread
+        IPinnedTask()                      : threadNum(0), pNext(NULL) {}  // default is to run a task on main thread
+        IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_), pNext(NULL) {}  // default is to run a task on main thread
 
-        IPinnedTaskSet( uint32_t threadNum_, uint32_t setSize_ )
-            : threadNum(threadNum_), ITaskSet( setSize_ )
-        {}
 
-        // IPinnedTaskSet needs to be non abstract for intrusive list functionality.
-        // Should never be called.
-        virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) { assert(false); }
+        // IPinnedTask needs to be non abstract for intrusive list functionality.
+        // Should never be called as should be overridden.
+        virtual void            Execute() { assert(false); }
 
 
         uint32_t                 threadNum; // thread to run this pinned task on
-        IPinnedTaskSet* volatile pNext;
+        IPinnedTask* volatile pNext;		// Do not use. For intrusive list only.
     };
 
 	// TaskScheduler implements several callbacks intended for profilers
@@ -147,7 +148,7 @@ namespace enki
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
         // Thread 0 is main thread, otherwise use threadNum
-        void            AddTaskSetPinned( IPinnedTaskSet* pTaskSet );
+        void            AddPinnedTask( IPinnedTask* pTask_ );
 
         // This function will run any ITaskSetAffinity* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.
@@ -156,7 +157,7 @@ namespace enki
 		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
 		// should only be called from thread which created the taskscheduler , or within a task
 		// if called with 0 it will try to run tasks, and return if none available.
-		void            WaitforTaskSet( const ITaskSet* pTaskSet );
+		void            WaitforTaskSet( const ICompletable* pCompletable_ );
 
 		// Waits for all task sets to complete - not guaranteed to work unless we know we
 		// are in a situation where tasks aren't being continuosly added.

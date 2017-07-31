@@ -40,6 +40,20 @@ struct enkiTaskSet : ITaskSet
 	void* pArgs;
 };
 
+struct enkiPinnedTask : IPinnedTask
+{
+	enkiPinnedTask( enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
+		: IPinnedTask( threadNum_ ), taskFun(taskFun_), pArgs(NULL) {}
+
+	virtual void Execute()
+	{
+		taskFun( pArgs );
+	}
+
+	enkiPinnedTaskExecute taskFun;
+	void* pArgs;
+};
+
 enkiTaskScheduler*	enkiNewTaskScheduler()
 {
 	enkiTaskScheduler* pETS = new enkiTaskScheduler();
@@ -96,6 +110,29 @@ int				enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
 	assert( pTaskSet_ );
 	return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
+}
+
+enkiPinnedTask * enkiCreatePinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
+{
+	return new enkiPinnedTask( taskFunc_, threadNum_ );
+}
+
+void enkiDeletePinnedTask(enkiPinnedTask * pTaskSet_)
+{
+	delete pTaskSet_;
+}
+
+void enkiAddPinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, void * pArgs_)
+{
+	assert( pTask_ );
+	pTask_->pArgs = pArgs_;
+	pETS_->AddPinnedTask( pTask_ );
+}
+
+int enkiIsPinnedTaskComplete(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_)
+{
+	assert( pTask_ );
+	return ( pTask_->GetIsComplete() ) ? 1 : 0;
 }
 
 void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )

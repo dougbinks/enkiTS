@@ -26,8 +26,10 @@ extern "C" {
 
 typedef struct enkiTaskScheduler enkiTaskScheduler;
 typedef struct enkiTaskSet		 enkiTaskSet;
+typedef struct enkiPinnedTask    enkiPinnedTask;
 
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
+typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 
 
 // Create a new task scheduler
@@ -71,6 +73,18 @@ void				enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTa
 // Check if TaskSet is complete. Doesn't wait. Returns 1 if complete, 0 if not.
 int					enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
+// Create a pinned task.
+enkiPinnedTask*		enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
+
+// Delete a pinned task.
+void                enkiDeletePinnedTask( enkiPinnedTask* pTaskSet_ );
+
+// Schedule a pinned task
+void				enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
+										   void* pArgs_ );
+
+// Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.
+int					enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Wait for a given task.
 // should only be called from thread which created the taskscheduler , or within a task

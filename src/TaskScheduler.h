@@ -150,7 +150,7 @@ namespace enki
         // Thread 0 is main thread, otherwise use threadNum
         void            AddPinnedTask( IPinnedTask* pTask_ );
 
-        // This function will run any ITaskSetAffinity* for current thread, but not run other
+        // This function will run any IPinnedTask* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.
         void            RunPinnedTasks();
 

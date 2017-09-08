@@ -197,7 +197,7 @@ namespace enki
 		volatile int32_t                                         m_NumThreadsWaiting;
 		uint32_t                                                 m_NumPartitions;
 		uint32_t                                                 m_NumInitialPartitions;
-		eventid_t                                                m_NewTaskEvent;
+		semaphoreid_t                                            m_NewTaskSemaphore;
 		bool                                                     m_bHaveThreads;
 		ProfilerCallbacks										 m_ProfilerCallbacks;
 

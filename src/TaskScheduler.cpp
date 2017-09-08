@@ -113,6 +113,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             if( spinCount > SPIN_COUNT )
             {
 				pTS->WaitForTasks( threadNum );
+				spinCount = 0;
             }
 			else
 			{
@@ -145,7 +146,7 @@ void TaskScheduler::StartThreads()
     }
     m_bRunning = true;
 
-    m_NewTaskEvent = EventCreate();
+    SemaphoreCreate( m_NewTaskSemaphore );
 
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadNumStore = new ThreadArgs[m_NumThreads];
@@ -193,7 +194,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         while( bWait_ && m_NumThreadsRunning > 1 )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
-            EventSignal( m_NewTaskEvent );
+            SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsRunning );
         }
 
         for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
@@ -206,7 +207,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         delete[] m_pThreadIDs;
         m_pThreadNumStore = 0;
         m_pThreadIDs = 0;
-        EventClose( m_NewTaskEvent );
+        SemaphoreClose( m_NewTaskSemaphore );
 
         m_bHaveThreads = false;
 		m_NumThreadsWaiting = 0;
@@ -260,6 +261,13 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
 void TaskScheduler::WaitForTasks( uint32_t threadNum )
 {
+	// We incrememt the number of threads waiting here in order
+	// to ensure that the check for tasks occurs after the increment
+	// to prevent a task being added after a check, then the thread waiting.
+	// This will occasionally result in threads being mistakenly awoken,
+	// but they will then go back to sleep.
+	AtomicAdd( &m_NumThreadsWaiting, 1 );
+
     bool bHaveTasks = false;
     for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
     {
@@ -272,19 +280,17 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-        AtomicAdd( &m_NumThreadsWaiting, +1 );
-        EventWait( m_NewTaskEvent, EVENTWAIT_INFINITE );
-        AtomicAdd( &m_NumThreadsWaiting, -1 );
+        SemaphoreWait( m_NewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
+
+    int32_t prev = AtomicAdd( &m_NumThreadsWaiting, -1 );
+    assert( prev != 0 );
 }
 
 void TaskScheduler::WakeThreads()
 {
-	if( m_NumThreadsWaiting )
-	{
-		EventSignal( m_NewTaskEvent );
-	}
+	SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
 }
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,

@@ -342,14 +342,14 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 			SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
 			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, 0 );
 			taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
-			taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_relaxed );
+			taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
 
 		}
 		else
 		{
 			// the task has already been divided up by AddTaskSetToPipe, so just run it
 			subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-			subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_relaxed );
+			subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
 		}
     }
 
@@ -419,7 +419,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
     }
 
 	// increment completion count by number added plus runningCountOffset_ to account for start value
-    subTask_.pTask->m_RunningCount.fetch_add( numAdded + runningCountOffset_, std::memory_order_relaxed );
+    subTask_.pTask->m_RunningCount.fetch_add( numAdded + runningCountOffset_, std::memory_order_release );
 
 	WakeThreads();
 }

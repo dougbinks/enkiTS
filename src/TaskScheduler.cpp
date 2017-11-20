@@ -152,15 +152,16 @@ namespace
 		return splitTask;
 	}
 
-	inline void Pause()
-	{
-	#if defined _WIN32 && defined _M_X86
-		_mm_pause();
-	#elif defined __i386__
-		asm("pause");
+	#if defined _WIN32
+		#if defined _M_IX86  || defined _M_X64
+			#pragma intrinsic(_mm_pause)
+			inline void Pause() { _mm_pause(); }
+		#endif
+	#elif defined __i386__ || defined __x86_64__
+		inline void Pause() { __asm__ __volatile__("pause;"); }
 	#else
+		inline void Pause() { ;} // may have NOP or yield equiv
 	#endif
-	}
 }
 
 

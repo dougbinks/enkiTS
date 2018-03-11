@@ -51,6 +51,7 @@ void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, voi
 int main(int argc, const char * argv[]) {
    enkiTaskSet* pTask;
    g_pTS = enkiNewTaskScheduler();
+   enkiInitTaskScheduler( g_pTS );
 	
    // create a task, can re-use this to get allocation occurring on startup
    pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
@@ -61,6 +62,8 @@ int main(int argc, const char * argv[]) {
    enkiWaitForTaskSet( g_pTS, pTask );
    
    enkiDeleteTaskSet( pTask );
+   
+   enkiDeleteTaskScheduler( g_pTS );
    
    return 0;
 }

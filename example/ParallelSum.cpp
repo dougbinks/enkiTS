@@ -54,10 +54,10 @@ struct ParallelSumTaskSet : ITaskSet
 		delete[] m_pPartialSums;
 	}
 
-	void Init()
+	void Init( uint32_t numPartialSums_ )
 	{
 		delete[] m_pPartialSums;
-		m_NumPartialSums = g_TS.GetNumTaskThreads();
+        m_NumPartialSums =numPartialSums_ ;
 		m_pPartialSums = new Count[ m_NumPartialSums ];
 		memset( m_pPartialSums, 0, sizeof(Count)*m_NumPartialSums );
 	}
@@ -80,9 +80,10 @@ struct ParallelReductionSumTaskSet : ITaskSet
 	ParallelSumTaskSet m_ParallelSumTaskSet;
 	uint64_t m_FinalSum;
 
-	ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0) {
-			m_ParallelSumTaskSet.Init();
-		}
+	ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0)
+    {
+			m_ParallelSumTaskSet.Init( g_TS.GetNumTaskThreads() );
+	}
 
 	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
 	{
@@ -97,7 +98,7 @@ struct ParallelReductionSumTaskSet : ITaskSet
 };
 
 static const int WARMUPS	= 10;
-static const int RUNS		= 10;
+static const int RUNS		= 20;
 static const int REPEATS	= RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
@@ -105,10 +106,37 @@ int main(int argc, const char * argv[])
 	uint32_t maxThreads = GetNumHardwareThreads();
 	double* avSpeedUps = new double[ maxThreads ];
 
+    // start by measuring serial
+    double avSerial = 0.0f;
+    uint32_t setSize = 20 * 1024 * 1024;
+    uint64_t sumSerial;
+	for( int run = 0; run< REPEATS; ++run )
+	{
+ 		Timer tSerial;
+		tSerial.Start();
+
+        ParallelSumTaskSet serialTask( setSize );
+        serialTask.Init( 1 );
+        TaskSetPartition range = { 0, setSize };
+
+		serialTask.ExecuteRange( range, 0 );
+        sumSerial = serialTask.m_pPartialSums[0].count;
+
+		tSerial.Stop();
+
+		if( run >= WARMUPS )
+		{
+			avSerial += tSerial.GetTimeMS() / RUNS;
+		}
+		printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sumSerial );
+    }
+
+    // now measure parallel
 	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
 	{
 		g_TS.Initialize(numThreads);
 		double avSpeedUp = 0.0;
+
 		for( int run = 0; run< REPEATS; ++run )
 		{
 
@@ -116,7 +144,7 @@ int main(int argc, const char * argv[])
 			Timer tParallel;
 			tParallel.Start();
 
-			ParallelReductionSumTaskSet parallelReductionSumTaskSet( 10 * 1024 * 1024 );
+			ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
 
 			g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
 
@@ -127,29 +155,18 @@ int main(int argc, const char * argv[])
 
 			printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), parallelReductionSumTaskSet.m_FinalSum );
 
-			Timer tSerial;
-			tSerial.Start();
-			uint64_t sum = 0;
-			for( uint64_t i = 0; i < (uint64_t)parallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
-			{
-				sum += i + 1;
-			}
-
-			tSerial.Stop();
-
 			if( run >= WARMUPS )
 			{
-				avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
+				avSpeedUp += avSerial  / tParallel.GetTimeMS() / RUNS;
 			}
 
-			if( sum != parallelReductionSumTaskSet.m_FinalSum )
+			if( sumSerial != parallelReductionSumTaskSet.m_FinalSum )
 			{
 				printf( "ERROR: sums do not match\n" );
 				return -1;
 			}
 
-			printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sum );
-			printf("Speed Up Serial / Parallel: %f\n\n", tSerial.GetTimeMS()  / tParallel.GetTimeMS() );
+			printf("Speed Up Serial / Parallel: %f\n\n", avSerial  / tParallel.GetTimeMS() );
 
 		}
 		avSpeedUps[numThreads-1] = avSpeedUp;

@@ -21,7 +21,9 @@
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
 
-
+#if defined __i386__ || defined __x86_64__
+#include "x86intrin.h"
+#endif
 
 using namespace enki;
 
@@ -70,16 +72,31 @@ namespace
 		return splitTask;
 	}
 
-	#if defined _WIN32
-		#if defined _M_IX86  || defined _M_X64
-			#pragma intrinsic(_mm_pause)
-			inline void Pause() { _mm_pause(); }
-		#endif
-	#elif defined __i386__ || defined __x86_64__
-		inline void Pause() { __asm__ __volatile__("pause;"); }
-	#else
-		inline void Pause() { ;} // may have NOP or yield equiv
+	#if defined _WIN32 && ( defined _M_IX86  || defined _M_X64 )
+		#pragma intrinsic(_mm_pause)
 	#endif
+
+    #if ( defined _WIN32 && ( defined _M_IX86  || defined _M_X64 ) ) || ( defined __i386__ || defined __x86_64__ )
+    static void SpinWait( uint32_t spinCount_ )
+    {
+        uint64_t end = __rdtsc() + spinCount_;
+        while( __rdtsc() < end )
+        {
+            _mm_pause();
+        }        
+    }
+    #else
+    static void SpinWait( uint32_t spinCount_ )
+    {
+        while( spinCount_ )
+        {
+            // TODO: may have NOP or yield equiv
+            --spinCount_;
+        }        
+    }
+    #endif
+
+
 }
 
 
@@ -120,12 +137,9 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             }
 			else
 			{
+                // Note: see https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
 				uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
-				while( spinBackoffCount )
-				{
-					Pause();
-					--spinBackoffCount;
-				}
+                SpinWait( spinBackoffCount );
 			}
         }
         else

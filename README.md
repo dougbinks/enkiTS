@@ -77,14 +77,14 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct ParallelTaskSet : enki::ITaskSet {
-   virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum ) {
+   virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
       // do something here, can issue tasks with g_TS
    }
 };
 
 int main(int argc, const char * argv[]) {
    g_TS.Initialize();
-   enki::ParallelTask task; // default constructor has a set size of 1
+   ParallelTaskSet task; // default constructor has a set size of 1
    g_TS.AddTaskSetToPipe( &task );
 
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.

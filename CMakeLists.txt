@@ -47,6 +47,9 @@ if(ENKITS_BUILD_EXAMPLES)
 	endif()
 	add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
 	target_link_libraries(ParallelSum enkiTS )
+
+	add_executable( PinnedTask example/PinnedTask.cpp )
+	target_link_libraries(PinnedTask enkiTS )
 	
 	add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
 	target_link_libraries(TaskThroughput enkiTS )
@@ -54,5 +57,8 @@ if(ENKITS_BUILD_EXAMPLES)
 if( ENKITS_BUILD_C_INTERFACE )
 	add_executable( ParallelSum_c example/ParallelSum_c.c )
 	target_link_libraries(ParallelSum_c enkiTS )
+	
+	add_executable( PinnedTask_c example/PinnedTask_c.c )
+	target_link_libraries(PinnedTask_c enkiTS )
 endif()	
 endif()

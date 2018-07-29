@@ -83,6 +83,10 @@ void                enkiDeletePinnedTask( enkiPinnedTask* pTaskSet_ );
 void				enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
 										   void* pArgs_ );
 
+// This function will run any enkiPinnedTask* for current thread, but not run other
+// Main thread should call this or use a wait to ensure it's tasks are run.
+void                enkiRunPinnedTasks( enkiTaskScheduler * pETS_ );
+
 // Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.
 int					enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
@@ -91,6 +95,10 @@ int					enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTas
 // if called with 0 it will try to run tasks, and return if none available.
 void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
+// Wait for a given pinned task.
+// should only be called from thread which created the taskscheduler , or within a task
+// if called with 0 it will try to run tasks, and return if none available.
+void				enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Waits for all task sets to complete - not guaranteed to work unless we know we
 // are in a situation where tasks aren't being continuosly added.

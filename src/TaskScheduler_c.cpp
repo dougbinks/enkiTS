@@ -112,7 +112,7 @@ int				enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 	return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
 }
 
-enkiPinnedTask * enkiCreatePinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
+enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
 	return new enkiPinnedTask( taskFunc_, threadNum_ );
 }
@@ -129,24 +129,33 @@ void enkiAddPinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, void 
 	pETS_->AddPinnedTask( pTask_ );
 }
 
+void enkiRunPinnedTasks(enkiTaskScheduler * pETS_)
+{
+    pETS_->RunPinnedTasks();
+}
+
 int enkiIsPinnedTaskComplete(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_)
 {
 	assert( pTask_ );
 	return ( pTask_->GetIsComplete() ) ? 1 : 0;
 }
 
-void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+void enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
 	pETS_->WaitforTaskSet( pTaskSet_ );
 }
 
-void				enkiWaitForAll( enkiTaskScheduler* pETS_ )
+void enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ )
+{
+	pETS_->WaitforTaskSet( pTask_ );
+}
+
+void enkiWaitForAll( enkiTaskScheduler* pETS_ )
 {
 	pETS_->WaitforAll();
 }
 
-
-uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
+uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 {
 	return pETS_->GetNumTaskThreads();
 }

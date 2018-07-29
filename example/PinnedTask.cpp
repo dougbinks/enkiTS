@@ -49,14 +49,14 @@ struct ParallelTaskSet : ITaskSet
     }
 };
 
-static const int REPEATS		= 5;
+static const int REPEATS        = 5;
 
 int main(int argc, const char * argv[])
 {
     g_TS.Initialize();
 
-	for( int run = 0; run< REPEATS; ++run )
-	{
+    for( int run = 0; run< REPEATS; ++run )
+    {
 
         ParallelTaskSet task;
         g_TS.AddTaskSetToPipe( &task );
@@ -68,5 +68,5 @@ int main(int argc, const char * argv[])
         g_TS.WaitforTaskSet( &task);
     }
 
-	return 0;
+    return 0;
 }

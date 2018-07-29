@@ -25,7 +25,7 @@ extern "C" {
 #include <stdint.h>
 
 typedef struct enkiTaskScheduler enkiTaskScheduler;
-typedef struct enkiTaskSet		 enkiTaskSet;
+typedef struct enkiTaskSet         enkiTaskSet;
 typedef struct enkiPinnedTask    enkiPinnedTask;
 
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
@@ -33,32 +33,32 @@ typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 
 
 // Create a new task scheduler
-enkiTaskScheduler*	enkiNewTaskScheduler();
+enkiTaskScheduler*    enkiNewTaskScheduler();
 
 // Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
 // Initialize can be called multiple times - it will wait for completion
 // before re-initializing.
-void	            enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ );
+void                enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ );
 
 // Initialize a task scheduler with numThreads_ (must be > 0)
 // will create numThreads_-1 threads, as thread 0 is
 // the thread on which the initialize was called.
-void	            enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ );
+void                enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ );
 
 
 // Delete a task scheduler
-void				enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );
+void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );
 
 // Create a task set.
-enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
+enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
 
 // Delete a task set.
 void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
 
 // Schedule the task
-void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
-										   void* pArgs_, uint32_t setSize_ );
+void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+                                           void* pArgs_, uint32_t setSize_ );
 
 // Schedule the task with a minimum range.
 // This should be set to a value which results in computation effort of at least 10k
@@ -66,47 +66,47 @@ void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
 // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
 // of m_MinRange.
 // Also known as grain size in literature.
-void				enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
-												  void* pArgs_, uint32_t setSize_, uint32_t minRange_ );
+void                enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+                                                  void* pArgs_, uint32_t setSize_, uint32_t minRange_ );
 
 
 // Check if TaskSet is complete. Doesn't wait. Returns 1 if complete, 0 if not.
-int					enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+int                    enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
 // Create a pinned task.
-enkiPinnedTask*		enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
+enkiPinnedTask*        enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
 // Delete a pinned task.
 void                enkiDeletePinnedTask( enkiPinnedTask* pTaskSet_ );
 
 // Schedule a pinned task
-void				enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
-										   void* pArgs_ );
+void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
+                                           void* pArgs_ );
 
 // This function will run any enkiPinnedTask* for current thread, but not run other
 // Main thread should call this or use a wait to ensure it's tasks are run.
 void                enkiRunPinnedTasks( enkiTaskScheduler * pETS_ );
 
 // Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.
-int					enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
+int                    enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Wait for a given task.
 // should only be called from thread which created the taskscheduler , or within a task
 // if called with 0 it will try to run tasks, and return if none available.
-void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
 // Wait for a given pinned task.
 // should only be called from thread which created the taskscheduler , or within a task
 // if called with 0 it will try to run tasks, and return if none available.
-void				enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
+void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Waits for all task sets to complete - not guaranteed to work unless we know we
 // are in a situation where tasks aren't being continuosly added.
-void				enkiWaitForAll( enkiTaskScheduler* pETS_ );
+void                enkiWaitForAll( enkiTaskScheduler* pETS_ );
 
 
 // get number of threads
-uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
+uint32_t            enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
 
 // TaskScheduler implements several callbacks intended for profilers
 typedef void (*enkiProfilerCallbackFunc)( uint32_t threadnum_ );
@@ -119,7 +119,7 @@ struct enkiProfilerCallbacks
 };
 
 // Get the callback structure so it can be set 
-struct enkiProfilerCallbacks*	enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ );
+struct enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ );
 
 #ifdef __cplusplus
 }

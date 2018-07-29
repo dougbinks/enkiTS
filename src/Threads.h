@@ -23,13 +23,13 @@
 
 #ifdef _WIN32
 
-	#include "Atomics.h"
+    #include "Atomics.h"
 
-	#define WIN32_LEAN_AND_MEAN
-	#include <Windows.h>
-	
-	#define THREADFUNC_DECL DWORD WINAPI
-	#define THREAD_LOCAL __declspec( thread )
+    #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
+    
+    #define THREADFUNC_DECL DWORD WINAPI
+    #define THREAD_LOCAL __declspec( thread )
 
 namespace enki
 {
@@ -61,10 +61,10 @@ namespace enki
 
 #else // posix
 
-	#include <pthread.h>
-	#include <unistd.h>
-	#define THREADFUNC_DECL void*
-	#define THREAD_LOCAL __thread
+    #include <pthread.h>
+    #include <unistd.h>
+    #define THREADFUNC_DECL void*
+    #define THREAD_LOCAL __thread
 
 namespace enki
 {
@@ -104,8 +104,8 @@ namespace enki
     {
         HANDLE      sem;
     };
-	
-	inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         semaphoreid.sem = CreateSemaphore(NULL, 0, MAXLONG, NULL );
     }
@@ -124,10 +124,10 @@ namespace enki
 
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
-		if( countWaiting )
-		{
-			ReleaseSemaphore( semaphoreid.sem, countWaiting, NULL );
-		}
+        if( countWaiting )
+        {
+            ReleaseSemaphore( semaphoreid.sem, countWaiting, NULL );
+        }
     }
 }
 #elif defined(__MACH__)
@@ -143,10 +143,10 @@ namespace enki
     {
         semaphore_t   sem;
     };
-	
-	inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
-		semaphore_create( mach_task_self(), &semaphoreid.sem, SYNC_POLICY_FIFO, 0 );
+        semaphore_create( mach_task_self(), &semaphoreid.sem, SYNC_POLICY_FIFO, 0 );
     }
     
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
@@ -162,9 +162,9 @@ namespace enki
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
-		{
-			semaphore_signal( semaphoreid.sem );
-		}
+        {
+            semaphore_signal( semaphoreid.sem );
+        }
     }
 }
 
@@ -179,11 +179,11 @@ namespace enki
     {
         sem_t   sem;
     };
-	
-	inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
-		int err = sem_init( &semaphoreid.sem, 0, 0 );
-		assert( err == 0 );
+        int err = sem_init( &semaphoreid.sem, 0, 0 );
+        assert( err == 0 );
     }
     
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
@@ -194,15 +194,15 @@ namespace enki
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         int err = sem_wait( &semaphoreid.sem );
-		assert( err == 0 );
+        assert( err == 0 );
     }
     
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
-		{
-			sem_post( &semaphoreid.sem );
-		}
+        {
+            sem_post( &semaphoreid.sem );
+        }
     }
 }
 #endif

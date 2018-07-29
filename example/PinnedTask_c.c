@@ -21,8 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-enkiTaskScheduler*	pETS;
-enkiTaskSet*		pParallelTask;
+enkiTaskScheduler*    pETS;
+enkiTaskSet*        pParallelTask;
 enkiPinnedTask*     pPinnedTask;
 
 static const int REPEATS = 5;
@@ -41,11 +41,11 @@ void ParallelTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, vo
 
 int main(int argc, const char * argv[])
 {
-	pETS = enkiNewTaskScheduler();
+    pETS = enkiNewTaskScheduler();
     enkiInitTaskScheduler( pETS );
 
-	pParallelTask = enkiCreateTaskSet( pETS, ParallelTaskSetFunc );
-	pPinnedTask = enkiCreatePinnedTask( pETS, PinnedTaskFunc, 0 ); // pinned task is created for thread 0
+    pParallelTask = enkiCreateTaskSet( pETS, ParallelTaskSetFunc );
+    pPinnedTask = enkiCreatePinnedTask( pETS, PinnedTaskFunc, 0 ); // pinned task is created for thread 0
 
 
     for( int run = 0; run< REPEATS; ++run )
@@ -57,8 +57,8 @@ int main(int argc, const char * argv[])
         enkiWaitForTaskSet( pETS, pParallelTask );
     }
 
-	enkiDeleteTaskSet( pParallelTask );
+    enkiDeleteTaskSet( pParallelTask );
     enkiDeletePinnedTask( pPinnedTask );
 
-	enkiDeleteTaskScheduler( pETS );
+    enkiDeleteTaskScheduler( pETS );
 }

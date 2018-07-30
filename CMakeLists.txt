@@ -40,21 +40,21 @@ if(APPLE)
 endif()
 
 if(ENKITS_BUILD_EXAMPLES)
-	if(WIN32)
-    		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
-	endif()
+    if(WIN32)
+            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
+    endif()
 
-	add_executable( UserThreads example/UserThreads.cpp example/Timer.h )
-	target_link_libraries(UserThreads enkiTS )
+    add_executable( UserThreads example/UserThreads.cpp example/Timer.h )
+    target_link_libraries(UserThreads enkiTS )
 
-	add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
-	target_link_libraries(ParallelSum enkiTS )
-		
-	add_executable( LambdaTask example/LambdaTask.cpp example/Timer.h )
-	target_link_libraries(LambdaTask enkiTS )
-	
-	add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
-	target_link_libraries(TaskThroughput enkiTS )
+    add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
+    target_link_libraries(ParallelSum enkiTS )
+        
+    add_executable( LambdaTask example/LambdaTask.cpp example/Timer.h )
+    target_link_libraries(LambdaTask enkiTS )
+    
+    add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
+    target_link_libraries(TaskThroughput enkiTS )
 
     add_executable( PinnedTask example/PinnedTask.cpp )
     target_link_libraries(PinnedTask enkiTS )

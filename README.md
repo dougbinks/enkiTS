@@ -51,6 +51,7 @@ void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, voi
 int main(int argc, const char * argv[]) {
    enkiTaskSet* pTask;
    g_pTS = enkiNewTaskScheduler();
+   enkiInitTaskScheduler( g_pTS );
 	
    // create a task, can re-use this to get allocation occurring on startup
    pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
@@ -61,6 +62,8 @@ int main(int argc, const char * argv[]) {
    enkiWaitForTaskSet( g_pTS, pTask );
    
    enkiDeleteTaskSet( pTask );
+   
+   enkiDeleteTaskScheduler( g_pTS );
    
    return 0;
 }
@@ -74,14 +77,14 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct ParallelTaskSet : enki::ITaskSet {
-   virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum ) {
+   virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
       // do something here, can issue tasks with g_TS
    }
 };
 
 int main(int argc, const char * argv[]) {
    g_TS.Initialize();
-   enki::ParallelTask task; // default constructor has a set size of 1
+   ParallelTaskSet task; // default constructor has a set size of 1
    g_TS.AddTaskSetToPipe( &task );
 
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
@@ -109,6 +112,32 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
+Pinned Tasks usage in C++ (see example/PinnedTask_c.c for C example).
+```C
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+
+// define a task set, can ignore range if we only do one thing
+struct PinnedTask : enki::IPinnedTask {
+    virtual void    Execute() {
+      // do something here, can issue tasks with g_TS
+   }
+};
+
+int main(int argc, const char * argv[]) {
+   g_TS.Initialize();
+   PinnedTask task; //default constructor sets thread for pinned task to 0 (main thread)
+   g_TS.AddPinnedTask( &task );
+   
+   // RunPinnedTasks must be called on main thread to run any pinned tasks for that thread.
+   // Tasking threads automatically do this in their task loop.
+   g_TS.RunPinnedTasks();
+   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   g_TS.WaitforTaskSet( &task );
+   return 0;
+}
+```
 ## To Do
 
 * Documentation.
@@ -135,7 +164,3 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
-
-
-
-

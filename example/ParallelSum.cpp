@@ -24,7 +24,7 @@
 #include <assert.h>
 
 #ifndef _WIN32
-	#include <string.h>
+    #include <string.h>
 #endif
 
 using namespace enki;
@@ -37,128 +37,146 @@ TaskScheduler g_TS;
 
 struct ParallelSumTaskSet : ITaskSet
 {
-	struct Count
-	{
-		// prevent false sharing.
-		uint64_t	count;
-		char		cacheline[64];
-	};
-	Count*    m_pPartialSums;
-	uint32_t  m_NumPartialSums;
+    struct Count
+    {
+        // prevent false sharing.
+        uint64_t    count;
+        char        cacheline[64];
+    };
+    Count*    m_pPartialSums;
+    uint32_t  m_NumPartialSums;
 
-	ParallelSumTaskSet( uint32_t size_ ) : m_pPartialSums(NULL), m_NumPartialSums(0) { m_SetSize = size_; }
-	virtual ~ParallelSumTaskSet()
-	{
-		delete[] m_pPartialSums;
-	}
+    ParallelSumTaskSet( uint32_t size_ ) : m_pPartialSums(NULL), m_NumPartialSums(0) { m_SetSize = size_; }
+    virtual ~ParallelSumTaskSet()
+    {
+        delete[] m_pPartialSums;
+    }
 
-	void Init()
-	{
-		delete[] m_pPartialSums;
-		m_NumPartialSums = g_TS.GetNumTaskThreads();
-		m_pPartialSums = new Count[ m_NumPartialSums ];
-		memset( m_pPartialSums, 0, sizeof(Count)*m_NumPartialSums );
-	}
+    void Init( uint32_t numPartialSums_ )
+    {
+        delete[] m_pPartialSums;
+        m_NumPartialSums =numPartialSums_ ;
+        m_pPartialSums = new Count[ m_NumPartialSums ];
+        memset( m_pPartialSums, 0, sizeof(Count)*m_NumPartialSums );
+    }
 
-	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
-	{
-		assert( m_pPartialSums && m_NumPartialSums );
-		uint64_t sum = m_pPartialSums[threadnum].count;
-		for( uint64_t i = range.start; i < range.end; ++i )
-		{
-			sum += i + 1;
-		}
-		m_pPartialSums[threadnum].count = sum;
-	}
+    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    {
+        assert( m_pPartialSums && m_NumPartialSums );
+        uint64_t sum = m_pPartialSums[threadnum].count;
+        for( uint64_t i = range.start; i < range.end; ++i )
+        {
+            sum += i + 1;
+        }
+        m_pPartialSums[threadnum].count = sum;
+    }
   
 };
 
 struct ParallelReductionSumTaskSet : ITaskSet
 {
-	ParallelSumTaskSet m_ParallelSumTaskSet;
-	uint64_t m_FinalSum;
+    ParallelSumTaskSet m_ParallelSumTaskSet;
+    uint64_t m_FinalSum;
 
-	ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0) {
-			m_ParallelSumTaskSet.Init();
-		}
+    ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0)
+    {
+            m_ParallelSumTaskSet.Init( g_TS.GetNumTaskThreads() );
+    }
 
-	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
-	{
-		g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
-		g_TS.WaitforTaskSet( &m_ParallelSumTaskSet );
+    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    {
+        g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
+        g_TS.WaitforTaskSet( &m_ParallelSumTaskSet );
 
-		for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
-		{
-			m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i].count;
-		}
-	}
+        for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
+        {
+            m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i].count;
+        }
+    }
 };
 
-static const int WARMUPS	= 10;
-static const int RUNS		= 10;
-static const int REPEATS	= RUNS + WARMUPS;
+static const int WARMUPS    = 10;
+static const int RUNS        = 20;
+static const int REPEATS    = RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
 	uint32_t maxThreads = std::thread::hardware_concurrency();
 	double* avSpeedUps = new double[ maxThreads ];
 
-	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
-	{
-		g_TS.Initialize(numThreads);
-		double avSpeedUp = 0.0;
-		for( int run = 0; run< REPEATS; ++run )
-		{
 
-			printf("Run %d.....\n", run);
-			Timer tParallel;
-			tParallel.Start();
+    // start by measuring serial
+    double avSerial = 0.0f;
+    uint32_t setSize = 20 * 1024 * 1024;
+    uint64_t sumSerial;
+    for( int run = 0; run< REPEATS; ++run )
+    {
+         Timer tSerial;
+        tSerial.Start();
 
-			ParallelReductionSumTaskSet parallelReductionSumTaskSet( 10 * 1024 * 1024 );
+        ParallelSumTaskSet serialTask( setSize );
+        serialTask.Init( 1 );
+        TaskSetPartition range = { 0, setSize };
 
-			g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+        serialTask.ExecuteRange( range, 0 );
+        sumSerial = serialTask.m_pPartialSums[0].count;
 
-			g_TS.WaitforTaskSet( &parallelReductionSumTaskSet );
+        tSerial.Stop();
 
-			tParallel.Stop();
+        if( run >= WARMUPS )
+        {
+            avSerial += tSerial.GetTimeMS() / RUNS;
+        }
+        printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sumSerial );
+    }
+
+    // now measure parallel
+    for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
+    {
+        g_TS.Initialize(numThreads);
+        double avSpeedUp = 0.0;
+
+        for( int run = 0; run< REPEATS; ++run )
+        {
+
+            printf("Run %d.....\n", run);
+            Timer tParallel;
+            tParallel.Start();
+
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
+
+            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+
+            g_TS.WaitforTaskSet( &parallelReductionSumTaskSet );
+
+            tParallel.Stop();
 
 
-			printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), parallelReductionSumTaskSet.m_FinalSum );
+            printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), parallelReductionSumTaskSet.m_FinalSum );
 
-			Timer tSerial;
-			tSerial.Start();
-			uint64_t sum = 0;
-			for( uint64_t i = 0; i < (uint64_t)parallelReductionSumTaskSet.m_ParallelSumTaskSet.m_SetSize; ++i )
-			{
-				sum += i + 1;
-			}
+            if( run >= WARMUPS )
+            {
+                avSpeedUp += avSerial  / tParallel.GetTimeMS() / RUNS;
+            }
 
-			tSerial.Stop();
+            if( sumSerial != parallelReductionSumTaskSet.m_FinalSum )
+            {
+                printf( "ERROR: sums do not match\n" );
+                return -1;
+            }
 
-			if( run >= WARMUPS )
-			{
-				avSpeedUp += tSerial.GetTimeMS()  / tParallel.GetTimeMS() / RUNS;
-			}
+            printf("Speed Up Serial / Parallel: %f\n\n", avSerial  / tParallel.GetTimeMS() );
 
-			if( sum != parallelReductionSumTaskSet.m_FinalSum )
-			{
-				printf( "ERROR: sums do not match\n" );
-				return -1;
-			}
+        }
+        avSpeedUps[numThreads-1] = avSpeedUp;
+        printf("\nAverage Speed Up for %d Hardware Threads Serial / Parallel: %f\n", numThreads, avSpeedUp );
+    }
 
-			printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sum );
-			printf("Speed Up Serial / Parallel: %f\n\n", tSerial.GetTimeMS()  / tParallel.GetTimeMS() );
+    printf("\nHardware Threads, Av Speed Up/s\n" );
+    for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
+    {
+        printf("%d, %f\n", numThreads, avSpeedUps[numThreads-1] );
+    }
 
-		}
-		avSpeedUps[numThreads-1] = avSpeedUp;
-		printf("\nAverage Speed Up for %d Hardware Threads Serial / Parallel: %f\n", numThreads, avSpeedUp );
-	}
-
-	printf("\nHardware Threads, Av Speed Up/s\n" );
-	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
-	{
-		printf("%d, %f\n", numThreads, avSpeedUps[numThreads-1] );
-	}
-
-	return 0;
+    return 0;
 }

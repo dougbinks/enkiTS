@@ -23,46 +23,60 @@
 #include <condition_variable>
 #include <stdint.h>
 #include <functional>
+#include <assert.h>
 
 namespace enki
 {
 
-	struct TaskSetPartition
-	{
-		uint32_t start;
-		uint32_t end;
-	};
+    struct TaskSetPartition
+    {
+        uint32_t start;
+        uint32_t end;
+    };
 
-	class  TaskScheduler;
-	class  TaskPipe;
-	struct ThreadArgs;
-	class  ThreadNum;
-	struct SubTaskSet;
+    class  TaskScheduler;
+    class  TaskPipe;
+    class  PinnedTaskList;
+    struct ThreadArgs;
+    struct SubTaskSet;
 
-	// Subclass ITaskSet to create tasks.
-	// TaskSets can be re-used, but check
-	class ITaskSet
-	{
-	public:
+    // ICompletable is a base class used to check for completion.
+    // Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
+    class ICompletable
+    {
+    public:
+        ICompletable() :        m_RunningCount(0) {}
+
+		bool                    GetIsComplete() const
+		{
+			return 0 == m_RunningCount.load( std::memory_order_acquire );
+		}
+    private:
+        friend class            TaskScheduler;
+		std::atomic<int32_t>   m_RunningCount;
+    };
+
+    // Subclass ITaskSet to create tasks.
+    // TaskSets can be re-used, but check completion first.
+    class ITaskSet : public ICompletable
+    {
+    public:
         ITaskSet()
             : m_SetSize(1)
-			, m_MinRange(1)
-            , m_RunningCount(0)
-			, m_RangeToRun(1)
+            , m_MinRange(1)
+            , m_RangeToRun(1)
         {}
 
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
-			, m_MinRange(1)
-            , m_RunningCount(0)
-			, m_RangeToRun(1)
+            , m_MinRange(1)
+            , m_RangeToRun(1)
         {}
 
-		ITaskSet( uint32_t setSize_, uint32_t minRange_ )
+        ITaskSet( uint32_t setSize_, uint32_t minRange_ )
             : m_SetSize( setSize_ )
-			, m_MinRange( minRange_ )
-            , m_RunningCount(0)
-			, m_RangeToRun(minRange_)
+            , m_MinRange( minRange_ )
+            , m_RangeToRun(minRange_)
         {}
 		// Execute range should be overloaded to process tasks. It will be called with a
 		// range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
@@ -84,15 +98,27 @@ namespace enki
 		// Also known as grain size in literature.
 		uint32_t                m_MinRange;
 
-		bool                    GetIsComplete() const
-		{
-			return 0 == m_RunningCount.load( std::memory_order_acquire );
-		}
 	private:
 		friend class           TaskScheduler;
-		std::atomic<int32_t>   m_RunningCount;
 		uint32_t               m_RangeToRun;
 	};
+
+    // Subclass IPinnedTask to create tasks which cab be run on a given thread only.
+    class IPinnedTask : public ICompletable
+    {
+    public:
+        IPinnedTask()                      : threadNum(0), pNext(NULL) {}  // default is to run a task on main thread
+        IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_), pNext(NULL) {}  // default is to run a task on main thread
+
+
+        // IPinnedTask needs to be non abstract for intrusive list functionality.
+        // Should never be called as should be overridden.
+        virtual void            Execute() { assert(false); }
+
+
+        uint32_t                 threadNum; // thread to run this pinned task on
+        IPinnedTask* volatile pNext;        // Do not use. For intrusive list only.
+    };
 
 	// A utility task set for creating tasks based on std::func.
 	typedef std::function<void (TaskSetPartition range, uint32_t threadnum  )> TaskSetFunction;
@@ -176,10 +202,17 @@ namespace enki
 		// should only be called from main thread, or within a task
 		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
-		// Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
-		// This is safe to call from any thread.
-		// If called with 0 it will try to run tasks, and return if none available.
-		void            WaitforTaskSet( const ITaskSet* pTaskSet );
+        // Thread 0 is main thread, otherwise use threadNum
+        void            AddPinnedTask( IPinnedTask* pTask_ );
+
+        // This function will run any IPinnedTask* for current thread, but not run other
+        // Main thread should call this or use a wait to ensure it's tasks are run.
+        void            RunPinnedTasks();
+
+        // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
+        // should only be called from thread which created the taskscheduler , or within a task
+        // if called with 0 it will try to run tasks, and return if none available.
+        void            WaitforTaskSet( const ICompletable* pCompletable_ );
 
 		// Waits for all task sets to complete - not guaranteed to work unless we know we
 		// are in a situation where tasks aren't being continuosly added.
@@ -222,21 +255,27 @@ namespace enki
 		// to exit.
 		void			StopUserThreadRunTasks();
 
+        // Returns the ProfilerCallbacks structure so that it can be modified to
+        // set the callbacks.
+        ProfilerCallbacks* GetProfilerCallbacks();
+
 	private:
 		friend class ThreadNum;
 
-		static void		 TaskingThreadFunction( const ThreadArgs& args_ );
+		static void      TaskingThreadFunction( const ThreadArgs& args_ );
+        void             RunPinnedTasks( uint32_t threadNum );
 		template<bool ISUSERTASK>
 		void             WaitForTasks( uint32_t threadNum );
 		bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
 		void             StartThreads();
 		void             Cleanup( bool bWait_ );
-		void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
-										  uint32_t rangeToSplit_, int32_t runningCountOffset_ );
+		void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
+                                          uint32_t rangeToSplit_, int32_t runningCountOffset_ );
 		void             WakeThreads();
 
 
 		TaskPipe*                                                m_pPipesPerThread;
+        PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
 		uint32_t                                                 m_NumThreads;
 		uint32_t												 m_NumEnkiThreads;

@@ -29,92 +29,138 @@ struct enkiTaskScheduler : TaskScheduler
 
 struct enkiTaskSet : ITaskSet
 {
-	enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
+    enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
 
-	virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
-	{
-		taskFun( range.start, range.end, threadnum, pArgs );
-	}
+    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
+    {
+        taskFun( range.start, range.end, threadnum, pArgs );
+    }
 
-	enkiTaskExecuteRange taskFun;
-	void* pArgs;
+    enkiTaskExecuteRange taskFun;
+    void* pArgs;
 };
 
-enkiTaskScheduler*	enkiNewTaskScheduler()
+struct enkiPinnedTask : IPinnedTask
 {
-	enkiTaskScheduler* pETS = new enkiTaskScheduler();
+    enkiPinnedTask( enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
+        : IPinnedTask( threadNum_ ), taskFun(taskFun_), pArgs(NULL) {}
+
+    virtual void Execute()
+    {
+        taskFun( pArgs );
+    }
+
+    enkiPinnedTaskExecute taskFun;
+    void* pArgs;
+};
+
+enkiTaskScheduler*    enkiNewTaskScheduler()
+{
+    enkiTaskScheduler* pETS = new enkiTaskScheduler();
     return pETS;
 }
 
-void	            enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
+void                enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
     pETS_->Initialize();
 }
 
-void	            enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
+void                enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
 {
     pETS_->Initialize( numThreads_ );
 }
 
-void				enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
+void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
-	delete pETS_;
+    delete pETS_;
 }
 
-enkiTaskSet*		enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
+enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
-	return new enkiTaskSet( taskFunc_ );
+    return new enkiTaskSet( taskFunc_ );
 }
 
 void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 {
-	delete pTaskSet_;
+    delete pTaskSet_;
 }
 
-void				enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
+void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
 {
-	assert( pTaskSet_ );
-	assert( pTaskSet_->taskFun );
+    assert( pTaskSet_ );
+    assert( pTaskSet_->taskFun );
 
-	pTaskSet_->m_SetSize = setSize_;
-	pTaskSet_->pArgs = pArgs_;
-	pETS_->AddTaskSetToPipe( pTaskSet_ );
+    pTaskSet_->m_SetSize = setSize_;
+    pTaskSet_->pArgs = pArgs_;
+    pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
 void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler * pETS_, enkiTaskSet * pTaskSet_, void * pArgs_, uint32_t setSize_, uint32_t minRange_)
 {
-	assert( pTaskSet_ );
-	assert( pTaskSet_->taskFun );
+    assert( pTaskSet_ );
+    assert( pTaskSet_->taskFun );
 
-	pTaskSet_->m_SetSize = setSize_;
-	pTaskSet_->m_MinRange = minRange_;
-	pTaskSet_->pArgs = pArgs_;
-	pETS_->AddTaskSetToPipe( pTaskSet_ );
+    pTaskSet_->m_SetSize = setSize_;
+    pTaskSet_->m_MinRange = minRange_;
+    pTaskSet_->pArgs = pArgs_;
+    pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
-int				enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+int                enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
-	assert( pTaskSet_ );
-	return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
+    assert( pTaskSet_ );
+    return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
 }
 
-void				enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
-	pETS_->WaitforTaskSet( pTaskSet_ );
+    return new enkiPinnedTask( taskFunc_, threadNum_ );
 }
 
-void				enkiWaitForAll( enkiTaskScheduler* pETS_ )
+void enkiDeletePinnedTask(enkiPinnedTask * pTaskSet_)
 {
-	pETS_->WaitforAll();
+    delete pTaskSet_;
 }
 
-
-uint32_t			enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
+void enkiAddPinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, void * pArgs_)
 {
-	return pETS_->GetNumTaskThreads();
+    assert( pTask_ );
+    pTask_->pArgs = pArgs_;
+    pETS_->AddPinnedTask( pTask_ );
 }
 
-enkiProfilerCallbacks*	enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
+void enkiRunPinnedTasks(enkiTaskScheduler * pETS_)
+{
+    pETS_->RunPinnedTasks();
+}
+
+int enkiIsPinnedTaskComplete(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_)
+{
+    assert( pTask_ );
+    return ( pTask_->GetIsComplete() ) ? 1 : 0;
+}
+
+void enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+{
+    pETS_->WaitforTaskSet( pTaskSet_ );
+}
+
+void enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ )
+{
+    pETS_->WaitforTaskSet( pTask_ );
+}
+
+void enkiWaitForAll( enkiTaskScheduler* pETS_ )
+{
+    pETS_->WaitforAll();
+}
+
+uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
+{
+    return pETS_->GetNumTaskThreads();
+}
+
+enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
 {
     assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks) );
     return (enkiProfilerCallbacks*)pETS_->GetProfilerCallbacks();

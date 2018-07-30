@@ -47,13 +47,13 @@ namespace enki
     public:
         ICompletable() :        m_RunningCount(0) {}
 
-		bool                    GetIsComplete() const
-		{
-			return 0 == m_RunningCount.load( std::memory_order_acquire );
-		}
+        bool                    GetIsComplete() const
+        {
+            return 0 == m_RunningCount.load( std::memory_order_acquire );
+        }
     private:
         friend class            TaskScheduler;
-		std::atomic<int32_t>   m_RunningCount;
+        std::atomic<int32_t>   m_RunningCount;
     };
 
     // Subclass ITaskSet to create tasks.
@@ -79,29 +79,29 @@ namespace enki
             , m_RangeToRun(minRange_)
         {}
 
-		// Execute range should be overloaded to process tasks. It will be called with a
-		// range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
-		// The range values should be mapped so that linearly processing them in order is cache friendly
-		// i.e. neighbouring values should be close together.
-		// threadnum should not be used for changing processing of data, it's intended purpose
-		// is to allow per-thread data buckets for output.
-		virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) = 0;
+        // Execute range should be overloaded to process tasks. It will be called with a
+        // range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
+        // The range values should be mapped so that linearly processing them in order is cache friendly
+        // i.e. neighbouring values should be close together.
+        // threadnum should not be used for changing processing of data, it's intended purpose
+        // is to allow per-thread data buckets for output.
+        virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  ) = 0;
 
-		// Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
-		uint32_t                m_SetSize;
+        // Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
+        uint32_t                m_SetSize;
 
-		// Minimum size of of TaskSetPartition range when splitting a task set into partitions.
-		// This should be set to a value which results in computation effort of at least 10k
-		// clock cycles to minimize tast scheduler overhead.
-		// NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
-		// of m_MinRange.
-		// Also known as grain size in literature.
-		uint32_t                m_MinRange;
+        // Minimum size of of TaskSetPartition range when splitting a task set into partitions.
+        // This should be set to a value which results in computation effort of at least 10k
+        // clock cycles to minimize tast scheduler overhead.
+        // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
+        // of m_MinRange.
+        // Also known as grain size in literature.
+        uint32_t                m_MinRange;
 
-	private:
-		friend class           TaskScheduler;
-		uint32_t               m_RangeToRun;
-	};
+    private:
+        friend class           TaskScheduler;
+        uint32_t               m_RangeToRun;
+    };
 
     // Subclass IPinnedTask to create tasks which cab be run on a given thread only.
     class IPinnedTask : public ICompletable
@@ -120,58 +120,58 @@ namespace enki
         IPinnedTask* volatile pNext;        // Do not use. For intrusive list only.
     };
 
-	// A utility task set for creating tasks based on std::func.
-	typedef std::function<void (TaskSetPartition range, uint32_t threadnum  )> TaskSetFunction;
-	class TaskSet : public ITaskSet
-	{
-	public:
-		TaskSet() = default;
-		TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
-		TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
+    // A utility task set for creating tasks based on std::func.
+    typedef std::function<void (TaskSetPartition range, uint32_t threadnum  )> TaskSetFunction;
+    class TaskSet : public ITaskSet
+    {
+    public:
+        TaskSet() = default;
+        TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
+        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
 
 
-		virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
-		{
-			m_Function( range, threadnum );
-		}
+        virtual void            ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
+        {
+            m_Function( range, threadnum );
+        }
 
-		TaskSetFunction m_Function;
-	};
+        TaskSetFunction m_Function;
+    };
 
-	// TaskScheduler implements several callbacks intended for profilers
-	typedef std::function<void ( uint32_t threadnum_ )> ProfilerCallbackFunc;
-	struct ProfilerCallbacks
-	{
-		ProfilerCallbackFunc threadStart;
-		ProfilerCallbackFunc threadStop;
-		ProfilerCallbackFunc waitStart;
-		ProfilerCallbackFunc waitStop;
-	};
+    // TaskScheduler implements several callbacks intended for profilers
+    typedef std::function<void ( uint32_t threadnum_ )> ProfilerCallbackFunc;
+    struct ProfilerCallbacks
+    {
+        ProfilerCallbackFunc threadStart;
+        ProfilerCallbackFunc threadStop;
+        ProfilerCallbackFunc waitStart;
+        ProfilerCallbackFunc waitStop;
+    };
 
-	class TaskScheduler
-	{
-	public:
-		TaskScheduler();
-		~TaskScheduler();
+    class TaskScheduler
+    {
+    public:
+        TaskScheduler();
+        ~TaskScheduler();
 
-		// Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
+        // Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
 
-		// Initialize() will create GetNumHardwareThreads()-1 threads, which is
-		// sufficient to fill the system when including the main thread.
-		// Initialize can be called multiple times - it will wait for completion
-		// before re-initializing.
-		void			Initialize();
+        // Initialize() will create GetNumHardwareThreads()-1 threads, which is
+        // sufficient to fill the system when including the main thread.
+        // Initialize can be called multiple times - it will wait for completion
+        // before re-initializing.
+        void            Initialize();
 
-		// Initialize( numThreads_ ) - numThreads_ (must be > 0)
-		// will create numThreads_-1 threads, as thread 0 is
-		// the thread on which the initialize was called.
-		void			Initialize( uint32_t numThreads_ );
+        // Initialize( numThreads_ ) - numThreads_ (must be > 0)
+        // will create numThreads_-1 threads, as thread 0 is
+        // the thread on which the initialize was called.
+        void            Initialize( uint32_t numThreads_ );
 
 
-		// Adds the TaskSet to pipe and returns if the pipe is not full.
-		// If the pipe is full, pTaskSet is run.
-		// should only be called from main thread, or within a task
-		void            AddTaskSetToPipe( ITaskSet* pTaskSet );
+        // Adds the TaskSet to pipe and returns if the pipe is not full.
+        // If the pipe is full, pTaskSet is run.
+        // should only be called from main thread, or within a task
+        void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
         // Thread 0 is main thread, otherwise use threadNum
         void            AddPinnedTask( IPinnedTask* pTask_ );
@@ -185,50 +185,50 @@ namespace enki
         // if called with 0 it will try to run tasks, and return if none available.
         void            WaitforTaskSet( const ICompletable* pCompletable_ );
 
-		// Waits for all task sets to complete - not guaranteed to work unless we know we
-		// are in a situation where tasks aren't being continuosly added.
-		void            WaitforAll();
+        // Waits for all task sets to complete - not guaranteed to work unless we know we
+        // are in a situation where tasks aren't being continuosly added.
+        void            WaitforAll();
 
-		// Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
-		// are in a situation where tasks aren't being continuosly added.
-		void            WaitforAllAndShutdown();
+        // Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
+        // are in a situation where tasks aren't being continuosly added.
+        void            WaitforAllAndShutdown();
 
-		// Returns the number of threads created for running tasks + 1
-		// to account for the main thread.
-		uint32_t        GetNumTaskThreads() const;
+        // Returns the number of threads created for running tasks + 1
+        // to account for the main thread.
+        uint32_t        GetNumTaskThreads() const;
 
-		// Returns the ProfilerCallbacks structure so that it can be modified to
-		// set the callbacks.
-		ProfilerCallbacks* GetProfilerCallbacks();
+        // Returns the ProfilerCallbacks structure so that it can be modified to
+        // set the callbacks.
+        ProfilerCallbacks* GetProfilerCallbacks();
 
-	private:
-		static void     TaskingThreadFunction( const ThreadArgs& args_ );
+    private:
+        static void     TaskingThreadFunction( const ThreadArgs& args_ );
         void            RunPinnedTasks( uint32_t threadNum );
-		bool            TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
-		void            StartThreads();
-		void            StopThreads( bool bWait_ );
-		void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
-										  uint32_t rangeToSplit_, int32_t runningCountOffset_ );
-		void             WakeThreads();
+        bool            TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
+        void            StartThreads();
+        void            StopThreads( bool bWait_ );
+        void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
+                                          uint32_t rangeToSplit_, int32_t runningCountOffset_ );
+        void             WakeThreads();
 
-		TaskPipe*                                                m_pPipesPerThread;
+        TaskPipe*                                                m_pPipesPerThread;
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
-		uint32_t                                                 m_NumThreads;
-		ThreadArgs*                                              m_pThreadNumStore;
-		std::thread**											 m_pThreads;
-		std::atomic<int32_t>                                     m_bRunning;
-		std::atomic<int32_t>                                     m_NumThreadsRunning;
-		std::atomic<int32_t>                                     m_NumThreadsWaiting;
-		uint32_t                                                 m_NumPartitions;
-		std::condition_variable                                  m_NewTaskEvent;
-		std::mutex												 m_NewTaskEventMutex;
-		uint32_t                                                 m_NumInitialPartitions;
-		bool                                                     m_bHaveThreads;
-		ProfilerCallbacks										 m_ProfilerCallbacks;
+        uint32_t                                                 m_NumThreads;
+        ThreadArgs*                                              m_pThreadNumStore;
+        std::thread**                                             m_pThreads;
+        std::atomic<int32_t>                                     m_bRunning;
+        std::atomic<int32_t>                                     m_NumThreadsRunning;
+        std::atomic<int32_t>                                     m_NumThreadsWaiting;
+        uint32_t                                                 m_NumPartitions;
+        std::condition_variable                                  m_NewTaskEvent;
+        std::mutex                                                 m_NewTaskEventMutex;
+        uint32_t                                                 m_NumInitialPartitions;
+        bool                                                     m_bHaveThreads;
+        ProfilerCallbacks                                         m_ProfilerCallbacks;
 
-		TaskScheduler( const TaskScheduler& nocopy );
-		TaskScheduler& operator=( const TaskScheduler& nocopy );
-	};
+        TaskScheduler( const TaskScheduler& nocopy );
+        TaskScheduler& operator=( const TaskScheduler& nocopy );
+    };
 
 }

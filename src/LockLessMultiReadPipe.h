@@ -78,10 +78,10 @@ namespace enki
 
         // read and write indexes allow fast access to the pipe, but actual access
         // controlled by the access flags. 
-        std::atomic<uint32_t>			m_WriteIndex;
-        std::atomic<uint32_t>			m_ReadCount;
-        std::atomic<uint32_t>			m_Flags[  ms_cSize ];
-        std::atomic<uint32_t>			m_ReadIndex;
+        std::atomic<uint32_t>            m_WriteIndex;
+        std::atomic<uint32_t>            m_ReadCount;
+        std::atomic<uint32_t>            m_Flags[  ms_cSize ];
+        std::atomic<uint32_t>            m_ReadIndex;
     };
 
     template<uint8_t cSizeLog2, typename T> inline

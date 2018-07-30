@@ -273,7 +273,7 @@ namespace enki
                     {
                         // pTailPlus1 is no longer the head, so pTailPlus1->pNext should be non NULL
                         assert( pTailPlus1->pNext );
-                        tail.pNext = pTailPlus1->pNext;
+                        tail.pNext = pTailPlus1->pNext.load();
                     }
                 }
             }

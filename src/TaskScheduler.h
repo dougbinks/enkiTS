@@ -117,7 +117,7 @@ namespace enki
 
 
         uint32_t                 threadNum; // thread to run this pinned task on
-        IPinnedTask* volatile pNext;        // Do not use. For intrusive list only.
+        std::atomic<IPinnedTask*> pNext;        // Do not use. For intrusive list only.
     };
 
     // A utility task set for creating tasks based on std::func.

@@ -142,24 +142,24 @@ namespace enki
         // the thread on which the initialize was called.
         void            Initialize( uint32_t numThreads_ );
 
-		// Initialize( numUserThreads_, numThreads_ ).
-		// This version is intended for use with other task systems
-		// or user created threads.
-		// Will create sufficient space in internal structures
-		// for GetNumHardwareThreads() user task functions.
-		// This version will create no EnkiTS held threads of it's own.
-		// Equivalent to InitializeWithUserThreads( GetNumHardwareThreads(), 0 );
-		void			InitializeWithUserThreads();
+        // Initialize( numUserThreads_, numThreads_ ).
+        // This version is intended for use with other task systems
+        // or user created threads.
+        // Will create sufficient space in internal structures
+        // for GetNumHardwareThreads() user task functions.
+        // This version will create no EnkiTS held threads of it's own.
+        // Equivalent to InitializeWithUserThreads( GetNumHardwareThreads(), 0 );
+        void            InitializeWithUserThreads();
 
-		// Initialize( numUserThreads_, numThreads_ ).
-		// numUserThreads_ must be > 0.
-		// This version is intended for use with other task systems
-		// or user created threads.
-		// Will create numThreads_-1 task threads, as thread 0 is
-		// the thread on which the initialize was called.
-		// Additionally, will create internal structures sufficient to run
-		// numUserThreads_ task functions.
-		void			InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ );
+        // Initialize( numUserThreads_, numThreads_ ).
+        // numUserThreads_ must be > 0.
+        // This version is intended for use with other task systems
+        // or user created threads.
+        // Will create numThreads_-1 task threads, as thread 0 is
+        // the thread on which the initialize was called.
+        // Additionally, will create internal structures sufficient to run
+        // numUserThreads_ task functions.
+        void            InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ );
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
@@ -193,42 +193,42 @@ namespace enki
         // TryRunTask will try to run a single task from the pipe.
         // Returns true if it ran a task, false if not.
         // Safe to run on any thread.
-        bool			TryRunTask();
+        bool            TryRunTask();
 
         // PreUserThreadRunTasks sets an internal state which controls
-		// the lifetime of UserThreadRunTasks().
-		// Calling this sets UserThreadRunTasks() to run continuously
-		// until  StopUserThreadRunTasks() is called.
-		void			PreUserThreadRunTasks();
+        // the lifetime of UserThreadRunTasks().
+        // Calling this sets UserThreadRunTasks() to run continuously
+        // until  StopUserThreadRunTasks() is called.
+        void            PreUserThreadRunTasks();
 
-		// Runs tasks. Lifetime controlled by PreUserThreadRunTasks() and
-		// StopUserThreadRunTasks(). Will exit immediatly if
-		// PreUserThreadRunTasks() has not been called.
-		void			UserThreadRunTasks();
+        // Runs tasks. Lifetime controlled by PreUserThreadRunTasks() and
+        // StopUserThreadRunTasks(). Will exit immediatly if
+        // PreUserThreadRunTasks() has not been called.
+        void            UserThreadRunTasks();
 
-		// StopUserThreadRunTasks sets an internal state which controls
-		// the lifetime of UserThreadRunTasks().
-		// Calling this sets UserThreadRunTasks() to exit as soon
-		// as it has finished the current task.
-		// If you want all tasks to complete, call WaitforAll()
-		// before calling this function.
-		// StopUserThreadRunTasks() may return immediatly,
-		// it is not guaranteed to wait for all UserThreadRunTasks() functions
-		// to exit (the non C++11 implementation currently does).
-		void			StopUserThreadRunTasks();
+        // StopUserThreadRunTasks sets an internal state which controls
+        // the lifetime of UserThreadRunTasks().
+        // Calling this sets UserThreadRunTasks() to exit as soon
+        // as it has finished the current task.
+        // If you want all tasks to complete, call WaitforAll()
+        // before calling this function.
+        // StopUserThreadRunTasks() may return immediatly,
+        // it is not guaranteed to wait for all UserThreadRunTasks() functions
+        // to exit (the non C++11 implementation currently does).
+        void            StopUserThreadRunTasks();
 
         // Returns the ProfilerCallbacks structure so that it can be modified to
         // set the callbacks.
         ProfilerCallbacks* GetProfilerCallbacks();
 
     private:
-		friend class ThreadNum;
+        friend class ThreadNum;
         static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
         void             WaitForTasks( uint32_t threadNum );
         void             RunPinnedTasks( uint32_t threadNum );
         bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
         void             StartThreads();
-		void             Cleanup( bool bWait_ );
+        void             Cleanup( bool bWait_ );
         void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
                                           uint32_t rangeToSplit_, int32_t runningCountOffset_ );
         void             WakeThreads();
@@ -237,12 +237,12 @@ namespace enki
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
         uint32_t                                                 m_NumThreads;
-		uint32_t                                                 m_NumEnkiThreads;
-		uint32_t                                                 m_NumUserThreads;
+        uint32_t                                                 m_NumEnkiThreads;
+        uint32_t                                                 m_NumUserThreads;
         ThreadArgs*                                              m_pThreadArgStore;
         threadid_t*                                              m_pThreadIDs;
         uint32_t*                                                m_pUserThreadNumStack;
-		volatile int32_t                                         m_UserThreadStackIndex;
+        volatile int32_t                                         m_UserThreadStackIndex;
         volatile bool                                            m_bRunning;
         volatile int32_t                                         m_NumThreadsRunning;
         volatile int32_t                                         m_NumThreadsWaiting;

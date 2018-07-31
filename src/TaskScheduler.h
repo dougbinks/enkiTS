@@ -76,6 +76,7 @@ namespace enki
             , m_MinRange( minRange_ )
             , m_RangeToRun(minRange_)
         {}
+
         // Execute range should be overloaded to process tasks. It will be called with a
         // range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
         // The range values should be mapped so that linearly processing them in order is cache friendly
@@ -259,9 +260,9 @@ namespace enki
         bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
         void             StartThreads();
         void             Cleanup( bool bWait_ );
-        void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
-                                          uint32_t rangeToSplit_, int32_t runningCountOffset_ );
+        void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void             WakeThreads();
+
 
         TaskPipe*                                                m_pPipesPerThread;
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
@@ -275,12 +276,12 @@ namespace enki
         std::atomic<int32_t>                                     m_UserThreadStackIndex;
         std::atomic<uint32_t>*                                   m_pUserThreadNumStack;
         std::atomic<bool>                                        m_bRunning;
+
         std::atomic<int32_t>                                     m_NumThreadsRunning;
         std::atomic<int32_t>                                     m_NumThreadsWaiting;
         uint32_t                                                 m_NumPartitions;
         std::condition_variable                                  m_NewTaskEvent;
         std::mutex                                               m_NewTaskEventMutex;
-
 
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;

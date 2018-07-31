@@ -23,6 +23,8 @@
 
 #if defined __i386__ || defined __x86_64__
 #include "x86intrin.h"
+#elif defined _WIN32
+#include <intrin.h>
 #endif
 
 using namespace enki;
@@ -155,10 +157,6 @@ namespace
         subTask_.partition.start = splitTask.partition.end;
         return splitTask;
     }
-
-    #if defined _WIN32 && ( defined _M_IX86  || defined _M_X64 )
-        #pragma intrinsic(_mm_pause)
-    #endif
 
     #if ( defined _WIN32 && ( defined _M_IX86  || defined _M_X64 ) ) || ( defined __i386__ || defined __x86_64__ )
     static void SpinWait( uint32_t spinCount_ )

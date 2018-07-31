@@ -182,8 +182,7 @@ namespace enki
         bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
         void             StartThreads();
         void             StopThreads( bool bWait_ );
-        void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
-                                          uint32_t rangeToSplit_, int32_t runningCountOffset_ );
+        void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void             WakeThreads();
 
         TaskPipe*                                                m_pPipesPerThread;

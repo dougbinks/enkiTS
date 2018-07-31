@@ -46,9 +46,7 @@ namespace enki
     {
     public:
         ICompletable() :        m_RunningCount(0) {}
-
-        bool                    GetIsComplete() const
-        {
+        bool                    GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
     private:
@@ -97,7 +95,6 @@ namespace enki
         // of m_MinRange.
         // Also known as grain size in literature.
         uint32_t                m_MinRange;
-
     private:
         friend class           TaskScheduler;
         uint32_t               m_RangeToRun;
@@ -151,8 +148,6 @@ namespace enki
     class TaskScheduler
     {
     public:
-        // TaskScheduler is not a singleton, but usual case is to have only one.
-        // It is safe to have multiple task schedulers.
         TaskScheduler();
         ~TaskScheduler();
 
@@ -162,10 +157,6 @@ namespace enki
         //  InitializeWithUserThreads(),
         //  InitializeWithUserThreads( numUserThreads_, numThreads_ )
 
-        // Initialize() will create GetNumHardwareThreads()-1 threads, which is
-        // sufficient to fill the system when including the main thread.
-        // Initialize can be called multiple times - it will wait for completion
-        // before re-initializing.
         // Equivalent to Initialize( GetNumHardwareThreads() );
         void            Initialize();
 
@@ -195,7 +186,6 @@ namespace enki
         // Additionally, will create internal structures sufficient to run
         // numUserThreads_ task functions.
         void            InitializeWithUserThreads( uint32_t numUserThreads_, uint32_t numThreads_ );
-
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
@@ -263,16 +253,15 @@ namespace enki
         friend class ThreadNum;
 
         static void      TaskingThreadFunction( const ThreadArgs& args_ );
-        void             RunPinnedTasks( uint32_t threadNum );
         template<bool ISUSERTASK>
         void             WaitForTasks( uint32_t threadNum );
+        void             RunPinnedTasks( uint32_t threadNum );
         bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
         void             StartThreads();
         void             Cleanup( bool bWait_ );
         void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
                                           uint32_t rangeToSplit_, int32_t runningCountOffset_ );
         void             WakeThreads();
-
 
         TaskPipe*                                                m_pPipesPerThread;
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
@@ -281,22 +270,21 @@ namespace enki
         uint32_t                                                 m_NumEnkiThreads;
         uint32_t                                                 m_NumUserThreads;
         ThreadArgs*                                              m_pThreadArgStore;
-        std::atomic<bool>                                         m_bUserThreadsCanRun;
-        std::thread**                                             m_pThreads;
+        std::atomic<bool>                                        m_bUserThreadsCanRun;
+        std::thread**                                            m_pThreads;
         std::atomic<int32_t>                                     m_UserThreadStackIndex;
-        std::atomic<uint32_t>*                                     m_pUserThreadNumStack;
-        std::atomic<bool>                                         m_bRunning;
+        std::atomic<uint32_t>*                                   m_pUserThreadNumStack;
+        std::atomic<bool>                                        m_bRunning;
         std::atomic<int32_t>                                     m_NumThreadsRunning;
         std::atomic<int32_t>                                     m_NumThreadsWaiting;
         uint32_t                                                 m_NumPartitions;
         std::condition_variable                                  m_NewTaskEvent;
-        std::mutex                                                 m_NewTaskEventMutex;
+        std::mutex                                               m_NewTaskEventMutex;
 
 
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
-        ProfilerCallbacks                                         m_ProfilerCallbacks;
-
+        ProfilerCallbacks                                        m_ProfilerCallbacks;
 
         TaskScheduler( const TaskScheduler& nocopy );
         TaskScheduler& operator=( const TaskScheduler& nocopy );

@@ -42,7 +42,10 @@ namespace enki
     {
     public:
         ICompletable() :        m_RunningCount(0) {}
-        bool                    GetIsComplete() { return 0 == m_RunningCount; }
+        bool                    GetIsComplete() {
+            bool bRet = ( 0 == m_RunningCount );
+            BASE_MEMORYBARRIER_ACQUIRE();
+            return bRet; }
     private:
         friend class            TaskScheduler;
         volatile int32_t        m_RunningCount;

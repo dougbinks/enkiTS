@@ -109,19 +109,6 @@ namespace
         }        
     }
     #endif
-
-
-    #if defined _WIN32
-        #include <intrin.h>
-        #if defined _M_IX86  || defined _M_X64
-            #pragma intrinsic(_mm_pause)
-            inline void Pause() { _mm_pause(); }
-        #endif
-    #elif defined __i386__ || defined __x86_64__
-        inline void Pause() { __asm__ __volatile__("pause;"); }
-    #else
-        inline void Pause() { ;} // may have NOP or yield equiv
-    #endif
 }
 
 static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
@@ -140,17 +127,15 @@ ProfilerCallbacks* TaskScheduler::GetProfilerCallbacks()
 
 void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 {
-    uint32_t threadNum                = args_.threadNum;
-    TaskScheduler*  pTS                = args_.pTaskScheduler;
-    gtl_threadNum      = threadNum;
+    uint32_t threadNum  = args_.threadNum;
+    TaskScheduler*  pTS = args_.pTaskScheduler;
+    gtl_threadNum       = threadNum;
 
-    
     SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
 
     uint32_t spinCount = 0;
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
     while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
-
     {
         if(!pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
         {
@@ -158,30 +143,8 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
-                bool bHaveTasks = false;
-                for( uint32_t thread = 0; thread < pTS->m_NumThreads; ++thread )
-                {
-                    if( !pTS->m_pPipesPerThread[ thread ].IsPipeEmpty() )
-                    {
-                        bHaveTasks = true;
-                        break;
-                    }
-                }
-                if( bHaveTasks )
-                {
-                    // keep trying
-                    spinCount = 0;
-                }
-                else
-                {
-                    SafeCallback( pTS->m_ProfilerCallbacks.waitStart, threadNum );
-                    pTS->m_NumThreadsWaiting.fetch_add( 1, std::memory_order_relaxed );
-                    std::unique_lock<std::mutex> lk( pTS->m_NewTaskEventMutex );
-                    pTS->m_NewTaskEvent.wait( lk );
-                    pTS->m_NumThreadsWaiting.fetch_sub( 1, std::memory_order_relaxed );
-                    SafeCallback( pTS->m_ProfilerCallbacks.waitStop, threadNum );
-                    spinCount = 0;
-                }
+                pTS->WaitForTasks( threadNum );
+                spinCount = 0;
             }
             else
             {
@@ -192,7 +155,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
         }
     }
 
-    pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_relaxed );
+    pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_release );
     SafeCallback( pTS->m_ProfilerCallbacks.threadStop, threadNum );
     return;
 
@@ -317,6 +280,35 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
     return bHaveTask;
 
+}
+
+void TaskScheduler::WaitForTasks( uint32_t threadNum )
+{
+    // We incrememt the number of threads waiting here in order
+    // to ensure that the check for tasks occurs after the increment
+    // to prevent a task being added after a check, then the thread waiting.
+    // This will occasionally result in threads being mistakenly awoken,
+    // but they will then go back to sleep.
+    m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
+
+    bool bHaveTasks = false;
+    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+    {
+        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+        {
+            bHaveTasks = true;
+            break;
+        }
+    }
+    if( !bHaveTasks )
+    {
+        SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
+        std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
+        m_NewTaskEvent.wait( lk );
+        SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
+    }
+
+    m_NumThreadsWaiting.fetch_sub( 1, std::memory_order_release );
 }
 
 void TaskScheduler::WakeThreads()

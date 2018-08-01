@@ -1,0 +1,17 @@
+language: cpp
+sudo: false
+dist: trusty
+
+os:
+  - linux
+  - osx
+
+addons:
+    apt:
+        packages:
+            - cmake
+
+script:
+    - mkdir build
+    - cd build
+    - cmake --build .

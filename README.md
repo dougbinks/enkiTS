@@ -1,4 +1,5 @@
 # enkiTS
+[![Build Status](https://travis-ci.org/dougbinks/enkiTS.svg?branch=master)](https://travis-ci.org/dougbinks/enkiTS)
 
 ## enki Task Scheduler
 

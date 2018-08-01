@@ -291,4 +291,8 @@ namespace enki
         TaskScheduler& operator=( const TaskScheduler& nocopy );
     };
 
+    inline uint32_t GetNumHardwareThreads()
+    {
+        return std::thread::hardware_concurrency();
+    }
 }

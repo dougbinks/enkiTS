@@ -213,7 +213,7 @@ namespace enki
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
         uint32_t                                                 m_NumThreads;
-        ThreadArgs*                                              m_pThreadNumStore;
+        ThreadArgs*                                              m_pThreadArgStore;
         std::thread**                                            m_pThreads;
         std::atomic<int32_t>                                     m_bRunning;
         std::atomic<int32_t>                                     m_NumThreadsRunning;

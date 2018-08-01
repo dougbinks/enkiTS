@@ -167,16 +167,16 @@ void TaskScheduler::StartThreads()
     m_bRunning = 1;
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadNumStore = new ThreadArgs[m_NumThreads];
+    m_pThreadArgStore = new ThreadArgs[m_NumThreads];
     m_pThreads          = new std::thread*[m_NumThreads];
-    m_pThreadNumStore[0].threadNum      = 0;
-    m_pThreadNumStore[0].pTaskScheduler = this;
+    m_pThreadArgStore[0].threadNum      = 0;
+    m_pThreadArgStore[0].pTaskScheduler = this;
     m_NumThreadsRunning = 1; // account for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadNumStore[thread].threadNum      = thread;
-        m_pThreadNumStore[thread].pTaskScheduler = this;
-        m_pThreads[thread] = new std::thread( TaskingThreadFunction, m_pThreadNumStore[thread] );
+        m_pThreadArgStore[thread].threadNum      = thread;
+        m_pThreadArgStore[thread].pTaskScheduler = this;
+        m_pThreads[thread] = new std::thread( TaskingThreadFunction, m_pThreadArgStore[thread] );
         ++m_NumThreadsRunning;
     }
 
@@ -220,9 +220,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
         }
 
         m_NumThreads = 0;
-        delete[] m_pThreadNumStore;
+        delete[] m_pThreadArgStore;
         delete[] m_pThreads;
-        m_pThreadNumStore = 0;
+        m_pThreadArgStore = 0;
         m_pThreads = 0;
 
         m_bHaveThreads = false;
@@ -447,7 +447,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 TaskScheduler::TaskScheduler()
         : m_pPipesPerThread(NULL)
         , m_NumThreads(0)
-        , m_pThreadNumStore(NULL)
+        , m_pThreadArgStore(NULL)
         , m_pThreads(NULL)
         , m_bRunning(0)
         , m_NumThreadsRunning(0)

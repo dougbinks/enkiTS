@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project( enkiTS )
 
 option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
-option( ENKITS_BUILD_EXAMPLES        "Build example applications" ON )
-
-
+option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
@@ -41,9 +39,6 @@ if(ENKITS_BUILD_EXAMPLES)
     endif()
     if(APPLE)
             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    endif()
-    if(WIN32)
-            SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /d2Zi+" )
     endif()
     add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
     target_link_libraries(ParallelSum enkiTS )

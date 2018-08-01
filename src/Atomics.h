@@ -49,7 +49,6 @@ namespace enki
     inline uint32_t AtomicCompareAndSwap( volatile uint32_t* pDest, uint32_t swapTo, uint32_t compareWith )
     {
        #ifdef _WIN32
-            // assumes two's complement - unsigned / signed conversion leads to same bit pattern
             return _InterlockedCompareExchange( (volatile long*)pDest,swapTo, compareWith );
         #else
             return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
@@ -59,7 +58,6 @@ namespace enki
     inline uint64_t AtomicCompareAndSwap( volatile uint64_t* pDest, uint64_t swapTo, uint64_t compareWith )
     {
        #ifdef _WIN32
-            // assumes two's complement - unsigned / signed conversion leads to same bit pattern
             return _InterlockedCompareExchange64( (__int64 volatile*)pDest, swapTo, compareWith );
         #else
             return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
@@ -69,7 +67,6 @@ namespace enki
     inline void* AtomicCompareAndSwapPtr( void* volatile* pDest, void* swapTo, void* compareWith )
     {
 #ifdef _WIN32
-        // assumes two's complement - unsigned / signed conversion leads to same bit pattern
         return _InterlockedCompareExchangePointer( pDest, swapTo, compareWith );
 #else
         return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
@@ -80,7 +77,6 @@ namespace enki
     inline void* AtomicExchangePtr( void* volatile* pDest, void* swapTo )
     {
 #ifdef _WIN32
-        // assumes two's complement - unsigned / signed conversion leads to same bit pattern
         return _InterlockedExchangePointer( pDest, swapTo );
 #else
         return __sync_lock_test_and_set( pDest, swapTo );

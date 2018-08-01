@@ -367,7 +367,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
         if( subTask.pTask->m_RangeToRun < partitionSize )
         {
             SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
-            SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun );
+            SplitAndAddTask( threadNum, subTask, subTask.pTask->m_RangeToRun );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
             AtomicAdd( &taskToRun.pTask->m_RunningCount, -1 );
         }
@@ -431,7 +431,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
         // add the partition to the pipe
         ++numAdded;
         AtomicAdd( &subTask_.pTask->m_RunningCount, 1 );
-        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( taskToAdd ) )
+        if( !m_pPipesPerThread[ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
         {
             if( numAdded > 1 )
             {

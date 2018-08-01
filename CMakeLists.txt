@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project( enkiTS )
 
 option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
-option( ENKITS_BUILD_EXAMPLES        "Build example applications" ON )
-
-
+option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 

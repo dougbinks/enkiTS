@@ -41,6 +41,7 @@ void ParallelTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, vo
 
 int main(int argc, const char * argv[])
 {
+    int run;
     pETS = enkiNewTaskScheduler();
     enkiInitTaskScheduler( pETS );
 
@@ -48,7 +49,7 @@ int main(int argc, const char * argv[])
     pPinnedTask = enkiCreatePinnedTask( pETS, PinnedTaskFunc, 0 ); // pinned task is created for thread 0
 
 
-    for( int run = 0; run< REPEATS; ++run )
+    for( run = 0; run< REPEATS; ++run )
     {
         enkiAddTaskSetToPipe( pETS, pParallelTask, NULL, 1);
 

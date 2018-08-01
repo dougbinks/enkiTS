@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include "Threads.h"
+#include "Atomics.h"
 
 namespace enki
 {

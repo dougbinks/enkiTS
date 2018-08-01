@@ -164,18 +164,18 @@ void TaskScheduler::StartThreads()
     SemaphoreCreate( m_NewTaskSemaphore );
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadNumStore = new ThreadArgs[m_NumThreads];
+    m_pThreadArgStore = new ThreadArgs[m_NumThreads];
     m_pThreadIDs      = new threadid_t[m_NumThreads];
-    m_pThreadNumStore[0].threadNum      = 0;
-    m_pThreadNumStore[0].pTaskScheduler = this;
+    m_pThreadArgStore[0].threadNum      = 0;
+    m_pThreadArgStore[0].pTaskScheduler = this;
     m_pThreadIDs[0] = 0;
     m_NumThreadsWaiting = 0;
     m_NumThreadsRunning = 1;// acount for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadNumStore[thread].threadNum      = thread;
-        m_pThreadNumStore[thread].pTaskScheduler = this;
-        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadNumStore[thread] );
+        m_pThreadArgStore[thread].threadNum      = thread;
+        m_pThreadArgStore[thread].pTaskScheduler = this;
+        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadArgStore[thread] );
         ++m_NumThreadsRunning;
     }
 
@@ -218,9 +218,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
         }
 
         m_NumThreads = 0;
-        delete[] m_pThreadNumStore;
+        delete[] m_pThreadArgStore;
         delete[] m_pThreadIDs;
-        m_pThreadNumStore = 0;
+        m_pThreadArgStore = 0;
         m_pThreadIDs = 0;
         SemaphoreClose( m_NewTaskSemaphore );
 
@@ -449,7 +449,7 @@ TaskScheduler::TaskScheduler()
         : m_pPipesPerThread(NULL)
         , m_pPinnedTaskListPerThread(NULL)
         , m_NumThreads(0)
-        , m_pThreadNumStore(NULL)
+        , m_pThreadArgStore(NULL)
         , m_pThreadIDs(NULL)
         , m_bRunning(false)
         , m_NumThreadsRunning(0)

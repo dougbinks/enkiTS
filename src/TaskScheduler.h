@@ -193,7 +193,7 @@ namespace enki
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;
 
         uint32_t                                                 m_NumThreads;
-        ThreadArgs*                                              m_pThreadNumStore;
+        ThreadArgs*                                              m_pThreadArgStore;
         threadid_t*                                              m_pThreadIDs;
         volatile bool                                            m_bRunning;
         volatile int32_t                                         m_NumThreadsRunning;

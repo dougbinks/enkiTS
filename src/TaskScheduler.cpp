@@ -324,21 +324,15 @@ void TaskScheduler::WakeThreads(  int32_t maxToWake_ )
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
-    int32_t numAdded = 0;
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
 
         // add the partition to the pipe
-        ++numAdded;
         AtomicAdd( &subTask_.pTask->m_RunningCount, 1 );
         if( !m_pPipesPerThread[ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
         {
-            if( numAdded > 1 )
-            {
-                WakeThreads( numAdded - 1 );
-            }
-            numAdded = 0;
+
             // alter range to run the appropriate fraction
             if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
             {
@@ -348,10 +342,12 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
             AtomicAdd( &subTask_.pTask->m_RunningCount, -1 );
         }
+        else
+        {
+            WakeThreads( 1 );
+        }
     }
 
-
-    WakeThreads( numAdded );
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )

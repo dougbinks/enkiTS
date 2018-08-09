@@ -61,6 +61,8 @@ int main(int argc, const char * argv[])
         ParallelTaskSet task;
         g_TS.AddTaskSetToPipe( &task );
 
+        printf("Task %d added\n", run );
+
         // RunPinnedTasks must be called on main thread to run any pinned tasks for that thread.
         // Tasking threads automatically do this in their task loop.
         g_TS.RunPinnedTasks(); 

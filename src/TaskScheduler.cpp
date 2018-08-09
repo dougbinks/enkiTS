@@ -120,7 +120,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 
     SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
     
-    uint32_t spinCount = 0;
+    uint32_t spinCount = SPIN_COUNT + 1;
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
     while( pTS->m_bRunning )
     {
@@ -310,9 +310,16 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     assert( prev != 0 );
 }
 
-void TaskScheduler::WakeThreads()
+void TaskScheduler::WakeThreads(  int32_t maxToWake_ )
 {
-    SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
+    if( maxToWake_ > 0 && maxToWake_  < m_NumThreadsWaiting )
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, maxToWake_ );
+    }
+    else
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
+    }
 }
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
@@ -329,7 +336,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
         {
             if( numAdded > 1 )
             {
-                WakeThreads();
+                WakeThreads( numAdded - 1 );
             }
             numAdded = 0;
             // alter range to run the appropriate fraction
@@ -344,7 +351,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
     }
 
 
-    WakeThreads();
+    WakeThreads( numAdded );
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )

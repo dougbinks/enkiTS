@@ -540,14 +540,16 @@ void    TaskScheduler::WaitforAll()
      uint32_t hintPipeToCheck_io = threadNum.m_ThreadNum  + 1;    // does not need to be clamped.
     while( bHaveTasks || ( m_NumThreadsWaiting < m_NumThreadsRunning - amRunningThread ) )
     {
-        TryRunTask( threadNum.m_ThreadNum, hintPipeToCheck_io );
-        bHaveTasks = false;
-        for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+        bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
+        if( !bHaveTasks )
         {
-            if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+            for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
             {
-                bHaveTasks = true;
-                break;
+                if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+                {
+                    bHaveTasks = true;
+                    break;
+                }
             }
         }
      }

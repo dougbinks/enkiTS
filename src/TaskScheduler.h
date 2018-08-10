@@ -234,7 +234,7 @@ namespace enki
         void             StartThreads();
         void             Cleanup( bool bWait_ );
         void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
-        void             WakeThreads();
+        void             WakeThreads( int32_t maxToWake_ = 0 );
 
         TaskPipe*                                                m_pPipesPerThread;
         PinnedTaskList*                                          m_pPinnedTaskListPerThread;

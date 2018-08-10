@@ -49,10 +49,12 @@ if(ENKITS_BUILD_EXAMPLES)
     add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
     target_link_libraries(TaskThroughput enkiTS )
 
+    add_executable( TaskOverhead example/TaskOverhead.cpp example/Timer.h )
+    target_link_libraries(TaskOverhead enkiTS )
+
     add_executable( UserThreads example/UserThreads.cpp example/Timer.h )
     target_link_libraries(UserThreads enkiTS )
 
-    
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )
     target_link_libraries(ParallelSum_c enkiTS )

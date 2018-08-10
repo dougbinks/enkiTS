@@ -296,6 +296,10 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
             break;
         }
     }
+    if( !bHaveTasks && !m_pPinnedTaskListPerThread[ threadNum ].IsListEmpty() )
+    {
+        bHaveTasks = true;
+    }
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );

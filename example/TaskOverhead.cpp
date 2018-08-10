@@ -186,7 +186,7 @@ int main(int argc, const char * argv[])
     printf("\nSet Size,\tTime Parallel,\tTime Serial\n" );
     for( uint32_t dataPoint = 0; dataPoint < DATA_POINTS; ++dataPoint )
     {
-        printf("%d, %f, %f\n", GetSetSizeForDataPoint( dataPoint ), (float)avTimeTakenMS[ dataPoint ], (float)avSerialTimeTakenMS[ dataPoint ] );
+        printf("%8d,\t%f,\t%f\n", GetSetSizeForDataPoint( dataPoint ), (float)avTimeTakenMS[ dataPoint ], (float)avSerialTimeTakenMS[ dataPoint ] );
     }
 
     return 0;

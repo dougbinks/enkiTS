@@ -78,10 +78,10 @@ namespace enki
 
         // read and write indexes allow fast access to the pipe, but actual access
         // controlled by the access flags. 
-        std::atomic<uint32_t>			m_WriteIndex;
-        std::atomic<uint32_t>			m_ReadCount;
-        std::atomic<uint32_t>			m_Flags[  ms_cSize ];
-        std::atomic<uint32_t>			m_ReadIndex;
+        std::atomic<uint32_t>            m_WriteIndex;
+        std::atomic<uint32_t>            m_ReadCount;
+        std::atomic<uint32_t>            m_Flags[  ms_cSize ];
+        std::atomic<uint32_t>            m_ReadIndex;
     };
 
     template<uint8_t cSizeLog2, typename T> inline
@@ -224,5 +224,61 @@ namespace enki
         m_WriteIndex.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
+
+
+    // Lockless multiwriter intrusive list
+    // Type T must implement T* volatile pNext;
+    template<typename T> class  LocklessMultiWriteIntrusiveList
+    {
+
+        std::atomic<T*> pHead;
+        T               tail;
+    public:
+        LocklessMultiWriteIntrusiveList() : pHead( &tail )
+        {
+            tail.pNext = NULL;
+        }
+
+        bool IsListEmpty() const
+        {
+            return pHead == &tail;
+        }
+
+        // Add - safe to perform from any thread
+        void WriterWriteFront( T* pNode_ )
+        {
+            assert( pNode_ );
+            pNode_->pNext = NULL;
+            T* pPrev = pHead.exchange( pNode_ );
+            pPrev->pNext = pNode_;
+        }
+
+        // Remove - only thread safe for owner
+        T* ReaderReadBack()
+        {
+            T* pTailPlus1 = tail.pNext;
+            if( pTailPlus1 )
+            {
+                T* pTailPlus2 = pTailPlus1->pNext;
+                if( pTailPlus2 )
+                {
+                    //not head
+                    tail.pNext = pTailPlus2;
+                }
+                else
+                {
+                    // pTailPlus1 is the head, attempt swap with tail
+                    tail.pNext = NULL;
+                    if( !pHead.compare_exchange_weak( pTailPlus1, &tail ) )
+                    {
+                        // pTailPlus1 is no longer the head, so pTailPlus1->pNext should be non NULL
+                        assert( pTailPlus1->pNext );
+                        tail.pNext = pTailPlus1->pNext.load();
+                    }
+                }
+            }
+            return pTailPlus1;
+        }
+    };
 
 }

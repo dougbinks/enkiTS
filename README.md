@@ -1,4 +1,5 @@
 # enkiTS
+[![Build Status for branch: dev_UserThread_C++11](https://travis-ci.org/dougbinks/enkiTS.svg?branch=dev_UserThread_C%2B%2B11)](https://travis-ci.org/dougbinks/enkiTS)
 
 ## enki Task Scheduler
 
@@ -10,11 +11,10 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 
-The user thread versions may get rolled into the C++11 and standard branches with defines controlling whether to include User Thread API.
 
-Note - this is a work in progress conversion from my code for [enkisoftware's](http://www.enkisoftware.com/) Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
+Note - this is a work in progress conversion from my code for [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 
-As this was originally written before widespread decent C++11 support for atomics and threads, these are implemented here per-platform only supporting Windows, Linux and OSX on Intel x86 / x64. [A separate C++11 branch exists](https://github.com/dougbinks/enkiTS/tree/C++11) for those who would like to use it, but this currently has slightly slower performance under very high task throughput when there is low work per task.
+As this was originally written before widespread decent C++11 support for atomics and threads, these are implemented here per-platform supporting Windows, Linux and OSX on Intel x86 / x64 (also works on ARM iOS and Android but not as well tested). [A separate C++11 branch exists](https://github.com/dougbinks/enkiTS/tree/C++11) for those who would like to use it, but this currently has slightly slower performance under very high task throughput when there is low work per task.
 
 The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++11 branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11) )
 
@@ -22,19 +22,21 @@ For further examples, see https://github.com/dougbinks/enkiTSExamples
 
 ## Building
 
-On Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
+Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will require the pthreads library.
+
+For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
 
 1. `mkdir build`
 2. `cmake ..`
 3. either run `make` or open `enkiTS.sln`
 
-## Project Goals
+## Project Features
 
 1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.
 1. *Fast, then scalable* - enkiTS is designed for consumer devices first, so performance on a low number of threads is important, followed by scalability.
 1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
-
+1. **NEW** - *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
  
 ## Usage
 
@@ -51,6 +53,7 @@ void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, voi
 int main(int argc, const char * argv[]) {
    enkiTaskSet* pTask;
    g_pTS = enkiNewTaskScheduler();
+   enkiInitTaskScheduler( g_pTS );
 	
    // create a task, can re-use this to get allocation occurring on startup
    pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
@@ -61,6 +64,8 @@ int main(int argc, const char * argv[]) {
    enkiWaitForTaskSet( g_pTS, pTask );
    
    enkiDeleteTaskSet( pTask );
+   
+   enkiDeleteTaskScheduler( g_pTS );
    
    return 0;
 }
@@ -74,18 +79,18 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct ParallelTaskSet : enki::ITaskSet {
-   virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum ) {
+   virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
       // do something here, can issue tasks with g_TS
    }
 };
 
 int main(int argc, const char * argv[]) {
    g_TS.Initialize();
-   enki::ParallelTask task; // default constructor has a set size of 1
+   ParallelTaskSet task; // default constructor has a set size of 1
    g_TS.AddTaskSetToPipe( &task );
 
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   g_TS.WaitforTaskSet( &task );
+   g_TS.WaitforTask( &task );
    return 0;
 }
 ```
@@ -104,16 +109,37 @@ int main(int argc, const char * argv[]) {
       }  );
 
    g_TS.AddTaskSetToPipe( &task );
-   g_TS.WaitforTaskSet( &task );
+   g_TS.WaitforTask( &task );
    return 0;
 }
 ```
 
-## To Do
+Pinned Tasks usage in C++ (see example/PinnedTask_c.c for C example).
+```C
+#include "TaskScheduler.h"
 
-* Documentation.
-* Add a profile header for support of various profiling libraries such as [ITT](https://software.intel.com/en-us/articles/intel-itt-api-open-source), [Remotery](https://github.com/dougbinks/Remotery), [InsightProfile](https://github.com/kayru/insightprofiler), [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) and potentially [Telemetry](http://www.radgametools.com/telemetry.htm).
-* Benchmarking?
+enki::TaskScheduler g_TS;
+
+// define a task set, can ignore range if we only do one thing
+struct PinnedTask : enki::IPinnedTask {
+    virtual void    Execute() {
+      // do something here, can issue tasks with g_TS
+   }
+};
+
+int main(int argc, const char * argv[]) {
+   g_TS.Initialize();
+   PinnedTask task; //default constructor sets thread for pinned task to 0 (main thread)
+   g_TS.AddPinnedTask( &task );
+   
+   // RunPinnedTasks must be called on main thread to run any pinned tasks for that thread.
+   // Tasking threads automatically do this in their task loop.
+   g_TS.RunPinnedTasks();
+   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   g_TS.WaitforTask( &task );
+   return 0;
+}
+```
 
 
 ## License (zlib)
@@ -135,7 +161,3 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
-
-
-
-

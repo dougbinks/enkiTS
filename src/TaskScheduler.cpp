@@ -21,7 +21,11 @@
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
 
-
+#if defined __i386__ || defined __x86_64__
+#include "x86intrin.h"
+#elif defined _WIN32
+#include <intrin.h>
+#endif
 
 using namespace enki;
 
@@ -36,75 +40,88 @@ static THREAD_LOCAL uint32_t                             gtl_threadNum       = 0
 
 namespace enki 
 {
-	struct SubTaskSet
-	{
-		ITaskSet*           pTask;
-		TaskSetPartition    partition;
-	};
+    struct SubTaskSet
+    {
+        ITaskSet*           pTask;
+        TaskSetPartition    partition;
+    };
 
-	// we derive class TaskPipe rather than typedef to get forward declaration working easily
-	class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::SubTaskSet> {};
+    // we derive class TaskPipe rather than typedef to get forward declaration working easily
+    class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::SubTaskSet> {};
 
-	struct ThreadArgs
-	{
-		uint32_t		threadNum;
-		TaskScheduler*  pTaskScheduler;
-	};
+    struct ThreadArgs
+    {
+        uint32_t        threadNum;
+        TaskScheduler*  pTaskScheduler;
+    };
+
+    class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 }
 
 namespace
 {
-	SubTaskSet       SplitTask( SubTaskSet& subTask_, uint32_t rangeToSplit_ )
-	{
-		SubTaskSet splitTask = subTask_;
-		uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
+    SubTaskSet       SplitTask( SubTaskSet& subTask_, uint32_t rangeToSplit_ )
+    {
+        SubTaskSet splitTask = subTask_;
+        uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
 
         if( rangeToSplit_ > rangeLeft )
         {
             rangeToSplit_ = rangeLeft;
         }
         splitTask.partition.end = subTask_.partition.start + rangeToSplit_;
-		subTask_.partition.start = splitTask.partition.end;
-		return splitTask;
-	}
+        subTask_.partition.start = splitTask.partition.end;
+        return splitTask;
+    }
 
-	#if defined _WIN32
-		#if defined _M_IX86  || defined _M_X64
-			#pragma intrinsic(_mm_pause)
-			inline void Pause() { _mm_pause(); }
-		#endif
-	#elif defined __i386__ || defined __x86_64__
-		inline void Pause() { __asm__ __volatile__("pause;"); }
-	#else
-		inline void Pause() { ;} // may have NOP or yield equiv
-	#endif
+    #if ( defined _WIN32 && ( defined _M_IX86  || defined _M_X64 ) ) || ( defined __i386__ || defined __x86_64__ )
+    static void SpinWait( uint32_t spinCount_ )
+    {
+        uint64_t end = __rdtsc() + spinCount_;
+        while( __rdtsc() < end )
+        {
+            _mm_pause();
+        }        
+    }
+    #else
+    static void SpinWait( uint32_t spinCount_ )
+    {
+        while( spinCount_ )
+        {
+            // TODO: may have NOP or yield equiv
+            --spinCount_;
+        }        
+    }
+    #endif
+
+
 }
 
 
 static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
 {
-	if( func_ )
-	{
-		func_(threadnum_);
-	}
+    if( func_ )
+    {
+        func_(threadnum_);
+    }
 }
 
 ProfilerCallbacks* TaskScheduler::GetProfilerCallbacks()
 {
-	return &m_ProfilerCallbacks;
+    return &m_ProfilerCallbacks;
 }
 
 THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
 {
-	ThreadArgs args					= *(ThreadArgs*)pArgs;
-	uint32_t threadNum				= args.threadNum;
-	TaskScheduler*  pTS				= args.pTaskScheduler;
+    ThreadArgs args                    = *(ThreadArgs*)pArgs;
+    uint32_t threadNum                = args.threadNum;
+    TaskScheduler*  pTS                = args.pTaskScheduler;
     gtl_threadNum      = threadNum;
 
-	SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
+    SafeCallback( pTS->m_ProfilerCallbacks.threadStart, threadNum );
     
-    uint32_t spinCount = 0;
-	uint32_t hintPipeToCheck_io = threadNum + 1;	// does not need to be clamped.
+    uint32_t spinCount = SPIN_COUNT + 1;
+    uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
     while( pTS->m_bRunning )
     {
         if(!pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
@@ -113,18 +130,15 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
-				pTS->WaitForTasks( threadNum );
-				spinCount = 0;
+                pTS->WaitForTasks( threadNum );
+                spinCount = 0;
             }
-			else
-			{
-				uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
-				while( spinBackoffCount )
-				{
-					Pause();
-					--spinBackoffCount;
-				}
-			}
+            else
+            {
+                // Note: see https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
+                uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                SpinWait( spinBackoffCount );
+            }
         }
         else
         {
@@ -133,7 +147,7 @@ THREADFUNC_DECL TaskScheduler::TaskingThreadFunction( void* pArgs )
     }
 
     AtomicAdd( &pTS->m_NumThreadsRunning, -1 );
-	SafeCallback( pTS->m_ProfilerCallbacks.threadStop, threadNum );
+    SafeCallback( pTS->m_ProfilerCallbacks.threadStop, threadNum );
 
     return 0;
 }
@@ -150,38 +164,38 @@ void TaskScheduler::StartThreads()
     SemaphoreCreate( m_NewTaskSemaphore );
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadNumStore = new ThreadArgs[m_NumThreads];
+    m_pThreadArgStore = new ThreadArgs[m_NumThreads];
     m_pThreadIDs      = new threadid_t[m_NumThreads];
-	m_pThreadNumStore[0].threadNum      = 0;
-	m_pThreadNumStore[0].pTaskScheduler = this;
-	m_pThreadIDs[0] = 0;
+    m_pThreadArgStore[0].threadNum      = 0;
+    m_pThreadArgStore[0].pTaskScheduler = this;
+    m_pThreadIDs[0] = 0;
     m_NumThreadsWaiting = 0;
     m_NumThreadsRunning = 1;// acount for main thread
     for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
-		m_pThreadNumStore[thread].threadNum      = thread;
-		m_pThreadNumStore[thread].pTaskScheduler = this;
-        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadNumStore[thread] );
+        m_pThreadArgStore[thread].threadNum      = thread;
+        m_pThreadArgStore[thread].pTaskScheduler = this;
+        ThreadCreate( &m_pThreadIDs[thread], TaskingThreadFunction, &m_pThreadArgStore[thread] );
         ++m_NumThreadsRunning;
     }
 
     // ensure we have sufficient tasks to equally fill either all threads including main
     // or just the threads we've launched, this is outside the firstinit as we want to be able
     // to runtime change it
-	if( 1 == m_NumThreads )
-	{
-		m_NumPartitions = 1;
-		m_NumInitialPartitions = 1;
-	}
-	else
-	{
-		m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
-		m_NumInitialPartitions = m_NumThreads - 1;
-		if( m_NumInitialPartitions > MAX_NUM_INITIAL_PARTITIONS )
-		{
-			m_NumInitialPartitions = MAX_NUM_INITIAL_PARTITIONS;
-		}
-	}
+    if( 1 == m_NumThreads )
+    {
+        m_NumPartitions = 1;
+        m_NumInitialPartitions = 1;
+    }
+    else
+    {
+        m_NumPartitions = m_NumThreads * (m_NumThreads - 1);
+        m_NumInitialPartitions = m_NumThreads - 1;
+        if( m_NumInitialPartitions > MAX_NUM_INITIAL_PARTITIONS )
+        {
+            m_NumInitialPartitions = MAX_NUM_INITIAL_PARTITIONS;
+        }
+    }
 
     m_bHaveThreads = true;
 }
@@ -203,57 +217,60 @@ void TaskScheduler::StopThreads( bool bWait_ )
             ThreadTerminate( m_pThreadIDs[thread] );
         }
 
-		m_NumThreads = 0;
-        delete[] m_pThreadNumStore;
+        m_NumThreads = 0;
+        delete[] m_pThreadArgStore;
         delete[] m_pThreadIDs;
-        m_pThreadNumStore = 0;
+        m_pThreadArgStore = 0;
         m_pThreadIDs = 0;
         SemaphoreClose( m_NewTaskSemaphore );
 
         m_bHaveThreads = false;
-		m_NumThreadsWaiting = 0;
-		m_NumThreadsRunning = 0;
+        m_NumThreadsWaiting = 0;
+        m_NumThreadsRunning = 0;
     }
 }
 
 bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ )
 {
+    // Run any tasks for this thread
+    RunPinnedTasks( threadNum );
+
     // check for tasks
     SubTaskSet subTask;
     bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &subTask );
 
-	uint32_t threadToCheck = hintPipeToCheck_io_;
-	uint32_t checkCount = 0;
+    uint32_t threadToCheck = hintPipeToCheck_io_;
+    uint32_t checkCount = 0;
     while( !bHaveTask && checkCount < m_NumThreads )
     {
-		threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
-		if( threadToCheck != threadNum )
-		{
-			bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
-		}
-		++checkCount;
+        threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
+        if( threadToCheck != threadNum )
+        {
+            bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
+        }
+        ++checkCount;
     }
         
     if( bHaveTask )
     {
-		// update hint, will preserve value unless actually got task from another thread.
-		hintPipeToCheck_io_ = threadToCheck;
+        // update hint, will preserve value unless actually got task from another thread.
+        hintPipeToCheck_io_ = threadToCheck;
 
-		uint32_t partitionSize = subTask.partition.end - subTask.partition.start;
-		if( subTask.pTask->m_RangeToRun < partitionSize )
-		{
-			SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
-			SplitAndAddTask( gtl_threadNum, subTask, subTask.pTask->m_RangeToRun, 0 );
-			taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
-			AtomicAdd( &taskToRun.pTask->m_RunningCount, -1 );
-		}
-		else
-		{
+        uint32_t partitionSize = subTask.partition.end - subTask.partition.start;
+        if( subTask.pTask->m_RangeToRun < partitionSize )
+        {
+            SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
+            SplitAndAddTask( threadNum, subTask, subTask.pTask->m_RangeToRun );
+            taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
+            AtomicAdd( &taskToRun.pTask->m_RunningCount, -1 );
+        }
+        else
+        {
 
-			// the task has already been divided up by AddTaskSetToPipe, so just run it
-			subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-			AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
-		}
+            // the task has already been divided up by AddTaskSetToPipe, so just run it
+            subTask.pTask->ExecuteRange( subTask.partition, threadNum );
+            AtomicAdd( &subTask.pTask->m_RunningCount, -1 );
+        }
     }
 
     return bHaveTask;
@@ -262,12 +279,12 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
 void TaskScheduler::WaitForTasks( uint32_t threadNum )
 {
-	// We incrememt the number of threads waiting here in order
-	// to ensure that the check for tasks occurs after the increment
-	// to prevent a task being added after a check, then the thread waiting.
-	// This will occasionally result in threads being mistakenly awoken,
-	// but they will then go back to sleep.
-	AtomicAdd( &m_NumThreadsWaiting, 1 );
+    // We incrememt the number of threads waiting here in order
+    // to ensure that the check for tasks occurs after the increment
+    // to prevent a task being added after a check, then the thread waiting.
+    // This will occasionally result in threads being mistakenly awoken,
+    // but they will then go back to sleep.
+    AtomicAdd( &m_NumThreadsWaiting, 1 );
 
     bool bHaveTasks = false;
     for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
@@ -277,6 +294,10 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
             bHaveTasks = true;
             break;
         }
+    }
+    if( !bHaveTasks && !m_pPinnedTaskListPerThread[ threadNum ].IsListEmpty() )
+    {
+        bHaveTasks = true;
     }
     if( !bHaveTasks )
     {
@@ -289,95 +310,125 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     assert( prev != 0 );
 }
 
-void TaskScheduler::WakeThreads()
+void TaskScheduler::WakeThreads(  int32_t maxToWake_ )
 {
-	SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
+    if( maxToWake_ > 0 && maxToWake_  < m_NumThreadsWaiting )
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, maxToWake_ );
+    }
+    else
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
+    }
 }
 
-void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_,
-	uint32_t rangeToSplit_, int32_t runningCountOffset_ )
+void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
-    int32_t numAdded = 0;
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
 
         // add the partition to the pipe
-        ++numAdded;
-        if( !m_pPipesPerThread[ gtl_threadNum ].WriterTryWriteFront( taskToAdd ) )
+        AtomicAdd( &subTask_.pTask->m_RunningCount, 1 );
+        if( !m_pPipesPerThread[ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
         {
-			if( numAdded > 1 )
-			{
-				WakeThreads();
-			}
-			// alter range to run the appropriate fraction
-			if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
-			{
-				taskToAdd.partition.end = taskToAdd.partition.start + taskToAdd.pTask->m_RangeToRun;
-				subTask_.partition.start = taskToAdd.partition.end;
-			}
+
+            // alter range to run the appropriate fraction
+            if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
+            {
+                taskToAdd.partition.end = taskToAdd.partition.start + taskToAdd.pTask->m_RangeToRun;
+                subTask_.partition.start = taskToAdd.partition.end;
+            }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
-            --numAdded;
+            AtomicAdd( &subTask_.pTask->m_RunningCount, -1 );
+        }
+        else
+        {
+            WakeThreads( 1 );
         }
     }
 
-    // increment running count by number added
-    AtomicAdd( &subTask_.pTask->m_RunningCount, numAdded + runningCountOffset_ );
-
-	WakeThreads();
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 {
-	// set running count to -1 to guarantee it won't be found complete until all subtasks added
-    pTaskSet->m_RunningCount = -1;
+    pTaskSet->m_RunningCount = 0;
 
     // divide task up and add to pipe
     pTaskSet->m_RangeToRun = pTaskSet->m_SetSize / m_NumPartitions;
     if( pTaskSet->m_RangeToRun < pTaskSet->m_MinRange ) { pTaskSet->m_RangeToRun = pTaskSet->m_MinRange; }
 
-	uint32_t rangeToSplit = pTaskSet->m_SetSize / m_NumInitialPartitions;
-	if( rangeToSplit < pTaskSet->m_MinRange ) { rangeToSplit = pTaskSet->m_MinRange; }
+    uint32_t rangeToSplit = pTaskSet->m_SetSize / m_NumInitialPartitions;
+    if( rangeToSplit < pTaskSet->m_MinRange ) { rangeToSplit = pTaskSet->m_MinRange; }
 
     SubTaskSet subTask;
     subTask.pTask = pTaskSet;
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet->m_SetSize;
-	SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit, 1 );
+    SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit );
 }
 
-void    TaskScheduler::WaitforTaskSet( const ITaskSet* pTaskSet )
+void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
-	uint32_t hintPipeToCheck_io = gtl_threadNum + 1;	// does not need to be clamped.
-	if( pTaskSet )
-	{
-		while( pTaskSet->m_RunningCount )
-		{
-			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-			// should add a spin then wait for task completion event.
-		}
-	}
-	else
-	{
-			TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-	}
+    pTask_->m_RunningCount = 1;
+    m_pPinnedTaskListPerThread[ pTask_->threadNum ].WriterWriteFront( pTask_ );
+    WakeThreads();
+}
+
+void TaskScheduler::RunPinnedTasks()
+{
+    uint32_t threadNum = gtl_threadNum;
+    RunPinnedTasks( threadNum );
+}
+
+void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
+{
+    IPinnedTask* pPinnedTaskSet = NULL;
+    do
+    {
+        pPinnedTaskSet = m_pPinnedTaskListPerThread[ threadNum ].ReaderReadBack();
+        if( pPinnedTaskSet )
+        {
+            pPinnedTaskSet->Execute();
+            pPinnedTaskSet->m_RunningCount = 0;
+        }
+    } while( pPinnedTaskSet );
+}
+
+void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_ )
+{
+    uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
+    if( pCompletable_ )
+    {
+        while( pCompletable_->m_RunningCount )
+        {
+            TryRunTask( gtl_threadNum, hintPipeToCheck_io );
+            // should add a spin then wait for task completion event.
+        }
+    }
+    else
+    {
+            TryRunTask( gtl_threadNum, hintPipeToCheck_io );
+    }
 }
 
 void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
- 	uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;	// does not need to be clamped.
-	int32_t threadsRunning = m_NumThreadsRunning - 1;
+     uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;    // does not need to be clamped.
+    int32_t threadsRunning = m_NumThreadsRunning - 1;
     while( bHaveTasks || m_NumThreadsWaiting < threadsRunning )
     {
-        TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-        bHaveTasks = false;
-        for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+        bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
+        if( !bHaveTasks )
         {
-            if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+            for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
             {
-                bHaveTasks = true;
-                break;
+                if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
+                {
+                    bHaveTasks = true;
+                    break;
+                }
             }
         }
      }
@@ -387,8 +438,11 @@ void    TaskScheduler::WaitforAllAndShutdown()
 {
     WaitforAll();
     StopThreads(true);
-	delete[] m_pPipesPerThread;
+    delete[] m_pPipesPerThread;
     m_pPipesPerThread = 0;
+
+    delete[] m_pPinnedTaskListPerThread;
+    m_pPinnedTaskListPerThread = 0;
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const
@@ -397,17 +451,18 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 }
 
 TaskScheduler::TaskScheduler()
-		: m_pPipesPerThread(NULL)
-		, m_NumThreads(0)
-		, m_pThreadNumStore(NULL)
-		, m_pThreadIDs(NULL)
-		, m_bRunning(false)
-		, m_NumThreadsRunning(0)
-		, m_NumThreadsWaiting(0)
-		, m_NumPartitions(0)
-		, m_bHaveThreads(false)
+        : m_pPipesPerThread(NULL)
+        , m_pPinnedTaskListPerThread(NULL)
+        , m_NumThreads(0)
+        , m_pThreadArgStore(NULL)
+        , m_pThreadIDs(NULL)
+        , m_bRunning(false)
+        , m_NumThreadsRunning(0)
+        , m_NumThreadsWaiting(0)
+        , m_NumPartitions(0)
+        , m_bHaveThreads(false)
 {
-	memset(&m_ProfilerCallbacks, 0, sizeof(m_ProfilerCallbacks));
+    memset(&m_ProfilerCallbacks, 0, sizeof(m_ProfilerCallbacks));
 }
 
 TaskScheduler::~TaskScheduler()
@@ -415,23 +470,28 @@ TaskScheduler::~TaskScheduler()
     StopThreads( true ); // Stops threads, waiting for them.
 
     delete[] m_pPipesPerThread;
-    m_pPipesPerThread = 0;
+    m_pPipesPerThread = NULL;
+
+    delete[] m_pPinnedTaskListPerThread;
+    m_pPinnedTaskListPerThread = NULL;
 }
 
 void    TaskScheduler::Initialize( uint32_t numThreads_ )
 {
-	assert( numThreads_ );
+    assert( numThreads_ );
     StopThreads( true ); // Stops threads, waiting for them.
     delete[] m_pPipesPerThread;
+    delete[] m_pPinnedTaskListPerThread;
 
-	m_NumThreads = numThreads_;
+    m_NumThreads = numThreads_;
 
-    m_pPipesPerThread = new TaskPipe[ m_NumThreads ];
+    m_pPipesPerThread          = new TaskPipe[ m_NumThreads ];
+    m_pPinnedTaskListPerThread = new PinnedTaskList[ m_NumThreads ];
 
     StartThreads();
 }
 
 void   TaskScheduler::Initialize()
 {
-	Initialize( GetNumHardwareThreads() );
+    Initialize( GetNumHardwareThreads() );
 }

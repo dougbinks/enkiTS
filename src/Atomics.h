@@ -21,9 +21,10 @@
 #include <stdint.h>
 
 #ifdef _WIN32
+    #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
-	#undef GetObject
+    #undef GetObject
     #include <intrin.h>
 
     extern "C" void _ReadWriteBarrier();
@@ -39,7 +40,7 @@
 #else
     #define BASE_MEMORYBARRIER_ACQUIRE() __asm__ __volatile__("": : :"memory")  
     #define BASE_MEMORYBARRIER_RELEASE() __asm__ __volatile__("": : :"memory")  
-	#define BASE_ALIGN(x)  __attribute__ ((aligned( x )))
+    #define BASE_ALIGN(x)  __attribute__ ((aligned( x )))
 #endif
 
 namespace enki
@@ -49,7 +50,6 @@ namespace enki
     inline uint32_t AtomicCompareAndSwap( volatile uint32_t* pDest, uint32_t swapTo, uint32_t compareWith )
     {
        #ifdef _WIN32
-			// assumes two's complement - unsigned / signed conversion leads to same bit pattern
             return _InterlockedCompareExchange( (volatile long*)pDest,swapTo, compareWith );
         #else
             return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
@@ -59,12 +59,30 @@ namespace enki
     inline uint64_t AtomicCompareAndSwap( volatile uint64_t* pDest, uint64_t swapTo, uint64_t compareWith )
     {
        #ifdef _WIN32
-			// assumes two's complement - unsigned / signed conversion leads to same bit pattern
             return _InterlockedCompareExchange64( (__int64 volatile*)pDest, swapTo, compareWith );
         #else
             return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
         #endif      
-    }	
+    }
+
+    inline void* AtomicCompareAndSwapPtr( void* volatile* pDest, void* swapTo, void* compareWith )
+    {
+#ifdef _WIN32
+        return _InterlockedCompareExchangePointer( pDest, swapTo, compareWith );
+#else
+        return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
+#endif      
+    }
+
+    // exchange ptr and return previous value
+    inline void* AtomicExchangePtr( void* volatile* pDest, void* swapTo )
+    {
+#ifdef _WIN32
+        return _InterlockedExchangePointer( pDest, swapTo );
+#else
+        return __sync_lock_test_and_set( pDest, swapTo );
+#endif      
+    }
 
     // Atomically performs: tmp = *pDest; *pDest += value; return tmp;
     inline int32_t AtomicAdd( volatile int32_t* pDest, int32_t value )

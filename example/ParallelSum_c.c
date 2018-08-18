@@ -21,93 +21,93 @@
 #include <stdlib.h>
 #include <string.h>
 
-enkiTaskScheduler*	pETS;
-enkiTaskSet*		pPSumTask;
-enkiTaskSet*		pPSumReductionTask;
+enkiTaskScheduler*    pETS;
+enkiTaskSet*        pPSumTask;
+enkiTaskSet*        pPSumReductionTask;
 
 
 typedef struct ParallelSumTaskSetArgs
 {
-	uint64_t* pPartialSums;
-	uint32_t  numPartialSums;
+    uint64_t* pPartialSums;
+    uint32_t  numPartialSums;
 } ParallelSumTaskSetArgs;
 
 void ParallelSumTaskSetArgsInit( ParallelSumTaskSetArgs* pArgs_ )
 {
-	pArgs_->numPartialSums = enkiGetNumTaskThreads( pETS );
-	pArgs_->pPartialSums = (uint64_t*)malloc( sizeof(uint64_t) * pArgs_->numPartialSums );
-	memset( pArgs_->pPartialSums, 0, sizeof(uint64_t) * pArgs_->numPartialSums );
+    pArgs_->numPartialSums = enkiGetNumTaskThreads( pETS );
+    pArgs_->pPartialSums = (uint64_t*)malloc( sizeof(uint64_t) * pArgs_->numPartialSums );
+    memset( pArgs_->pPartialSums, 0, sizeof(uint64_t) * pArgs_->numPartialSums );
 }
 
 void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
 {
-	ParallelSumTaskSetArgs args;
-	uint64_t sum, i;
-	
-	args = *(ParallelSumTaskSetArgs*)pArgs_;
+    ParallelSumTaskSetArgs args;
+    uint64_t sum, i;
+    
+    args = *(ParallelSumTaskSetArgs*)pArgs_;
 
-	sum = args.pPartialSums[threadnum_];
-	for( i = start_; i < end; ++i )
-	{
-		sum += i + 1;
-	}
-	args.pPartialSums[threadnum_] = sum;
+    sum = args.pPartialSums[threadnum_];
+    for( i = start_; i < end; ++i )
+    {
+        sum += i + 1;
+    }
+    args.pPartialSums[threadnum_] = sum;
 }
 
 void ParallelReductionSumTaskSet(  uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
 {
-	ParallelSumTaskSetArgs args;
-	uint64_t sum;
-	uint64_t inMax_outSum, i;
+    ParallelSumTaskSetArgs args;
+    uint64_t sum;
+    uint64_t inMax_outSum, i;
 
-	inMax_outSum = *(uint64_t*)pArgs_;
+    inMax_outSum = *(uint64_t*)pArgs_;
 
-	ParallelSumTaskSetArgsInit( &args );
+    ParallelSumTaskSetArgsInit( &args );
 
-	enkiAddTaskSetToPipe( pETS, pPSumTask, &args, (uint32_t)inMax_outSum);
-	enkiWaitForTaskSet( pETS, pPSumTask );
+    enkiAddTaskSetToPipe( pETS, pPSumTask, &args, (uint32_t)inMax_outSum);
+    enkiWaitForTaskSet( pETS, pPSumTask );
 
-	sum = 0;
-	for( i = 0; i < args.numPartialSums; ++i )
-	{
-		sum += args.pPartialSums[i];
-	}
+    sum = 0;
+    for( i = 0; i < args.numPartialSums; ++i )
+    {
+        sum += args.pPartialSums[i];
+    }
 
-	free( args.pPartialSums );
+    free( args.pPartialSums );
 
 
-	*(uint64_t*)pArgs_ = sum;
+    *(uint64_t*)pArgs_ = sum;
 }
 
 
 
 int main(int argc, const char * argv[])
 {
-	uint64_t inMax_outSum, i, serialSum, max;
+    uint64_t inMax_outSum, i, serialSum, max;
 
-	pETS = enkiNewTaskScheduler();
+    pETS = enkiNewTaskScheduler();
     enkiInitTaskScheduler( pETS );
 
-	pPSumTask			= enkiCreateTaskSet( pETS, ParallelSumTaskSetFunc );
-	pPSumReductionTask	= enkiCreateTaskSet( pETS, ParallelReductionSumTaskSet );
+    pPSumTask            = enkiCreateTaskSet( pETS, ParallelSumTaskSetFunc );
+    pPSumReductionTask    = enkiCreateTaskSet( pETS, ParallelReductionSumTaskSet );
 
-	max = 10 * 1024 * 1024;
-	inMax_outSum = max;
-	enkiAddTaskSetToPipe( pETS, pPSumReductionTask, &inMax_outSum, 1);
-	enkiWaitForTaskSet( pETS, pPSumReductionTask );
+    max = 10 * 1024 * 1024;
+    inMax_outSum = max;
+    enkiAddTaskSetToPipe( pETS, pPSumReductionTask, &inMax_outSum, 1);
+    enkiWaitForTaskSet( pETS, pPSumReductionTask );
 
-	printf("Parallel Example complete sum: \t %llu\n", (long long unsigned int)inMax_outSum );
+    printf("Parallel Example complete sum: \t %llu\n", (long long unsigned int)inMax_outSum );
 
-	serialSum = 0;
-	for( i = 0; i < max; ++i )
-	{
-		serialSum += i + 1;
-	}
+    serialSum = 0;
+    for( i = 0; i < max; ++i )
+    {
+        serialSum += i + 1;
+    }
 
-	printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
+    printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
 
-	enkiDeleteTaskSet( pPSumTask );
-	enkiDeleteTaskSet( pPSumReductionTask );
+    enkiDeleteTaskSet( pPSumTask );
+    enkiDeleteTaskSet( pPSumReductionTask );
 
-	enkiDeleteTaskScheduler( pETS );
+    enkiDeleteTaskScheduler( pETS );
 }

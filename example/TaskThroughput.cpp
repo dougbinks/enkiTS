@@ -24,7 +24,7 @@
 #include <math.h>
 
 #ifndef _WIN32
-	#include <string.h>
+    #include <string.h>
 #endif
 
 using namespace enki;
@@ -37,128 +37,129 @@ TaskScheduler g_TS;
 
 struct ConsumeTask : ITaskSet
 {
-	static ConsumeTask tasks[numTasks];
+    static ConsumeTask tasks[numTasks];
 
-	struct Count
-	{
-		// prevent false sharing.
-		uint32_t	count;
-		char		cacheline[64];
-	};
-	static Count*   pCount;
-	static uint32_t numCount;
+    struct Count
+    {
+        // prevent false sharing.
+        uint32_t    count;
+        char        cacheline[64];
+    };
+    static Count*   pCount;
+    static uint32_t numCount;
 
-	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
-	{
-		++pCount[threadnum].count;
-	}
+    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    {
+        ++pCount[threadnum].count;
+    }
 
-	static void Init()
-	{
-		delete[] ConsumeTask::pCount;
-		numCount = g_TS.GetNumTaskThreads();
-		ConsumeTask::pCount = new Count[ numCount ];
-		memset( pCount, 0, sizeof(Count) * numCount );
-	}
+    static void Init()
+    {
+        delete[] ConsumeTask::pCount;
+        numCount = g_TS.GetNumTaskThreads();
+        ConsumeTask::pCount = new Count[ numCount ];
+        memset( pCount, 0, sizeof(Count) * numCount );
+    }
 };
 
-ConsumeTask				 ConsumeTask::tasks[numTasks];
+ConsumeTask                 ConsumeTask::tasks[numTasks];
 ConsumeTask::Count*      ConsumeTask::pCount = NULL;
-uint32_t				 ConsumeTask::numCount = 0;
+uint32_t                 ConsumeTask::numCount = 0;
 
 
 
 struct CreateTasks : ITaskSet
 {
-	CreateTasks()
-	{
-		m_SetSize = numTasks;
-	}
-	virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
-	{
-		for( uint32_t i=range.start; i <range.end; ++i )
-		{
-			ConsumeTask& task = ConsumeTask::tasks[ i ];
-			g_TS.AddTaskSetToPipe( &task );
-		}
-	}
+    CreateTasks()
+    {
+        m_SetSize = numTasks;
+    }
+    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    {
+        for( uint32_t i=range.start; i <range.end; ++i )
+        {
+            ConsumeTask& task = ConsumeTask::tasks[ i ];
+            g_TS.AddTaskSetToPipe( &task );
+        }
+    }
 };
 
 
 
-static const int WARMUPS	= 5;
-static const int RUNS		= 10;
-static const int REPEATS	= RUNS + WARMUPS;
+static const int WARMUPS    = 5;
+static const int RUNS        = 10;
+static const int REPEATS    = RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-	uint32_t maxThreads = std::thread::hardware_concurrency();
-	double* times = new double[ maxThreads ];
-	double* stdev = new double[ maxThreads ];
-
-	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
-	{
-		g_TS.Initialize(numThreads);
-
-		double avTime = 0.0;
-		double avTime2 = 0.0;
-		uint32_t totalErrors = 0;
-		for( int run = 0; run< REPEATS; ++run )
-		{
-
-			printf("Run %d.....\n", run);
-			Timer tParallel;
-			CreateTasks createTask;
-			ConsumeTask::Init();
-
-			tParallel.Start();
+    uint32_t maxThreads = std::thread::hardware_concurrency();
+    double* times = new double[ maxThreads ];
+    double* stdev = new double[ maxThreads ];
 
 
-			g_TS.AddTaskSetToPipe( &createTask );
+    for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
+    {
+        g_TS.Initialize(numThreads);
 
-			g_TS.WaitforAll();
+        double avTime = 0.0;
+        double avTime2 = 0.0;
+        uint32_t totalErrors = 0;
+        for( int run = 0; run< REPEATS; ++run )
+        {
 
-			tParallel.Stop();
+            printf("Run %d.....\n", run);
+            Timer tParallel;
+            CreateTasks createTask;
+            ConsumeTask::Init();
 
-
-			printf("Parallel Example complete in \t%fms, task rate: %f M tasks/s\n", tParallel.GetTimeMS(), numTasks / tParallel.GetTimeMS() / 1000.0f );
-
-			printf("Parallel Example error checking...");
-			uint32_t numTasksDone = 0;
-			for( uint32_t check = 0; check < ConsumeTask::numCount; ++check )
-			{
-				numTasksDone += ConsumeTask::pCount[check].count;
-			}
-			if( numTasksDone != numTasks )
-			{
-				printf("\n ERRORS FOUND - %d tasks not done!!!\n", numTasks - numTasksDone );
-			}
-			else
-			{
-				printf(" no errors found.\n" );
-			}
-
-			if( run >= WARMUPS )
-			{
-				avTime2 += tParallel.GetTimeMS() * tParallel.GetTimeMS();
-				avTime += tParallel.GetTimeMS() / RUNS;
-			}
-		}
-
-		printf("\nAverage Time for %d Hardware Threads: %fms, rate: %f M tasks/s. %d errors found.\n", numThreads, avTime, numTasks / avTime / 1000.0f, totalErrors );
-
-		times[numThreads-1] = avTime;
-		stdev[numThreads-1] = sqrt(RUNS * avTime2 - (RUNS * avTime)*(RUNS * avTime)) / RUNS;
-	}
+            tParallel.Start();
 
 
-	printf("\nHardware Threads, Time, std, MTasks/s, Perf Multiplier\n" );
-	for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
-	{
-		printf("%d, %f, %f, %f, %f\n", numThreads, times[numThreads-1], stdev[numThreads-1], numTasks / times[numThreads-1] / 1000.0f, times[0] / times[numThreads-1] );
-	}
+            g_TS.AddTaskSetToPipe( &createTask );
 
-	delete[] times;
+            g_TS.WaitforAll();
 
-	return 0;
+            tParallel.Stop();
+
+
+            printf("Parallel Example complete in \t%fms, task rate: %f M tasks/s\n", tParallel.GetTimeMS(), numTasks / tParallel.GetTimeMS() / 1000.0f );
+
+            printf("Parallel Example error checking...");
+            uint32_t numTasksDone = 0;
+            for( uint32_t check = 0; check < ConsumeTask::numCount; ++check )
+            {
+                numTasksDone += ConsumeTask::pCount[check].count;
+            }
+            if( numTasksDone != numTasks )
+            {
+                printf("\n ERRORS FOUND - %d tasks not done!!!\n", numTasks - numTasksDone );
+            }
+            else
+            {
+                printf(" no errors found.\n" );
+            }
+
+            if( run >= WARMUPS )
+            {
+                avTime2 += tParallel.GetTimeMS() * tParallel.GetTimeMS();
+                avTime += tParallel.GetTimeMS() / RUNS;
+            }
+        }
+
+        printf("\nAverage Time for %d Hardware Threads: %fms, rate: %f M tasks/s. %d errors found.\n", numThreads, avTime, numTasks / avTime / 1000.0f, totalErrors );
+
+        times[numThreads-1] = avTime;
+        stdev[numThreads-1] = sqrt(RUNS * avTime2 - (RUNS * avTime)*(RUNS * avTime)) / RUNS;
+    }
+
+    printf("\nHardware Threads, Time, std, MTasks/s, Perf Multiplier\n" );
+    for( uint32_t numThreads = 1; numThreads <= maxThreads; ++numThreads )
+    {
+        printf("%d, %f, %f, %f, %f\n", numThreads, times[numThreads-1], stdev[numThreads-1], numTasks / times[numThreads-1] / 1000.0f, times[0] / times[numThreads-1] );
+    }
+
+
+    delete[] times;
+
+    return 0;
 }

@@ -36,8 +36,8 @@ int main(int argc, const char * argv[])
 
     enki::TaskSet task( 1024, []( enki::TaskSetPartition range, uint32_t threadnum  ) { printf("Thread %d, start %d, end %d\n", threadnum, range.start, range.end ); } );
 
-    g_TS.AddTaskSetToPipe( &task );
-    g_TS.WaitforTaskSet( &task );
+	g_TS.AddTaskSetToPipe( &task );
+	g_TS.WaitforTask( &task );
 
     return 0;
 }

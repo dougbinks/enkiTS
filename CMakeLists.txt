@@ -44,13 +44,13 @@ if(ENKITS_BUILD_EXAMPLES)
 
     add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
     target_link_libraries(ParallelSum enkiTS )
-	
+
     add_executable( PinnedTask example/PinnedTask.cpp )
     target_link_libraries(PinnedTask enkiTS )
 
     add_executable( LambdaTask example/LambdaTask.cpp example/Timer.h )
     target_link_libraries(LambdaTask enkiTS )
-    
+
     add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
     target_link_libraries(TaskThroughput enkiTS )
 

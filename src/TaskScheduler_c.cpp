@@ -142,12 +142,12 @@ int enkiIsPinnedTaskComplete(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_)
 
 void enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
-    pETS_->WaitforTaskSet( pTaskSet_ );
+    pETS_->WaitforTask( pTaskSet_ );
 }
 
 void enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ )
 {
-    pETS_->WaitforTaskSet( pTask_ );
+    pETS_->WaitforTask( pTask_ );
 }
 
 void enkiWaitForAll( enkiTaskScheduler* pETS_ )

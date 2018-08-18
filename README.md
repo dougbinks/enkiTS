@@ -11,7 +11,6 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 
-The user thread versions may get rolled into the C++11 and standard branches with defines controlling whether to include User Thread API.
 
 Note - this is a work in progress conversion from my code for [enkisoftware's](http://www.enkisoftware.com/) Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 
@@ -23,19 +22,21 @@ For further examples, see https://github.com/dougbinks/enkiTSExamples
 
 ## Building
 
-On Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
+Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will require the pthreads library.
+
+For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
 
 1. `mkdir build`
 2. `cmake ..`
 3. either run `make` or open `enkiTS.sln`
 
-## Project Goals
+## Project Features
 
 1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.
 1. *Fast, then scalable* - enkiTS is designed for consumer devices first, so performance on a low number of threads is important, followed by scalability.
 1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
-
+1. **NEW** - *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
  
 ## Usage
 
@@ -139,11 +140,6 @@ int main(int argc, const char * argv[]) {
    return 0;
 }
 ```
-## To Do
-
-* Documentation.
-* Add a profile header for support of various profiling libraries such as [ITT](https://software.intel.com/en-us/articles/intel-itt-api-open-source), [Remotery](https://github.com/dougbinks/Remotery), [InsightProfile](https://github.com/kayru/insightprofiler), [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) and potentially [Telemetry](http://www.radgametools.com/telemetry.htm).
-* Benchmarking?
 
 
 ## License (zlib)

@@ -395,7 +395,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
     } while( pPinnedTaskSet );
 }
 
-void    TaskScheduler::WaitforTaskSet( const ICompletable* pCompletable_ )
+void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_ )
 {
     uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
     if( pCompletable_ )

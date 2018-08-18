@@ -23,23 +23,18 @@
 
 #ifdef _WIN32
 
-	#include "Atomics.h"
+    #include "Atomics.h"
 
-	#define WIN32_LEAN_AND_MEAN
-	#include <Windows.h>
-	
-	#define THREADFUNC_DECL DWORD WINAPI
-	#define THREAD_LOCAL __declspec( thread )
+    #define NOMINMAX
+    #define WIN32_LEAN_AND_MEAN
+    #include <Windows.h>
+    
+    #define THREADFUNC_DECL DWORD WINAPI
+    #define THREAD_LOCAL __declspec( thread )
 
 namespace enki
 {
     typedef HANDLE threadid_t;
-    struct eventid_t
-    {
-        HANDLE      event;
-        int32_t     countWaiters;
-    };
-    const uint32_t EVENTWAIT_INFINITE = INFINITE;
 
     // declare the thread start function as:
     // THREADFUNC_DECL MyThreadStart( void* pArg );
@@ -63,53 +58,18 @@ namespace enki
         GetSystemInfo(&sysInfo);
         return sysInfo.dwNumberOfProcessors;
     }
-
-    inline eventid_t EventCreate()
-    {
-        eventid_t ret;
-        ret.event = CreateSemaphore(NULL, 0, MAXLONG, NULL );
-        ret.countWaiters = 0;
-        return ret;
-    }
-
-    inline void EventClose( eventid_t eventid )
-    {
-        CloseHandle( eventid.event );
-    }
-
-    inline void EventWait( eventid_t& eventid, uint32_t milliseconds )
-    {
-        AtomicAdd( &eventid.countWaiters, 1 );
-        DWORD retval = WaitForSingleObject( eventid.event, milliseconds );
-        int32_t prev = AtomicAdd( &eventid.countWaiters, -1 );
-
-        assert( retval != WAIT_FAILED );
-        assert( prev != 0 );
-    }
-
-    inline void EventSignal( eventid_t eventid )
-    {
-        ReleaseSemaphore( eventid.event, eventid.countWaiters, NULL );
-    }
 }
 
 #else // posix
 
-	#include <pthread.h>
-	#include <unistd.h>
-	#define THREADFUNC_DECL void*
-	#define THREAD_LOCAL __thread
+    #include <pthread.h>
+    #include <unistd.h>
+    #define THREADFUNC_DECL void*
+    #define THREAD_LOCAL __thread
 
 namespace enki
 {
-    typedef pthread_t threadid_t;
-    struct eventid_t
-    {
-        pthread_cond_t  cond;
-        pthread_mutex_t mutex;
-    };
-    const uint32_t EVENTWAIT_INFINITE = -1;
-    
+    typedef pthread_t threadid_t;  
         
     // declare the thread start function as:
     // THREADFUNC_DECL MyThreadStart( void* pArg );
@@ -131,44 +91,121 @@ namespace enki
     {
         return (uint32_t)sysconf( _SC_NPROCESSORS_ONLN );
     }
-    
-    inline eventid_t EventCreate()
-    {
-        eventid_t event = { PTHREAD_COND_INITIALIZER, PTHREAD_MUTEX_INITIALIZER };
-        return event;
-    }
-    
-    inline void EventClose( eventid_t eventid )
-    {
-        // do not need to close event
-    }
-    
-    inline void EventWait( eventid_t& eventid, uint32_t milliseconds )
-    {
-        pthread_mutex_lock( &eventid.mutex );
-        if( milliseconds == EVENTWAIT_INFINITE )
-        {
-            pthread_cond_wait( &eventid.cond, &eventid.mutex );
-        }
-        else
-        {
-            timespec waittime;
-            waittime.tv_sec = milliseconds/1000;
-            milliseconds -= waittime.tv_sec*1000;
-            waittime.tv_nsec = milliseconds * 1000;
-            pthread_cond_timedwait( &eventid.cond, &eventid.mutex, &waittime );
-
-        }
-        pthread_mutex_unlock( &eventid.mutex );
-    }
-    
-    inline void EventSignal( eventid_t& eventid )
-    {
-        pthread_mutex_lock( &eventid.mutex );
-        pthread_cond_broadcast( &eventid.cond );
-        pthread_mutex_unlock( &eventid.mutex );
-    }
 }
 
 #endif // posix
+
+
+// Semaphore implementation
+#ifdef _WIN32
+
+namespace enki
+{
+    struct semaphoreid_t
+    {
+        HANDLE      sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        semaphoreid.sem = CreateSemaphore(NULL, 0, MAXLONG, NULL );
+    }
+
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        CloseHandle( semaphoreid.sem );
+    }
+
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        DWORD retval = WaitForSingleObject( semaphoreid.sem, INFINITE );
+
+        assert( retval != WAIT_FAILED );
+    }
+
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        if( countWaiting )
+        {
+            ReleaseSemaphore( semaphoreid.sem, countWaiting, NULL );
+        }
+    }
+}
+#elif defined(__MACH__)
+
+// OS X does not have POSIX semaphores
+// see https://developer.apple.com/library/content/documentation/Darwin/Conceptual/KernelProgramming/synchronization/synchronization.html
+#include <mach/mach.h>
+
+namespace enki
+{
+    
+    struct semaphoreid_t
+    {
+        semaphore_t   sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        semaphore_create( mach_task_self(), &semaphoreid.sem, SYNC_POLICY_FIFO, 0 );
+    }
+    
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        semaphore_destroy( mach_task_self(), semaphoreid.sem );
+    }
+    
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        semaphore_wait( semaphoreid.sem );
+    }
+    
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        while( countWaiting-- > 0 )
+        {
+            semaphore_signal( semaphoreid.sem );
+        }
+    }
+}
+
+#else // POSIX
+
+#include <semaphore.h>
+
+namespace enki
+{
+    
+    struct semaphoreid_t
+    {
+        sem_t   sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        int err = sem_init( &semaphoreid.sem, 0, 0 );
+        assert( err == 0 );
+    }
+    
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        sem_destroy( &semaphoreid.sem );
+    }
+    
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        int err = sem_wait( &semaphoreid.sem );
+        assert( err == 0 );
+    }
+    
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        while( countWaiting-- > 0 )
+        {
+            sem_post( &semaphoreid.sem );
+        }
+    }
+}
+#endif
+
 

@@ -89,7 +89,7 @@ int main(int argc, const char * argv[]) {
    g_TS.AddTaskSetToPipe( &task );
 
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   g_TS.WaitforTaskSet( &task );
+   g_TS.WaitforTask( &task );
    return 0;
 }
 ```
@@ -108,7 +108,7 @@ int main(int argc, const char * argv[]) {
       }  );
 
    g_TS.AddTaskSetToPipe( &task );
-   g_TS.WaitforTaskSet( &task );
+   g_TS.WaitforTask( &task );
    return 0;
 }
 ```
@@ -135,7 +135,7 @@ int main(int argc, const char * argv[]) {
    // Tasking threads automatically do this in their task loop.
    g_TS.RunPinnedTasks();
    // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   g_TS.WaitforTaskSet( &task );
+   g_TS.WaitforTask( &task );
    return 0;
 }
 ```

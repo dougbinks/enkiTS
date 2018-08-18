@@ -88,7 +88,7 @@ struct ParallelReductionSumTaskSet : ITaskSet
     virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
     {
         g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
-        g_TS.WaitforTaskSet( &m_ParallelSumTaskSet );
+        g_TS.WaitforTask( &m_ParallelSumTaskSet );
 
         for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
         {
@@ -148,7 +148,7 @@ int main(int argc, const char * argv[])
 
             g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
 
-            g_TS.WaitforTaskSet( &parallelReductionSumTaskSet );
+            g_TS.WaitforTask( &parallelReductionSumTaskSet );
 
             tParallel.Stop();
 

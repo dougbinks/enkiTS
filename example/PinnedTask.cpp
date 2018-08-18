@@ -45,7 +45,7 @@ struct ParallelTaskSet : ITaskSet
 
         printf("This could run on any thread, currently thread %d\n", threadnum);
 
-        g_TS.WaitforTaskSet( &pinnedTask );
+        g_TS.WaitforTask( &pinnedTask );
     }
 };
 
@@ -67,7 +67,7 @@ int main(int argc, const char * argv[])
         // Tasking threads automatically do this in their task loop.
         g_TS.RunPinnedTasks(); 
 
-        g_TS.WaitforTaskSet( &task);
+        g_TS.WaitforTask( &task);
     }
 
     return 0;

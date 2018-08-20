@@ -37,16 +37,26 @@ namespace enki
     struct ThreadArgs;
     struct SubTaskSet;
 
+    enum TaskPriority
+    {
+        TASK_PRIORITY_HIGH = 0,
+        TASK_PRIORITY_MED  = 1,
+        TASK_PRIORITY_LOW  = 2,
+        TASK_PRIORITY_NUM  = 3
+    };
+
     // ICompletable is a base class used to check for completion.
     // Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
     class ICompletable
     {
     public:
-        ICompletable() :        m_RunningCount(0) {}
+        ICompletable() :        m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0) {}
         bool                    GetIsComplete() {
             bool bRet = ( 0 == m_RunningCount );
             BASE_MEMORYBARRIER_ACQUIRE();
             return bRet; }
+
+        TaskPriority            m_Priority;
     private:
         friend class            TaskScheduler;
         volatile int32_t        m_RunningCount;
@@ -161,7 +171,8 @@ namespace enki
         // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
-        void            WaitforTask( const ICompletable* pCompletable_ );
+        // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
+        void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TASK_PRIORITY_LOW );
 
         // WaitforTaskSet, deprecated interface use WaitforTask
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
@@ -184,16 +195,18 @@ namespace enki
 
     private:
         static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );
+        bool             HaveTasks( uint32_t threadNum_ );
         void             WaitForTasks( uint32_t threadNum );
-        void             RunPinnedTasks( uint32_t threadNum );
-        bool             TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
+        void             RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
+        bool             TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
+        bool             TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
         void             StartThreads();
         void             StopThreads( bool bWait_ );
         void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void             WakeThreads( int32_t maxToWake_ = 0 );
 
-        TaskPipe*                                                m_pPipesPerThread;
-        PinnedTaskList*                                          m_pPinnedTaskListPerThread;
+        TaskPipe*                                                m_pPipesPerThread[ TASK_PRIORITY_NUM ];
+        PinnedTaskList*                                          m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
 
         uint32_t                                                 m_NumThreads;
         ThreadArgs*                                              m_pThreadArgStore;
@@ -205,7 +218,7 @@ namespace enki
         uint32_t                                                 m_NumInitialPartitions;
         semaphoreid_t                                            m_NewTaskSemaphore;
         bool                                                     m_bHaveThreads;
-        ProfilerCallbacks                                         m_ProfilerCallbacks;
+        ProfilerCallbacks                                        m_ProfilerCallbacks;
 
         TaskScheduler( const TaskScheduler& nocopy );
         TaskScheduler& operator=( const TaskScheduler& nocopy );

@@ -12,11 +12,20 @@ set( ENKITS_SRC
      src/TaskScheduler.h
      src/TaskScheduler.cpp
      )
+
+set( ENKITS_HEADERS
+    src/LockLessMultiReadPipe.h
+    src/TaskScheduler.h
+    )
      
 if( ENKITS_BUILD_C_INTERFACE )
     list( APPEND ENKITS_SRC
         src/TaskScheduler_c.h
         src/TaskScheduler_c.cpp
+        )
+
+    list( APPEND ENKITS_HEADERS
+        src/TaskScheduler_c.h
         )
 endif()
      
@@ -29,6 +38,9 @@ if(UNIX)
     endif()
     target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
 endif()
+
+install(TARGETS enkiTS DESTINATION "lib/enkiTS")
+install(FILES ${ENKITS_HEADERS} DESTINATION "include/enkiTS")
 
 if(UNIX)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

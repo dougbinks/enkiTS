@@ -39,8 +39,8 @@ if(UNIX)
     target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-install(TARGETS enkiTS DESTINATION "lib/enkiTS")
-install(FILES ${ENKITS_HEADERS} DESTINATION "include/enkiTS")
+install(TARGETS enkiTS DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/enkiTS")
+install(FILES ${ENKITS_HEADERS} DESTINATION "${CMAKE_INSTALL_PREFIX}/include/enkiTS")
 
 if(UNIX)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

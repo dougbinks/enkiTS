@@ -452,6 +452,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 
 TaskScheduler::TaskScheduler()
         : m_pPipesPerThread(NULL)
+        , m_pPinnedTaskListPerThread(NULL)
         , m_NumThreads(0)
         , m_pThreadArgStore(NULL)
         , m_pThreads(NULL)

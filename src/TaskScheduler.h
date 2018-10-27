@@ -22,6 +22,12 @@
 #include "Threads.h"
 #include "Atomics.h"
 
+// ENKI_TASK_PRIORITIES_NUM can be set from 0 to 5.
+// Both 0 and 1 correspond to effectively no priorities.
+#ifndef ENKI_TASK_PRIORITIES_NUM
+    #define ENKI_TASK_PRIORITIES_NUM 3
+#endif
+
 namespace enki
 {
 
@@ -39,10 +45,20 @@ namespace enki
 
     enum TaskPriority
     {
-        TASK_PRIORITY_HIGH = 0,
-        TASK_PRIORITY_MED  = 1,
-        TASK_PRIORITY_LOW  = 2,
-        TASK_PRIORITY_NUM  = 3
+        TASK_PRIORITY_HIGH   = 0,
+#if ( ENKI_TASK_PRIORITIES_NUM > 3 )
+        TASK_PRIORITY_MED_HI,
+#endif
+#if ( ENKI_TASK_PRIORITIES_NUM > 2 )
+        TASK_PRIORITY_MED,
+#endif
+#if ( ENKI_TASK_PRIORITIES_NUM > 4 )
+        TASK_PRIORITY_MED_LO,
+#endif 
+#if ( ENKI_TASK_PRIORITIES_NUM > 1 )
+        TASK_PRIORITY_LOW,
+#endif
+        TASK_PRIORITY_NUM    = ENKI_TASK_PRIORITIES_NUM
     };
 
     // ICompletable is a base class used to check for completion.

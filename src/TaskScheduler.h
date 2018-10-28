@@ -58,7 +58,7 @@ namespace enki
 #if ( ENKI_TASK_PRIORITIES_NUM > 1 )
         TASK_PRIORITY_LOW,
 #endif
-        TASK_PRIORITY_NUM    = ENKI_TASK_PRIORITIES_NUM
+        TASK_PRIORITY_NUM
     };
 
     // ICompletable is a base class used to check for completion.
@@ -188,7 +188,8 @@ namespace enki
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
         // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
-        void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TASK_PRIORITY_LOW );
+        // Default is lowest priority available.
+        void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // WaitforTaskSet, deprecated interface use WaitforTask
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }

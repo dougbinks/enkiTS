@@ -85,7 +85,7 @@ namespace enki
     {
         // posix equiv pthread_cancel
         pthread_cancel( threadid );
-        return pthread_join( threadid, NULL ) == 0;
+        return pthread_detach( threadid ) == 0;
     }
     
     inline uint32_t GetNumHardwareThreads()

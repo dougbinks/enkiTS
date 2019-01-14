@@ -18,12 +18,17 @@
 
 #pragma once
 
-#define ENKITS_DLL
-
-#if defined(_WIN32) && defined(ENKITS_DLL)
-	#define ENKITS_API __declspec(dllexport)
+#if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
+    // Building enkiTS as a DLL
+    #define ENKITS_API __declspec(dllexport)
+#elif defined(_WIN32) && defined(ENKITS_DLL)
+    // Using enkiTS as a DLL
+    #define ENKITS_API __declspec(dllimport)
+#elif defined(__GNUC__) && defined(ENKITS_BUILD_DLL)
+    // Building enkiTS as a shared library
+    #define ENKITS_API __attribute__((visibility("default")))
 #else
-	#define ENKITS_API extern
+    #define ENKITS_API
 #endif
 
 #ifdef __cplusplus

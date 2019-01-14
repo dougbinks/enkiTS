@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 project( enkiTS )
 
@@ -25,6 +25,8 @@ endif()
 
 if (ENKITS_BUILD_SHARED)
      add_library( enkiTS SHARED ${ENKITS_SRC} )
+     target_compile_definitions( enkiTS PRIVATE ENKITS_BUILD_DLL=1)
+     target_compile_definitions( enkiTS INTERFACE ENKITS_DLL=1)
 else()
      add_library( enkiTS STATIC ${ENKITS_SRC} )
 endif()

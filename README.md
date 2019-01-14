@@ -141,6 +141,9 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
+## Bindings
+
+- C# [EnkiTasks C#](https://github.com/nxrighthere/EnkiTasks-CSharp)
 
 ## License (zlib)
 

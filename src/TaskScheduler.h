@@ -80,7 +80,7 @@ namespace enki
     {
     public:
         ICompletable() :        m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0) {}
-        bool                    GetIsComplete() {
+        bool                    GetIsComplete() const {
             bool bRet = ( 0 == m_RunningCount );
             BASE_MEMORYBARRIER_ACQUIRE();
             return bRet; }

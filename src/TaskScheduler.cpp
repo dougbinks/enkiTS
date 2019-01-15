@@ -165,7 +165,6 @@ void TaskScheduler::StartThreads()
         m_pPipesPerThread[ priority ]          = new TaskPipe[ m_NumThreads ];
         m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
     }
-    
 
     SemaphoreCreate( m_NewTaskSemaphore );
 
@@ -441,7 +440,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
     uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
     if( pCompletable_ )
     {
-        while( pCompletable_->m_RunningCount )
+        while( !pCompletable_->GetIsComplete() )
         {
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
             {

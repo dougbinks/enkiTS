@@ -25,6 +25,12 @@
 #include <functional>
 #include <assert.h>
 
+// ENKI_TASK_PRIORITIES_NUM can be set from 1 to 5.
+// 1 corresponds to effectively no priorities.
+#ifndef ENKI_TASK_PRIORITIES_NUM
+    #define ENKI_TASK_PRIORITIES_NUM 3
+#endif
+
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
     // Building enkiTS as a DLL
     #define ENKITS_API __declspec(dllexport)
@@ -53,15 +59,34 @@ namespace enki
     struct ThreadArgs;
     struct SubTaskSet;
 
+    enum TaskPriority
+    {
+        TASK_PRIORITY_HIGH   = 0,
+#if ( ENKI_TASK_PRIORITIES_NUM > 3 )
+        TASK_PRIORITY_MED_HI,
+#endif
+#if ( ENKI_TASK_PRIORITIES_NUM > 2 )
+        TASK_PRIORITY_MED,
+#endif
+#if ( ENKI_TASK_PRIORITIES_NUM > 4 )
+        TASK_PRIORITY_MED_LO,
+#endif 
+#if ( ENKI_TASK_PRIORITIES_NUM > 1 )
+        TASK_PRIORITY_LOW,
+#endif
+        TASK_PRIORITY_NUM
+    };
+
     // ICompletable is a base class used to check for completion.
     // Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
     class ICompletable
     {
     public:
-        ICompletable() :        m_RunningCount(0) {}
+        ICompletable() :        m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0) {}
         bool                    GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
+        TaskPriority            m_Priority;
     private:
         friend class            TaskScheduler;
         std::atomic<int32_t>   m_RunningCount;
@@ -191,10 +216,12 @@ namespace enki
         // Main thread should call this or use a wait to ensure it's tasks are run.
         ENKITS_API void            RunPinnedTasks();
 
-        // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
+       // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
-        ENKITS_API void            WaitforTask( const ICompletable* pCompletable_ );
+        // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
+        // Default is lowest priority available.
+        ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // WaitforTaskSet, deprecated interface use WaitforTask
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
@@ -217,16 +244,18 @@ namespace enki
 
     private:
         static void     TaskingThreadFunction( const ThreadArgs& args_ );
-        void            WaitForTasks( uint32_t threadNum );
-        void            RunPinnedTasks( uint32_t threadNum );
-        bool            TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ );
+        bool            HaveTasks( uint32_t threadNum_ );
+        void            WaitForTasks( uint32_t threadNum_ );
+        void            RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
+        bool            TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
+        bool            TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
         void            StartThreads();
         void            StopThreads( bool bWait_ );
-        void             SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
+        void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void            WakeThreads();
 
-        TaskPipe*                                                m_pPipesPerThread;
-        PinnedTaskList*                                          m_pPinnedTaskListPerThread;
+        TaskPipe*                                                m_pPipesPerThread[ TASK_PRIORITY_NUM ];
+        PinnedTaskList*                                          m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
 
         uint32_t                                                 m_NumThreads;
         ThreadArgs*                                              m_pThreadArgStore;

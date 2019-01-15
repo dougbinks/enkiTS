@@ -164,15 +164,22 @@ void TaskScheduler::StartThreads()
     {
         return;
     }
-    m_bRunning = 1;
+
+    for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+    {
+        m_pPipesPerThread[ priority ]          = new TaskPipe[ m_NumThreads ];
+        m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
+    }
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadArgStore = new ThreadArgs[m_NumThreads];
+    m_pThreadArgStore   = new ThreadArgs[m_NumThreads];
     m_pThreads          = new std::thread*[m_NumThreads];
     m_pThreadArgStore[0].threadNum      = 0;
     m_pThreadArgStore[0].pTaskScheduler = this;
     m_NumThreadsRunning = 1; // account for main thread
-    for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
+    m_bRunning = 1;
+
+   for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
     {
         m_pThreadArgStore[thread].threadNum      = thread;
         m_pThreadArgStore[thread].pTaskScheduler = this;
@@ -228,17 +235,37 @@ void TaskScheduler::StopThreads( bool bWait_ )
         m_bHaveThreads = false;
         m_NumThreadsWaiting = 0;
         m_NumThreadsRunning = 0;
+
+        for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+        {
+            delete[] m_pPipesPerThread[ priority ];
+            m_pPipesPerThread[ priority ] = NULL;
+            delete[] m_pPinnedTaskListPerThread[ priority ];
+            m_pPinnedTaskListPerThread[ priority ] = NULL;
+        }
     }
 }
 
-bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io_ )
+bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ )
+{
+    for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+    {
+        if( TryRunTask( threadNum_, priority, hintPipeToCheck_io_ ) )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t& hintPipeToCheck_io_ )
 {
     // Run any tasks for this thread
-    RunPinnedTasks( threadNum );
+    RunPinnedTasks( threadNum, priority_ );
 
     // check for tasks
     SubTaskSet subTask;
-    bool bHaveTask = m_pPipesPerThread[ threadNum ].WriterTryReadFront( &subTask );
+    bool bHaveTask = m_pPipesPerThread[ priority_ ][ threadNum ].WriterTryReadFront( &subTask );
 
     uint32_t threadToCheck = hintPipeToCheck_io_;
     uint32_t checkCount = 0;
@@ -247,7 +274,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
         threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
         if( threadToCheck != threadNum )
         {
-            bHaveTask = m_pPipesPerThread[ threadToCheck ].ReaderTryReadBack( &subTask );
+            bHaveTask = m_pPipesPerThread[ priority_ ][ threadToCheck ].ReaderTryReadBack( &subTask );
         }
         ++checkCount;
     }
@@ -278,6 +305,25 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t& hintPipeToCheck_io
 
 }
 
+bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
+{
+    for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+    {
+        for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+        {
+            if( !m_pPipesPerThread[ priority ][ thread ].IsPipeEmpty() )
+            {
+                return true;
+            }
+        }
+        if( !m_pPinnedTaskListPerThread[ priority ][ threadNum_ ].IsListEmpty() )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TaskScheduler::WaitForTasks( uint32_t threadNum )
 {
     // We incrememt the number of threads waiting here in order
@@ -287,19 +333,7 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     // but they will then go back to sleep.
     m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
 
-    bool bHaveTasks = false;
-    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
-    {
-        if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
-        {
-            bHaveTasks = true;
-            break;
-        }
-    }
-    if( !bHaveTasks && !m_pPinnedTaskListPerThread[ threadNum ].IsListEmpty() )
-    {
-        bHaveTasks = true;
-    }
+    bool bHaveTasks = HaveTasks( threadNum );
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
@@ -329,7 +363,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
         // add the partition to the pipe
         ++numAdded;
         subTask_.pTask->m_RunningCount.fetch_add( 1, std::memory_order_acquire );
-        if( !m_pPipesPerThread[ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
+        if( !m_pPipesPerThread[ subTask_.pTask->m_Priority ][ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
         {
             if( numAdded > 1 )
             {
@@ -371,22 +405,25 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
     pTask_->m_RunningCount = 1;
-    m_pPinnedTaskListPerThread[ pTask_->threadNum ].WriterWriteFront( pTask_ );
+    m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeThreads();
 }
 
 void TaskScheduler::RunPinnedTasks()
 {
     uint32_t threadNum = gtl_threadNum;
-    RunPinnedTasks( threadNum );
+    for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+    {
+        RunPinnedTasks( threadNum, priority );
+    }
 }
 
-void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
+void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
 {
     IPinnedTask* pPinnedTaskSet = NULL;
     do
     {
-        pPinnedTaskSet = m_pPinnedTaskListPerThread[ threadNum ].ReaderReadBack();
+        pPinnedTaskSet = m_pPinnedTaskListPerThread[ priority_ ][ threadNum_ ].ReaderReadBack();
         if( pPinnedTaskSet )
         {
             pPinnedTaskSet->Execute();
@@ -395,42 +432,42 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum )
     } while( pPinnedTaskSet );
 }
 
-void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_ )
+void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ )
 {
     uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
     if( pCompletable_ )
     {
         while( !pCompletable_->GetIsComplete() )
         {
-            TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-            // should add a spin then wait for task completion event.
+            for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
+            {
+                if( TryRunTask( gtl_threadNum, priority, hintPipeToCheck_io ) )
+                {
+                    break;
+                }
+            }
         }
     }
     else
     {
-            TryRunTask( gtl_threadNum, hintPipeToCheck_io );
+            for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
+            {
+                if( TryRunTask( gtl_threadNum, priority, hintPipeToCheck_io ) )
+                {
+                    break;
+                }
+            }
     }
 }
 
 void    TaskScheduler::WaitforAll()
 {
     bool bHaveTasks = true;
-     uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;    // does not need to be clamped.
+    uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;    // does not need to be clamped.
     int32_t numThreadsRunning = m_NumThreadsRunning.load( std::memory_order_relaxed ) - 1; // account for this thread
     while( bHaveTasks || m_NumThreadsWaiting.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-        if( !bHaveTasks )
-        {
-            for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
-            {
-                if( !m_pPipesPerThread[ thread ].IsPipeEmpty() )
-                {
-                    bHaveTasks = true;
-                    break;
-                }
-            }
-        }
      }
 }
 
@@ -438,11 +475,6 @@ void    TaskScheduler::WaitforAllAndShutdown()
 {
     WaitforAll();
     StopThreads(true);
-    delete[] m_pPipesPerThread;
-    m_pPipesPerThread = 0;
-
-    delete[] m_pPinnedTaskListPerThread;
-    m_pPinnedTaskListPerThread = 0;
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const
@@ -451,8 +483,8 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 }
 
 TaskScheduler::TaskScheduler()
-        : m_pPipesPerThread(NULL)
-        , m_pPinnedTaskListPerThread(NULL)
+        : m_pPipesPerThread()
+        , m_pPinnedTaskListPerThread()
         , m_NumThreads(0)
         , m_pThreadArgStore(NULL)
         , m_pThreads(NULL)
@@ -468,25 +500,14 @@ TaskScheduler::TaskScheduler()
 TaskScheduler::~TaskScheduler()
 {
     StopThreads( true ); // Stops threads, waiting for them.
-
-    delete[] m_pPipesPerThread;
-    m_pPipesPerThread = NULL;
-
-    delete[] m_pPinnedTaskListPerThread;
-    m_pPinnedTaskListPerThread = NULL;
 }
 
 void    TaskScheduler::Initialize( uint32_t numThreads_ )
 {
     assert( numThreads_ );
     StopThreads( true ); // Stops threads, waiting for them.
-    delete[] m_pPipesPerThread;
-    delete[] m_pPinnedTaskListPerThread;
 
     m_NumThreads = numThreads_;
-
-    m_pPipesPerThread          = new TaskPipe[ m_NumThreads ];
-    m_pPinnedTaskListPerThread = new PinnedTaskList[ m_NumThreads ];
 
     StartThreads();
 }

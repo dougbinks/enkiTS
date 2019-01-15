@@ -28,6 +28,20 @@
     #define ENKI_TASK_PRIORITIES_NUM 3
 #endif
 
+
+#if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
+    // Building enkiTS as a DLL
+    #define ENKITS_API __declspec(dllexport)
+#elif defined(_WIN32) && defined(ENKITS_DLL)
+    // Using enkiTS as a DLL
+    #define ENKITS_API __declspec(dllimport)
+#elif defined(__GNUC__) && defined(ENKITS_BUILD_DLL)
+    // Building enkiTS as a shared library
+    #define ENKITS_API __attribute__((visibility("default")))
+#else
+    #define ENKITS_API
+#endif
+
 namespace enki
 {
 
@@ -155,8 +169,8 @@ namespace enki
     class TaskScheduler
     {
     public:
-        TaskScheduler();
-        ~TaskScheduler();
+        ENKITS_API TaskScheduler();
+        ENKITS_API ~TaskScheduler();
 
         // Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
 
@@ -164,51 +178,51 @@ namespace enki
         // sufficient to fill the system when including the main thread.
         // Initialize can be called multiple times - it will wait for completion
         // before re-initializing.
-        void            Initialize();
+        ENKITS_API void            Initialize();
 
         // Initialize( numThreads_ ) - numThreads_ (must be > 0)
         // will create numThreads_-1 threads, as thread 0 is
         // the thread on which the initialize was called.
-        void            Initialize( uint32_t numThreads_ );
+        ENKITS_API void            Initialize( uint32_t numThreads_ );
 
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
         // should only be called from main thread, or within a task
-        void            AddTaskSetToPipe( ITaskSet* pTaskSet );
+        ENKITS_API void            AddTaskSetToPipe( ITaskSet* pTaskSet );
 
         // Thread 0 is main thread, otherwise use threadNum
-        void            AddPinnedTask( IPinnedTask* pTask_ );
+        ENKITS_API void            AddPinnedTask( IPinnedTask* pTask_ );
 
         // This function will run any IPinnedTask* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.
-        void            RunPinnedTasks();
+        ENKITS_API void            RunPinnedTasks();
 
         // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
         // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
         // Default is lowest priority available.
-        void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
+        ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // WaitforTaskSet, deprecated interface use WaitforTask
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
 
         // Waits for all task sets to complete - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuosly added.
-        void            WaitforAll();
+        ENKITS_API void            WaitforAll();
 
         // Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuosly added.
-        void            WaitforAllAndShutdown();
+        ENKITS_API void            WaitforAllAndShutdown();
 
         // Returns the number of threads created for running tasks + 1
         // to account for the main thread.
-        uint32_t        GetNumTaskThreads() const;
+        ENKITS_API uint32_t        GetNumTaskThreads() const;
 
         // Returns the ProfilerCallbacks structure so that it can be modified to
         // set the callbacks.
-        ProfilerCallbacks* GetProfilerCallbacks();
+        ENKITS_API ProfilerCallbacks* GetProfilerCallbacks();
 
     private:
         static THREADFUNC_DECL  TaskingThreadFunction( void* pArgs );

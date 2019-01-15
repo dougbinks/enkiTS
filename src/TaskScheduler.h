@@ -22,12 +22,11 @@
 #include "Threads.h"
 #include "Atomics.h"
 
-// ENKI_TASK_PRIORITIES_NUM can be set from 0 to 5.
-// Both 0 and 1 correspond to effectively no priorities.
+// ENKI_TASK_PRIORITIES_NUM can be set from 1 to 5.
+// 1 corresponds to effectively no priorities.
 #ifndef ENKI_TASK_PRIORITIES_NUM
     #define ENKI_TASK_PRIORITIES_NUM 3
 #endif
-
 
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
     // Building enkiTS as a DLL

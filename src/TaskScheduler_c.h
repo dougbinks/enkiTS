@@ -38,7 +38,7 @@ extern "C" {
 #include <stdint.h>
 
 typedef struct enkiTaskScheduler enkiTaskScheduler;
-typedef struct enkiTaskSet         enkiTaskSet;
+typedef struct enkiTaskSet       enkiTaskSet;
 typedef struct enkiPinnedTask    enkiPinnedTask;
 
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
@@ -46,7 +46,7 @@ typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 
 
 // Create a new task scheduler
-ENKITS_API enkiTaskScheduler*    enkiNewTaskScheduler();
+ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
 
 // Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
@@ -87,13 +87,13 @@ ENKITS_API void                enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* 
 
 
 // Check if TaskSet is complete. Doesn't wait. Returns 1 if complete, 0 if not.
-ENKITS_API int                    enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+ENKITS_API int                 enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
 // Create a pinned task.
-ENKITS_API enkiPinnedTask*        enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
+ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
 // Delete a pinned task.
-ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTaskSet_ );
+ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTask_ );
 
 // Set PinnedTask ( 0 to ENKI_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
@@ -107,7 +107,7 @@ ENKITS_API void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enki
 ENKITS_API void                enkiRunPinnedTasks( enkiTaskScheduler * pETS_ );
 
 // Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.
-ENKITS_API int                    enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
+ENKITS_API int                 enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Wait for a given task.
 // should only be called from thread which created the taskscheduler , or within a task
@@ -118,7 +118,7 @@ ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enk
 ENKITS_API void                enkiWaitForTaskSetPriority( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, int maxPriority_ );
 
 // Wait for a given pinned task.
-// should only be called from thread which created the taskscheduler , or within a task
+// should only be called from thread which created the taskscheduler, or within a task
 // if called with 0 it will try to run tasks, and return if none available.
 ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 

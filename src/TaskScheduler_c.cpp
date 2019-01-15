@@ -86,6 +86,12 @@ void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 }
 
 void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
+void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
+{
+    assert( priority_ < ENKI_TASK_PRIORITIES_NUM );
+    pTaskSet_->m_Priority = TaskPriority( priority_ );
+}
+
 {
     assert( pTaskSet_ );
     assert( pTaskSet_->taskFun );
@@ -123,6 +129,12 @@ void enkiDeletePinnedTask(enkiPinnedTask * pTaskSet_)
 }
 
 void enkiAddPinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, void * pArgs_)
+void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
+{
+    assert( priority_ < ENKI_TASK_PRIORITIES_NUM );
+    pTask_->m_Priority = TaskPriority( priority_ );
+}
+
 {
     assert( pTask_ );
     pTask_->pArgs = pArgs_;
@@ -145,9 +157,19 @@ void enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
     pETS_->WaitforTask( pTaskSet_ );
 }
 
+void enkiWaitForTaskSetPriority( enkiTaskScheduler * pETS_, enkiTaskSet * pTaskSet_, int maxPriority_ )
+{
+    pETS_->WaitforTask( pTaskSet_, TaskPriority( maxPriority_ ) );
+}
+
 void enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ )
 {
     pETS_->WaitforTask( pTask_ );
+}
+
+void enkiWaitForPinnedTaskPriority( enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, int maxPriority_ )
+{
+    pETS_->WaitforTask( pTask_, TaskPriority( maxPriority_ ) );
 }
 
 void enkiWaitForAll( enkiTaskScheduler* pETS_ )

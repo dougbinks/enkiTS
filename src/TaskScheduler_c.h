@@ -69,6 +69,9 @@ ENKITS_API enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enki
 // Delete a task set.
 ENKITS_API void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
 
+// Set task priority ( 0 to ENKI_TASK_PRIORITIES_NUM-1, where 0 is highest)
+ENKITS_API void                enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ );
+
 // Schedule the task
 ENKITS_API void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
                                            void* pArgs_, uint32_t setSize_ );
@@ -92,6 +95,9 @@ ENKITS_API enkiPinnedTask*        enkiCreatePinnedTask( enkiTaskScheduler* pETS_
 // Delete a pinned task.
 ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTaskSet_ );
 
+// Set PinnedTask ( 0 to ENKI_TASK_PRIORITIES_NUM-1, where 0 is highest)
+ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
+
 // Schedule a pinned task
 ENKITS_API void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
                                            void* pArgs_ );
@@ -108,10 +114,16 @@ ENKITS_API int                    enkiIsPinnedTaskComplete( enkiTaskScheduler* p
 // if called with 0 it will try to run tasks, and return if none available.
 ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
+// enkiWaitForTaskSetPriority as enkiWaitForTaskSet but only runs other tasks with priority <= maxPriority_
+ENKITS_API void                enkiWaitForTaskSetPriority( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, int maxPriority_ );
+
 // Wait for a given pinned task.
 // should only be called from thread which created the taskscheduler , or within a task
 // if called with 0 it will try to run tasks, and return if none available.
 ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
+
+// enkiWaitForPinnedTaskPriority as enkiWaitForPinnedTask but only runs other tasks with priority <= maxPriority_
+ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, int maxPriority_ );
 
 // Waits for all task sets to complete - not guaranteed to work unless we know we
 // are in a situation where tasks aren't being continuosly added.

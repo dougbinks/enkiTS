@@ -8,9 +8,6 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
 * [C++ 11 version  on Branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11)
-* [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
-* [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
-
 
 Note - this is a work in progress conversion from my code for [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
 
@@ -36,7 +33,8 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Fast, then scalable* - enkiTS is designed for consumer devices first, so performance on a low number of threads is important, followed by scalability.
 1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
-1. **NEW** - *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
+1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
+1. **NEW** - *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
  
 ## Usage
 
@@ -187,9 +185,15 @@ int main(int argc, const char * argv[]) {
 ```
 
 
+## Deprecated
+
+The user thread versions are no longer being maintained as they are no longer needed.
+* [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
+* [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
+
 ## License (zlib)
 
-Copyright (c) 2013 Doug Binks
+Copyright (c) 2013-2019 Doug Binks
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages

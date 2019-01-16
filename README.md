@@ -114,6 +114,51 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
+Task priorities usage in C++
+```C
+// See full example in Priorities.cpp
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+
+struct ExampleTask : enki::ITaskSet
+{
+    ExampleTask( ) { m_SetSize = size_; }
+
+    virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum ) {
+		// See full example in Priorities.cpp
+    }
+};
+
+
+// This example demonstrates how to run a long running task alongside tasks
+// which must complete as early as possible using priorities.
+int main(int argc, const char * argv[])
+{
+    g_TS.Initialize();
+
+    ExampleTask lowPriorityTask( 10 );
+    lowPriorityTask.m_Priority  = enki::TASK_PRIORITY_LOW;
+
+    ExampleTask highPriorityTask( 1 );
+    highPriorityTask.m_Priority = enki::TASK_PRIORITY_HIGH;
+
+    g_TS.AddTaskSetToPipe( &lowPriorityTask );
+    for( int task = 0; task < 10; ++task )
+    {
+        // run high priority tasks
+        g_TS.AddTaskSetToPipe( &highPriorityTask );
+
+        // wait for task but only run tasks of the same priority on this thread
+        g_TS.WaitforTask( &highPriorityTask, highPriorityTask.m_Priority );
+    }
+    // wait for low priority task, run any tasks on this thread whilst waiting
+    g_TS.WaitforTask( &lowPriorityTask );
+
+    return 0;
+}
+```
+
 Pinned Tasks usage in C++ (see example/PinnedTask_c.c for C example).
 ```C
 #include "TaskScheduler.h"

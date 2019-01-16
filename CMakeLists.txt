@@ -60,6 +60,11 @@ if(ENKITS_BUILD_EXAMPLES)
 
     add_executable( PinnedTask example/PinnedTask.cpp )
     target_link_libraries(PinnedTask enkiTS )
+
+    if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
+        add_executable( Priorities example/Priorities.cpp )
+        target_link_libraries(Priorities enkiTS )
+    endif()
     
     add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
     target_link_libraries(TaskThroughput enkiTS )

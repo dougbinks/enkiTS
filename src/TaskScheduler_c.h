@@ -69,7 +69,7 @@ ENKITS_API enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enki
 // Delete a task set.
 ENKITS_API void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
 
-// Set task priority ( 0 to ENKI_TASK_PRIORITIES_NUM-1, where 0 is highest)
+// Set task priority ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ );
 
 // Schedule the task
@@ -95,7 +95,7 @@ ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, e
 // Delete a pinned task.
 ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTask_ );
 
-// Set PinnedTask ( 0 to ENKI_TASK_PRIORITIES_NUM-1, where 0 is highest)
+// Set PinnedTask ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
 
 // Schedule a pinned task

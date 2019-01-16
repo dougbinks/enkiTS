@@ -87,7 +87,7 @@ void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
 {
-    assert( priority_ < ENKI_TASK_PRIORITIES_NUM );
+    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
     pTaskSet_->m_Priority = TaskPriority( priority_ );
 }
 
@@ -130,7 +130,7 @@ void enkiDeletePinnedTask(enkiPinnedTask* pTaskSet_)
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
 {
-    assert( priority_ < ENKI_TASK_PRIORITIES_NUM );
+    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
     pTask_->m_Priority = TaskPriority( priority_ );
 }
 

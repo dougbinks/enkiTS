@@ -22,10 +22,10 @@
 #include "Threads.h"
 #include "Atomics.h"
 
-// ENKI_TASK_PRIORITIES_NUM can be set from 1 to 5.
+// ENKITS_TASK_PRIORITIES_NUM can be set from 1 to 5.
 // 1 corresponds to effectively no priorities.
-#ifndef ENKI_TASK_PRIORITIES_NUM
-    #define ENKI_TASK_PRIORITIES_NUM 3
+#ifndef ENKITS_TASK_PRIORITIES_NUM
+    #define ENKITS_TASK_PRIORITIES_NUM 3
 #endif
 
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
@@ -59,16 +59,16 @@ namespace enki
     enum TaskPriority
     {
         TASK_PRIORITY_HIGH   = 0,
-#if ( ENKI_TASK_PRIORITIES_NUM > 3 )
+#if ( ENKITS_TASK_PRIORITIES_NUM > 3 )
         TASK_PRIORITY_MED_HI,
 #endif
-#if ( ENKI_TASK_PRIORITIES_NUM > 2 )
+#if ( ENKITS_TASK_PRIORITIES_NUM > 2 )
         TASK_PRIORITY_MED,
 #endif
-#if ( ENKI_TASK_PRIORITIES_NUM > 4 )
+#if ( ENKITS_TASK_PRIORITIES_NUM > 4 )
         TASK_PRIORITY_MED_LO,
 #endif 
-#if ( ENKI_TASK_PRIORITIES_NUM > 1 )
+#if ( ENKITS_TASK_PRIORITIES_NUM > 1 )
         TASK_PRIORITY_LOW,
 #endif
         TASK_PRIORITY_NUM

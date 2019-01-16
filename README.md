@@ -126,7 +126,7 @@ struct ExampleTask : enki::ITaskSet
     ExampleTask( ) { m_SetSize = size_; }
 
     virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum ) {
-		// See full example in Priorities.cpp
+        // See full example in Priorities.cpp
     }
 };
 

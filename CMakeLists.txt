@@ -6,6 +6,8 @@ option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
 option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 option( ENKITS_BUILD_SHARED         "Build shared library" OFF )
 
+set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5, 0 for defined by defaults in source" ) 
+
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
 set( ENKITS_SRC
@@ -30,6 +32,12 @@ if (ENKITS_BUILD_SHARED)
 else()
      add_library( enkiTS STATIC ${ENKITS_SRC} )
 endif()
+
+
+if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
+    target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )    
+endif()
+
 if(UNIX)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     find_package(Threads REQUIRED)

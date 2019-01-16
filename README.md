@@ -114,7 +114,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-Task priorities usage in C++
+Task priorities usage in C++  (see example/Priorities_c.c for C example).
 ```C
 // See full example in Priorities.cpp
 #include "TaskScheduler.h"

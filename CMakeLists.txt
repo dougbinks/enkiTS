@@ -79,5 +79,10 @@ if( ENKITS_BUILD_C_INTERFACE )
     
     add_executable( PinnedTask_c example/PinnedTask_c.c )
     target_link_libraries(PinnedTask_c enkiTS )
+
+    if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
+        add_executable( Priorities_c example/Priorities_c.c )
+        target_link_libraries(Priorities_c enkiTS )
+    endif()
 endif()    
 endif()

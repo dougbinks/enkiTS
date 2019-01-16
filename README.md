@@ -149,7 +149,7 @@ int main(int argc, const char * argv[])
         // run high priority tasks
         g_TS.AddTaskSetToPipe( &highPriorityTask );
 
-        // wait for task but only run tasks of the same priority on this thread
+        // wait for task but only run tasks of the same priority or higher on this thread
         g_TS.WaitforTask( &highPriorityTask, highPriorityTask.m_Priority );
     }
     // wait for low priority task, run any tasks on this thread whilst waiting

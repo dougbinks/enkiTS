@@ -5,6 +5,7 @@ project( enkiTS )
 option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
 option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 option( ENKITS_BUILD_SHARED         "Build shared library" OFF )
+option( ENKITS_INSTALL              "Generate installation target" OFF )
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
@@ -46,8 +47,10 @@ if(UNIX)
     target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-install(TARGETS enkiTS DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/enkiTS")
-install(FILES ${ENKITS_HEADERS} DESTINATION "${CMAKE_INSTALL_PREFIX}/include/enkiTS")
+if( ENKITS_INSTALL )
+    install(TARGETS enkiTS DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/enkiTS")
+    install(FILES ${ENKITS_HEADERS} DESTINATION "${CMAKE_INSTALL_PREFIX}/include/enkiTS")
+endif()
 
 if(UNIX)
         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

@@ -11,27 +11,26 @@ set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5
 
 include_directories( "${PROJECT_SOURCE_DIR}/src" )
 
-set( ENKITS_SRC
-     src/LockLessMultiReadPipe.h
-     src/TaskScheduler.h
-     src/TaskScheduler.cpp
-     )
-
 set( ENKITS_HEADERS
     src/LockLessMultiReadPipe.h
     src/TaskScheduler.h
     )
-     
-if( ENKITS_BUILD_C_INTERFACE )
-    list( APPEND ENKITS_SRC
-        src/TaskScheduler_c.h
-        src/TaskScheduler_c.cpp
-        )
 
+set( ENKITS_SRC
+     src/TaskScheduler.cpp
+     )
+
+if( ENKITS_BUILD_C_INTERFACE )
     list( APPEND ENKITS_HEADERS
         src/TaskScheduler_c.h
         )
+		
+    list( APPEND ENKITS_SRC
+        src/TaskScheduler_c.cpp
+        )
 endif()
+
+list( APPEND ENKITS_SRC ${ENKITS_HEADERS} )
 
 if( ENKITS_BUILD_SHARED )
     add_library( enkiTS SHARED ${ENKITS_SRC} )

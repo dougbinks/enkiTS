@@ -5,6 +5,7 @@ project( enkiTS )
 option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
 option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 option( ENKITS_BUILD_SHARED         "Build shared library" OFF )
+option( ENKITS_INSTALL              "Generate installation target" OFF )
 
 include_directories ("${PROJECT_SOURCE_DIR}/src")
 
@@ -15,11 +16,21 @@ set( ENKITS_SRC
      src/TaskScheduler.h
      src/TaskScheduler.cpp
      )
+
+set( ENKITS_HEADERS
+     src/Atomics.h
+     src/LockLessMultiReadPipe.h
+     src/Threads.h
+     src/TaskScheduler.h
+     )
      
 if( ENKITS_BUILD_C_INTERFACE )
     list( APPEND ENKITS_SRC
         src/TaskScheduler_c.h
         src/TaskScheduler_c.cpp
+        )
+    list( APPEND ENKITS_HEADERS
+        src/TaskScheduler_c.h
         )
 endif()
 
@@ -39,6 +50,10 @@ if(UNIX)
     target_link_libraries (enkiTS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
+if( ENKITS_INSTALL )
+    install(TARGETS enkiTS DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/enkiTS")
+    install(FILES ${ENKITS_HEADERS} DESTINATION "${CMAKE_INSTALL_PREFIX}/include/enkiTS")
+endif()
 
 if(ENKITS_BUILD_EXAMPLES)
     if(UNIX)

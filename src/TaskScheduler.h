@@ -85,7 +85,9 @@ namespace enki
             BASE_MEMORYBARRIER_ACQUIRE();
             return bRet; }
 
-        TaskPriority            m_Priority;
+		virtual                 ~ICompletable() {}
+
+		TaskPriority            m_Priority;
     private:
         friend class            TaskScheduler;
         volatile int32_t        m_RunningCount;

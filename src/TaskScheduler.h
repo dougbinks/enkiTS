@@ -60,6 +60,8 @@ namespace enki
             bool bRet = ( 0 == m_RunningCount );
             BASE_MEMORYBARRIER_ACQUIRE();
             return bRet; }
+
+		virtual                 ~ICompletable() {}
     private:
         friend class            TaskScheduler;
         volatile int32_t        m_RunningCount;

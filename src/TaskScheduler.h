@@ -86,6 +86,9 @@ namespace enki
         bool                    GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
+
+		virtual                ~ICompletable() {}
+
         TaskPriority            m_Priority;
     private:
         friend class            TaskScheduler;

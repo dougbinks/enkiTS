@@ -241,6 +241,10 @@ namespace enki
         // to account for the main thread.
         ENKITS_API uint32_t        GetNumTaskThreads() const;
 
+		// Returns the current task threadNum
+		// Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
+        ENKITS_API uint32_t        GetThreadNum() const;
+
         // Returns the ProfilerCallbacks structure so that it can be modified to
         // set the callbacks.
         ENKITS_API ProfilerCallbacks* GetProfilerCallbacks();

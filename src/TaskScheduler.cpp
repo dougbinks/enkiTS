@@ -485,6 +485,13 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
     return m_NumThreads;
 }
 
+
+uint32_t TaskScheduler::GetThreadNum() const
+{
+	return gtl_threadNum;
+}
+
+
 TaskScheduler::TaskScheduler()
         : m_pPipesPerThread()
         , m_pPinnedTaskListPerThread()

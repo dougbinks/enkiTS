@@ -327,35 +327,44 @@ bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
 
 void TaskScheduler::WaitForTasks( uint32_t threadNum )
 {
-    // We incrememt the number of threads waiting here in order
-    // to ensure that the check for tasks occurs after the increment
-    // to prevent a task being added after a check, then the thread waiting.
-    // This will occasionally result in threads being mistakenly awoken,
-    // but they will then go back to sleep.
-    AtomicAdd( &m_NumThreadsWaiting, 1 );
-
     bool bHaveTasks = HaveTasks( threadNum );
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
+	    AtomicAdd( &m_NumThreadsWaiting, 1 );
         SemaphoreWait( m_NewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
-
-    int32_t prev = AtomicAdd( &m_NumThreadsWaiting, -1 );
-    assert( prev != 0 );
 }
 
-void TaskScheduler::WakeThreads(  int32_t maxToWake_ )
+void TaskScheduler::WakeOne()
 {
-    if( maxToWake_ > 0 && maxToWake_  < m_NumThreadsWaiting )
-    {
-        SemaphoreSignal( m_NewTaskSemaphore, maxToWake_ );
-    }
-    else
-    {
-        SemaphoreSignal( m_NewTaskSemaphore, m_NumThreadsWaiting );
-    }
+	int32_t waiting;
+	int32_t toRelease;
+	do
+	{
+		waiting = m_NumThreadsWaiting;
+		waiting ? toRelease = 1 : toRelease = 0;
+	} while( toRelease && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, waiting-toRelease, waiting ) );
+
+	if( toRelease )
+	{
+		SemaphoreSignal( m_NewTaskSemaphore, toRelease );
+	}
+}
+
+void TaskScheduler::WakeAll()
+{
+	int32_t waiting;
+	do
+	{
+		waiting = m_NumThreadsWaiting;
+	} while( waiting && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, 0, waiting ) );
+
+	if( waiting )
+	{
+		SemaphoreSignal( m_NewTaskSemaphore, waiting );
+	}
 }
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
@@ -380,7 +389,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
         }
         else
         {
-            WakeThreads( 1 );
+            WakeOne();
         }
     }
 
@@ -408,7 +417,7 @@ void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
     pTask_->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
-    WakeThreads();
+    WakeAll();
 }
 
 void TaskScheduler::RunPinnedTasks()

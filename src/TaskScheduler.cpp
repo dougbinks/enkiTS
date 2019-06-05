@@ -31,8 +31,8 @@ using namespace enki;
 
 
 static const uint32_t PIPESIZE_LOG2              = 8;
-static const uint32_t SPIN_COUNT                 = 100;
-static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 10;
+static const uint32_t SPIN_COUNT                 = 10;
+static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 100;
 static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable

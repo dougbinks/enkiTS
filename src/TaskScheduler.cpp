@@ -68,6 +68,11 @@ namespace enki
     };
 
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
+
+	semaphoreid_t* SemaphoreCreate();
+	void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
+    void SemaphoreWait(   semaphoreid_t& semaphoreid );
+    void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting );
 }
 
 namespace
@@ -171,6 +176,8 @@ void TaskScheduler::StartThreads()
         m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
     }
 
+    m_pNewTaskSemaphore = SemaphoreCreate();
+
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadArgStore   = new ThreadArgs[m_NumThreads];
     m_pThreads          = new std::thread*[m_NumThreads];
@@ -217,7 +224,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         while( bWait_ && m_NumThreadsRunning > 1)
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
-           m_NewTaskEvent.notify_all();
+           WakeThreads();
         }
 
         for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
@@ -231,6 +238,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
         delete[] m_pThreads;
         m_pThreadArgStore = 0;
         m_pThreads = 0;
+
+		SemaphoreDelete( m_pNewTaskSemaphore );
+		m_pNewTaskSemaphore = 0;
 
         m_bHaveThreads = false;
         m_NumThreadsWaiting = 0;
@@ -331,25 +341,28 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     // to prevent a task being added after a check, then the thread waiting.
     // This will occasionally result in threads being mistakenly awoken,
     // but they will then go back to sleep.
-    m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
 
     bool bHaveTasks = HaveTasks( threadNum );
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-        std::unique_lock<std::mutex> lk( m_NewTaskEventMutex );
-        m_NewTaskEvent.wait( lk );
+	    m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
+        SemaphoreWait( *m_pNewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
-
-    m_NumThreadsWaiting.fetch_sub( 1, std::memory_order_release );
 }
 
 void TaskScheduler::WakeThreads()
 {
-    if( m_NumThreadsWaiting.load( std::memory_order_relaxed ) )
+    int32_t waiting;
+    do
     {
-        m_NewTaskEvent.notify_all();
+        waiting = m_NumThreadsWaiting;
+    } while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+
+    if( waiting )
+    {
+        SemaphoreSignal( *m_pNewTaskSemaphore, waiting );
     }
 }
 
@@ -522,4 +535,138 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 void   TaskScheduler::Initialize()
 {
     Initialize( std::thread::hardware_concurrency() );
+}
+
+
+
+// Semaphore implementation
+#ifdef _WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+
+namespace enki
+{
+    struct semaphoreid_t
+    {
+        HANDLE      sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        semaphoreid.sem = CreateSemaphore(NULL, 0, MAXLONG, NULL );
+    }
+
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        CloseHandle( semaphoreid.sem );
+    }
+
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        DWORD retval = WaitForSingleObject( semaphoreid.sem, INFINITE );
+
+        assert( retval != WAIT_FAILED );
+    }
+
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        if( countWaiting )
+        {
+            ReleaseSemaphore( semaphoreid.sem, countWaiting, NULL );
+        }
+    }
+}
+#elif defined(__MACH__)
+
+// OS X does not have POSIX semaphores
+// see https://developer.apple.com/library/content/documentation/Darwin/Conceptual/KernelProgramming/synchronization/synchronization.html
+#include <mach/mach.h>
+
+namespace enki
+{
+    
+    struct semaphoreid_t
+    {
+        semaphore_t   sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        semaphore_create( mach_task_self(), &semaphoreid.sem, SYNC_POLICY_FIFO, 0 );
+    }
+    
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        semaphore_destroy( mach_task_self(), semaphoreid.sem );
+    }
+    
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        semaphore_wait( semaphoreid.sem );
+    }
+    
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        while( countWaiting-- > 0 )
+        {
+            semaphore_signal( semaphoreid.sem );
+        }
+    }
+}
+
+#else // POSIX
+
+#include <semaphore.h>
+
+namespace enki
+{
+    
+    struct semaphoreid_t
+    {
+        sem_t   sem;
+    };
+    
+    inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
+    {
+        int err = sem_init( &semaphoreid.sem, 0, 0 );
+        assert( err == 0 );
+    }
+    
+    inline void SemaphoreClose( semaphoreid_t& semaphoreid )
+    {
+        sem_destroy( &semaphoreid.sem );
+    }
+    
+    inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
+    {
+        int err = sem_wait( &semaphoreid.sem );
+        assert( err == 0 );
+    }
+    
+    inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
+    {
+        while( countWaiting-- > 0 )
+        {
+            sem_post( &semaphoreid.sem );
+        }
+    }
+}
+#endif
+
+namespace enki
+{
+	semaphoreid_t* SemaphoreCreate()
+	{
+		semaphoreid_t* pSemaphore = new semaphoreid_t;
+		SemaphoreCreate( *pSemaphore );
+		return pSemaphore;
+	}
+
+	void SemaphoreDelete( semaphoreid_t* pSemaphore_ )
+	{
+		SemaphoreClose( *pSemaphore_ );
+		delete pSemaphore_;
+	}
 }

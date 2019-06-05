@@ -58,6 +58,8 @@ namespace enki
     class  PinnedTaskList;
     struct ThreadArgs;
     struct SubTaskSet;
+	struct semaphoreid_t;
+
 
     enum TaskPriority
     {
@@ -271,8 +273,7 @@ namespace enki
         std::atomic<int32_t>                                     m_NumThreadsRunning;
         std::atomic<int32_t>                                     m_NumThreadsWaiting;
         uint32_t                                                 m_NumPartitions;
-        std::condition_variable                                  m_NewTaskEvent;
-        std::mutex                                               m_NewTaskEventMutex;
+		semaphoreid_t*                                           m_pNewTaskSemaphore;
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
         ProfilerCallbacks                                        m_ProfilerCallbacks;

@@ -56,6 +56,15 @@ namespace enki
         #endif      
     }
 
+    inline int32_t AtomicCompareAndSwap( volatile int32_t* pDest, int32_t swapTo, int32_t compareWith )
+    {
+#ifdef _WIN32
+		return _InterlockedCompareExchange( (volatile long*)pDest,swapTo, compareWith );
+#else
+		return __sync_val_compare_and_swap( pDest, compareWith, swapTo );
+#endif      
+    }
+
     inline uint64_t AtomicCompareAndSwap( volatile uint64_t* pDest, uint64_t swapTo, uint64_t compareWith )
     {
        #ifdef _WIN32

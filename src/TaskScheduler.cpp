@@ -331,7 +331,7 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-	    AtomicAdd( &m_NumThreadsWaiting, 1 );
+        AtomicAdd( &m_NumThreadsWaiting, 1 );
         SemaphoreWait( m_NewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
@@ -339,32 +339,32 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 
 void TaskScheduler::WakeOne()
 {
-	int32_t waiting;
-	int32_t toRelease;
-	do
-	{
-		waiting = m_NumThreadsWaiting;
-		waiting ? toRelease = 1 : toRelease = 0;
-	} while( toRelease && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, waiting-toRelease, waiting ) );
+    int32_t waiting;
+    int32_t toRelease;
+    do
+    {
+        waiting = m_NumThreadsWaiting;
+        waiting ? toRelease = 1 : toRelease = 0;
+    } while( toRelease && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, waiting-toRelease, waiting ) );
 
-	if( toRelease )
-	{
-		SemaphoreSignal( m_NewTaskSemaphore, toRelease );
-	}
+    if( toRelease )
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, toRelease );
+    }
 }
 
 void TaskScheduler::WakeAll()
 {
-	int32_t waiting;
-	do
-	{
-		waiting = m_NumThreadsWaiting;
-	} while( waiting && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, 0, waiting ) );
+    int32_t waiting;
+    do
+    {
+        waiting = m_NumThreadsWaiting;
+    } while( waiting && waiting != AtomicCompareAndSwap( &m_NumThreadsWaiting, 0, waiting ) );
 
-	if( waiting )
-	{
-		SemaphoreSignal( m_NewTaskSemaphore, waiting );
-	}
+    if( waiting )
+    {
+        SemaphoreSignal( m_NewTaskSemaphore, waiting );
+    }
 }
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
@@ -497,7 +497,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 
 uint32_t TaskScheduler::GetThreadNum() const
 {
-	return gtl_threadNum;
+    return gtl_threadNum;
 }
 
 

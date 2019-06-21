@@ -85,9 +85,9 @@ namespace enki
             BASE_MEMORYBARRIER_ACQUIRE();
             return bRet; }
 
-		virtual                 ~ICompletable() {}
+        virtual                 ~ICompletable() {}
 
-		TaskPriority            m_Priority;
+        TaskPriority            m_Priority;
     private:
         friend class            TaskScheduler;
         volatile int32_t        m_RunningCount;
@@ -221,8 +221,8 @@ namespace enki
         // to account for the main thread.
         ENKITS_API uint32_t        GetNumTaskThreads() const;
 
-		// Returns the current task threadNum
-		// Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
+        // Returns the current task threadNum
+        // Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
         ENKITS_API uint32_t        GetThreadNum() const;
 
         // Returns the ProfilerCallbacks structure so that it can be modified to

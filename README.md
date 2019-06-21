@@ -3,21 +3,20 @@ Support development of enkiTS through our [Patreon](https://www.patreon.com/enki
 [<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
 
 # enkiTS
-[![Build Status for branch: dev](https://travis-ci.org/dougbinks/enkiTS.svg?branch=dev)](https://travis-ci.org/dougbinks/enkiTS)
+[![Build Status for branch: dev](https://travis-ci.org/dougbinks/enkiTS.svg?branch=C++98)](https://travis-ci.org/dougbinks/enkiTS)
 
 ## enki Task Scheduler
 
-A permissively licensed C and C++ Task Scheduler for creating parallel programs.
+A permissively licensed C and C++ Task Scheduler for creating parallel programs. **NEW** The master branch now requires C++11 support, [A C++98 branch exists](https://github.com/dougbinks/enkiTS/tree/C++98) for those without access to a C++11 compiler or for ease in porting to pure C, though it may be deprecated in time.
 
-* [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
-* [C++ 11 version  on Branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11)
+* [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
 
-Note - this is a work in progress conversion from my code for [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase, with [RuntimeCompiledC++](https://github.com/RuntimeCompiledCPlusPlus/RuntimeCompiledCPlusPlus) removed along with the removal of profiling code.
+enkiTS was developed for, and is used in [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase.
 
-As this was originally written before widespread decent C++11 support for atomics and threads, these are implemented here per-platform supporting Windows, Linux and OSX on Intel x86 / x64 (also works on ARM iOS and Android but not as well tested). [A separate C++11 branch exists](https://github.com/dougbinks/enkiTS/tree/C++11) for those who would like to use it, but this currently has slightly slower performance under very high task throughput when there is low work per task.
+## Examples
 
-The example code requires C++ 11 for chrono (and for [C++ 11 features in the C++11 branch C++11](https://github.com/dougbinks/enkiTS/tree/C++11) )
+The example code requires C++ 11 for chrono.
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
@@ -41,37 +40,6 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. **NEW** - *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
  
 ## Usage
-
-C usage:
-```C
-#include "TaskScheduler_c.h"
-
-enkiTaskScheduler*	g_pTS;
-
-void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ ) {
-   /* Do something here, can issue tasks with g_pTS */
-}
-
-int main(int argc, const char * argv[]) {
-   enkiTaskSet* pTask;
-   g_pTS = enkiNewTaskScheduler();
-   enkiInitTaskScheduler( g_pTS );
-	
-   // create a task, can re-use this to get allocation occurring on startup
-   pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
-
-   enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
-
-   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   enkiWaitForTaskSet( g_pTS, pTask );
-   
-   enkiDeleteTaskSet( pTask );
-   
-   enkiDeleteTaskScheduler( g_pTS );
-   
-   return 0;
-}
-```
 
 C++ usage:
 ```C
@@ -97,7 +65,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-C++ 11 usage (currently requires [C++11 branch](https://github.com/dougbinks/enkiTS/tree/C++11), or define own lambda wrapper taskset interface.
+C++ 11 lambda usage (not available on C++98 branch):
 ```C
 #include "TaskScheduler.h"
 
@@ -188,13 +156,45 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
+
+C usage:
+```C
+#include "TaskScheduler_c.h"
+
+enkiTaskScheduler*	g_pTS;
+
+void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ ) {
+   /* Do something here, can issue tasks with g_pTS */
+}
+
+int main(int argc, const char * argv[]) {
+   enkiTaskSet* pTask;
+   g_pTS = enkiNewTaskScheduler();
+   enkiInitTaskScheduler( g_pTS );
+	
+   // create a task, can re-use this to get allocation occurring on startup
+   pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
+
+   enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
+
+   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   enkiWaitForTaskSet( g_pTS, pTask );
+   
+   enkiDeleteTaskSet( pTask );
+   
+   enkiDeleteTaskScheduler( g_pTS );
+   
+   return 0;
+}
+```
+
 ## Bindings
 
 - C# [EnkiTasks C#](https://github.com/nxrighthere/EnkiTasks-CSharp)
 
 ## Deprecated
 
-The user thread versions are no longer being maintained as they are no longer needed.
+The user thread versions are no longer being maintained as they are no longer in use. These were developed 
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 

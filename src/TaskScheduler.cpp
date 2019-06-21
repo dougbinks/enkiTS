@@ -69,8 +69,8 @@ namespace enki
 
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 
-	semaphoreid_t* SemaphoreCreate();
-	void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
+    semaphoreid_t* SemaphoreCreate();
+    void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
     void SemaphoreWait(   semaphoreid_t& semaphoreid );
     void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting );
 }
@@ -239,8 +239,8 @@ void TaskScheduler::StopThreads( bool bWait_ )
         m_pThreadArgStore = 0;
         m_pThreads = 0;
 
-		SemaphoreDelete( m_pNewTaskSemaphore );
-		m_pNewTaskSemaphore = 0;
+        SemaphoreDelete( m_pNewTaskSemaphore );
+        m_pNewTaskSemaphore = 0;
 
         m_bHaveThreads = false;
         m_NumThreadsWaiting = 0;
@@ -346,7 +346,7 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-	    m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
+        m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
         SemaphoreWait( *m_pNewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
@@ -498,7 +498,7 @@ uint32_t        TaskScheduler::GetNumTaskThreads() const
 
 uint32_t TaskScheduler::GetThreadNum() const
 {
-	return gtl_threadNum;
+    return gtl_threadNum;
 }
 
 
@@ -657,16 +657,16 @@ namespace enki
 
 namespace enki
 {
-	semaphoreid_t* SemaphoreCreate()
-	{
-		semaphoreid_t* pSemaphore = new semaphoreid_t;
-		SemaphoreCreate( *pSemaphore );
-		return pSemaphore;
-	}
+    semaphoreid_t* SemaphoreCreate()
+    {
+        semaphoreid_t* pSemaphore = new semaphoreid_t;
+        SemaphoreCreate( *pSemaphore );
+        return pSemaphore;
+    }
 
-	void SemaphoreDelete( semaphoreid_t* pSemaphore_ )
-	{
-		SemaphoreClose( *pSemaphore_ );
-		delete pSemaphore_;
-	}
+    void SemaphoreDelete( semaphoreid_t* pSemaphore_ )
+    {
+        SemaphoreClose( *pSemaphore_ );
+        delete pSemaphore_;
+    }
 }

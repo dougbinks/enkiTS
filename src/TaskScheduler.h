@@ -58,7 +58,7 @@ namespace enki
     class  PinnedTaskList;
     struct ThreadArgs;
     struct SubTaskSet;
-	struct semaphoreid_t;
+    struct semaphoreid_t;
 
 
     enum TaskPriority
@@ -89,7 +89,7 @@ namespace enki
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
 
-		virtual                ~ICompletable() {}
+        virtual                ~ICompletable() {}
 
         TaskPriority            m_Priority;
     private:
@@ -243,8 +243,8 @@ namespace enki
         // to account for the main thread.
         ENKITS_API uint32_t        GetNumTaskThreads() const;
 
-		// Returns the current task threadNum
-		// Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
+        // Returns the current task threadNum
+        // Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
         ENKITS_API uint32_t        GetThreadNum() const;
 
         // Returns the ProfilerCallbacks structure so that it can be modified to
@@ -273,7 +273,7 @@ namespace enki
         std::atomic<int32_t>                                     m_NumThreadsRunning;
         std::atomic<int32_t>                                     m_NumThreadsWaiting;
         uint32_t                                                 m_NumPartitions;
-		semaphoreid_t*                                           m_pNewTaskSemaphore;
+        semaphoreid_t*                                           m_pNewTaskSemaphore;
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
         ProfilerCallbacks                                        m_ProfilerCallbacks;

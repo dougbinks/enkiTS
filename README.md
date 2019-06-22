@@ -194,16 +194,16 @@ int main(int argc, const char * argv[]) {
 
 ## Deprecated
 
-The user thread versions are no longer being maintained as they are no longer in use. These were developed 
+The user thread versions are no longer being maintained as they are no longer in use.
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 
 ## Projects using enkiTS
 
 ### [Avoyd](https://www.avoyd.com)
-Avoyd is an abstract 6 degrees of freedom voxel game.
+Avoyd is an abstract 6 degrees of freedom voxel game. enkiTS was developed for use in our [in-house engine powering Avoyd](https://www.enkisoftware.com/faq#engine). 
 
-![Avoyd screenshot](https://github.com/juliettef/Media/blob/master/Avoyd_2019-06-22_enkiTS_microprofile.jpg)
+![Avoyd screenshot](https://github.com/juliettef/Media/blob/master/Avoyd_2019-06-22_enkiTS_microprofile.jpg?raw=true)
 
 ### [Imogen](https://github.com/CedricGuillemet/Imogen)
 GPU/CPU Texture Generator

@@ -12,11 +12,9 @@ set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5
 include_directories( "${PROJECT_SOURCE_DIR}/src" )
 
 set( ENKITS_HEADERS
-     src/Atomics.h
-     src/LockLessMultiReadPipe.h
-     src/Threads.h
-     src/TaskScheduler.h
-     )
+    src/LockLessMultiReadPipe.h
+    src/TaskScheduler.h
+    )
 
 set( ENKITS_SRC
      src/TaskScheduler.cpp
@@ -26,6 +24,7 @@ if( ENKITS_BUILD_C_INTERFACE )
     list( APPEND ENKITS_HEADERS
         src/TaskScheduler_c.h
         )
+		
     list( APPEND ENKITS_SRC
         src/TaskScheduler_c.cpp
         )
@@ -43,7 +42,7 @@ endif()
 
 
 if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
-    target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )
+    target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )    
 endif()
 
 if( UNIX )
@@ -60,18 +59,22 @@ if( ENKITS_INSTALL )
     install(FILES ${ENKITS_HEADERS} DESTINATION "${CMAKE_INSTALL_PREFIX}/include/enkiTS")
 endif()
 
+if( UNIX )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
+endif()
+if( APPLE )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++" )
+endif()
+
 if( ENKITS_BUILD_EXAMPLES )
-    if( UNIX )
-        SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
-    endif()
-    if(APPLE)
-        SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++" )
-    endif()
     add_executable( ParallelSum example/ParallelSum.cpp example/Timer.h )
     target_link_libraries(ParallelSum enkiTS )
 
     add_executable( PinnedTask example/PinnedTask.cpp )
     target_link_libraries(PinnedTask enkiTS )
+
+    add_executable( LambdaTask example/LambdaTask.cpp example/Timer.h )
+    target_link_libraries(LambdaTask enkiTS )
 
     if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
         add_executable( Priorities example/Priorities.cpp )

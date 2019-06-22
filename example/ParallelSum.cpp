@@ -20,9 +20,7 @@
 #include "Timer.h"
 
 #include <stdio.h>
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#undef __STDC_FORMAT_MACROS
 #include <assert.h>
 
 #ifndef _WIN32
@@ -103,8 +101,9 @@ static const int REPEATS    = RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-    uint32_t maxThreads = GetNumHardwareThreads();
+    uint32_t maxThreads = std::thread::hardware_concurrency();
     double* avSpeedUps = new double[ maxThreads ];
+
 
     // start by measuring serial
     double avSerial = 0.0f;

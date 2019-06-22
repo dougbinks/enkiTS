@@ -54,38 +54,44 @@ struct enkiPinnedTask : IPinnedTask
     void* pArgs;
 };
 
-enkiTaskScheduler*    enkiNewTaskScheduler()
+enkiTaskScheduler* enkiNewTaskScheduler()
 {
     enkiTaskScheduler* pETS = new enkiTaskScheduler();
     return pETS;
 }
 
-void                enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
+void enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
     pETS_->Initialize();
 }
 
-void                enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
+void enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
 {
     pETS_->Initialize( numThreads_ );
 }
 
-void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
+void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
     delete pETS_;
 }
 
-enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
+enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
     return new enkiTaskSet( taskFunc_ );
 }
 
-void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
+void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 {
     delete pTaskSet_;
 }
 
-void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
+void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
+{
+    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
+    pTaskSet_->m_Priority = TaskPriority( priority_ );
+}
+
+void enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
 {
     assert( pTaskSet_ );
     assert( pTaskSet_->taskFun );
@@ -95,7 +101,7 @@ void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet*
     pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
-void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler * pETS_, enkiTaskSet * pTaskSet_, void * pArgs_, uint32_t setSize_, uint32_t minRange_)
+void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_, uint32_t minRange_)
 {
     assert( pTaskSet_ );
     assert( pTaskSet_->taskFun );
@@ -106,35 +112,41 @@ void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler * pETS_, enkiTaskSet * pTask
     pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
-int                enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
     assert( pTaskSet_ );
     return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
 }
 
-enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
+enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
     return new enkiPinnedTask( taskFunc_, threadNum_ );
 }
 
-void enkiDeletePinnedTask(enkiPinnedTask * pTaskSet_)
+void enkiDeletePinnedTask(enkiPinnedTask* pTaskSet_)
 {
     delete pTaskSet_;
 }
 
-void enkiAddPinnedTask(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, void * pArgs_)
+void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
+{
+    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
+    pTask_->m_Priority = TaskPriority( priority_ );
+}
+
+void enkiAddPinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, void* pArgs_)
 {
     assert( pTask_ );
     pTask_->pArgs = pArgs_;
     pETS_->AddPinnedTask( pTask_ );
 }
 
-void enkiRunPinnedTasks(enkiTaskScheduler * pETS_)
+void enkiRunPinnedTasks(enkiTaskScheduler* pETS_)
 {
     pETS_->RunPinnedTasks();
 }
 
-int enkiIsPinnedTaskComplete(enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_)
+int enkiIsPinnedTaskComplete(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_)
 {
     assert( pTask_ );
     return ( pTask_->GetIsComplete() ) ? 1 : 0;
@@ -145,9 +157,19 @@ void enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
     pETS_->WaitforTask( pTaskSet_ );
 }
 
+void enkiWaitForTaskSetPriority( enkiTaskScheduler * pETS_, enkiTaskSet * pTaskSet_, int maxPriority_ )
+{
+    pETS_->WaitforTask( pTaskSet_, TaskPriority( maxPriority_ ) );
+}
+
 void enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ )
 {
     pETS_->WaitforTask( pTask_ );
+}
+
+void enkiWaitForPinnedTaskPriority( enkiTaskScheduler * pETS_, enkiPinnedTask * pTask_, int maxPriority_ )
+{
+    pETS_->WaitforTask( pTask_, TaskPriority( maxPriority_ ) );
 }
 
 void enkiWaitForAll( enkiTaskScheduler* pETS_ )

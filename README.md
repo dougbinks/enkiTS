@@ -198,6 +198,23 @@ The user thread versions are no longer being maintained as they are no longer in
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 
+## Projects using enkiTS
+
+### [Avoyd](https://www.avoyd.com)
+Avoyd is an abstract 6 degrees of freedom voxel game.
+
+![Avoyd screenshot](https://github.com/juliettef/Media/blob/master/Avoyd_2019-06-22_enkiTS_microprofile.jpg)
+
+### [Imogen](https://github.com/CedricGuillemet/Imogen)
+GPU/CPU Texture Generator
+
+![Imogen screenshot](https://camo.githubusercontent.com/28347bc0c1627aa4f289e1b2b769afcb3a5de370/68747470733a2f2f692e696d6775722e636f6d2f7351664f3542722e706e67)
+
+### [ToyPathRacer](https://github.com/aras-p/ToyPathTracer)
+Aras Pranckevičius' code for his series on [Daily Path Tracer experiments with various languages](https://aras-p.info/blog/2018/03/28/Daily-Pathtracer-Part-0-Intro/).
+
+![ToyPathTracer screenshot](https://github.com/aras-p/ToyPathTracer/blob/master/Shots/screenshot.jpg?raw=true).
+
 ## License (zlib)
 
 Copyright (c) 2013-2019 Doug Binks

@@ -21,6 +21,7 @@
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
 
+#include <algorithm>
 
 #if defined __i386__ || defined __x86_64__
 #include "x86intrin.h"
@@ -448,8 +449,12 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
 void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ )
 {
     uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
+
     if( pCompletable_ )
     {
+        // We need to ensure that the task we're waiting on can complete even if we're the only thread,
+        // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
+        priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
         while( !pCompletable_->GetIsComplete() )
         {
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )

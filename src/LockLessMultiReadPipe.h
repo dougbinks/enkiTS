@@ -125,8 +125,8 @@ namespace enki
             // Multiple potential readers mean we should check if the data is valid,
             // using an atomic compare exchange
             uint32_t previous = FLAG_CAN_READ;
-            m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
-            if( FLAG_CAN_READ == previous )
+            bool bSuccess = m_Flags[  actualReadIndex ].compare_exchange_strong( previous, FLAG_INVALID, std::memory_order_relaxed );
+            if( bSuccess )
             {
                 break;
             }
@@ -172,7 +172,7 @@ namespace enki
             --frontReadIndex;
             actualReadIndex    = frontReadIndex & ms_cIndexMask;
             uint32_t previous = FLAG_CAN_READ;
-            bool success = m_Flags[  actualReadIndex ].compare_exchange_weak( previous, FLAG_INVALID, std::memory_order_relaxed );
+            bool success = m_Flags[  actualReadIndex ].compare_exchange_strong( previous, FLAG_INVALID, std::memory_order_relaxed );
             if( success )
             {
                 break;

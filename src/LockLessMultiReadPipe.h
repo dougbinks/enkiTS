@@ -87,8 +87,8 @@ namespace enki
     template<uint8_t cSizeLog2, typename T> inline
         LockLessMultiReadPipe<cSizeLog2,T>::LockLessMultiReadPipe()
         : m_WriteIndex(0)
-        , m_ReadIndex(0)
         , m_ReadCount(0)
+        , m_ReadIndex(0)
     {
         assert( cSizeLog2 < 32 );
         memset( (void*)m_Flags, 0, sizeof( m_Flags ) );

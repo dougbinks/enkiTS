@@ -14,6 +14,13 @@ A permissively licensed C and C++ Task Scheduler for creating parallel programs.
 
 enkiTS was developed for, and is used in [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase.
 
+## Platforms
+
+- Windows, Linux, Mac OS, Android (should work on iOS) 
+- x64 & x86, ARM
+
+enkiTS is primarily developed on x64 and x86 Intel architectures on MS Windows, with well tested support for Linux and somewhat less frequently tested support on Mac OS and ARM Android.
+
 ## Examples
 
 Several examples exist in  the [example folder](https://github.com/dougbinks/enkiTS/tree/dev_C%2B%2B11/example). The example code requires C++ 11 for chrono.

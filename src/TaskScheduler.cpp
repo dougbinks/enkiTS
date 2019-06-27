@@ -21,6 +21,8 @@
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
 
+#include <algorithm>
+
 #if defined __i386__ || defined __x86_64__
 #include "x86intrin.h"
 #elif defined _WIN32
@@ -395,26 +397,29 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
 
 }
 
-void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
+void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
 {
-    pTaskSet->m_RunningCount = 0;
+    assert( pTaskSet_->m_RunningCount == 0 );
+    pTaskSet_->m_RunningCount = 0;
 
     // divide task up and add to pipe
-    pTaskSet->m_RangeToRun = pTaskSet->m_SetSize / m_NumPartitions;
-    if( pTaskSet->m_RangeToRun < pTaskSet->m_MinRange ) { pTaskSet->m_RangeToRun = pTaskSet->m_MinRange; }
+    pTaskSet_->m_RangeToRun = pTaskSet_->m_SetSize / m_NumPartitions;
+    if( pTaskSet_->m_RangeToRun < pTaskSet_->m_MinRange ) { pTaskSet_->m_RangeToRun = pTaskSet_->m_MinRange; }
 
-    uint32_t rangeToSplit = pTaskSet->m_SetSize / m_NumInitialPartitions;
-    if( rangeToSplit < pTaskSet->m_MinRange ) { rangeToSplit = pTaskSet->m_MinRange; }
+    uint32_t rangeToSplit = pTaskSet_->m_SetSize / m_NumInitialPartitions;
+    if( rangeToSplit < pTaskSet_->m_MinRange ) { rangeToSplit = pTaskSet_->m_MinRange; }
 
     SubTaskSet subTask;
-    subTask.pTask = pTaskSet;
+    subTask.pTask = pTaskSet_;
     subTask.partition.start = 0;
-    subTask.partition.end = pTaskSet->m_SetSize;
+    subTask.partition.end = pTaskSet_->m_SetSize;
     SplitAndAddTask( gtl_threadNum, subTask, rangeToSplit );
 }
 
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
+    assert( pTask_->m_RunningCount == 0 );
+
     pTask_->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeAll();
@@ -447,8 +452,12 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
 void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ )
 {
     uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
+
     if( pCompletable_ )
     {
+        // We need to ensure that the task we're waiting on can complete even if we're the only thread,
+        // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
+        priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
         while( !pCompletable_->GetIsComplete() )
         {
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )

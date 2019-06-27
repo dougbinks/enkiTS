@@ -40,7 +40,6 @@ namespace enki
     // THREADFUNC_DECL MyThreadStart( void* pArg );
     inline bool ThreadCreate( threadid_t* returnid, DWORD ( WINAPI *StartFunc) (void* ), void* pArg )
     {
-        // posix equiv pthread_create
         DWORD threadid;
         *returnid = CreateThread( 0, 0, StartFunc, pArg, 0, &threadid );
         return  *returnid != NULL;
@@ -48,7 +47,6 @@ namespace enki
 
     inline bool ThreadTerminate( threadid_t threadid )
     {
-        // posix equiv pthread_cancel
         return CloseHandle( threadid ) == 0;
     }
 
@@ -75,7 +73,6 @@ namespace enki
     // THREADFUNC_DECL MyThreadStart( void* pArg );
     inline bool ThreadCreate( threadid_t* returnid, void* ( *StartFunc) (void* ), void* pArg )
     {
-        // posix equiv pthread_create
         int32_t retval = pthread_create( returnid, NULL, StartFunc, pArg );
 
         return  retval == 0;
@@ -83,8 +80,6 @@ namespace enki
     
     inline bool ThreadTerminate( threadid_t threadid )
     {
-        // posix equiv pthread_cancel
-        pthread_cancel( threadid );
         return pthread_detach( threadid ) == 0;
     }
     

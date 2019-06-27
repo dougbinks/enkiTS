@@ -400,6 +400,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 {
+    assert( pTaskSet->m_RunningCount == 0 );
     pTaskSet->m_RunningCount.store( 0, std::memory_order_relaxed );
 
     // divide task up and add to pipe
@@ -418,6 +419,8 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet )
 
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
+    assert( pTask_->m_RunningCount == 0 );
+
     pTask_->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeThreads();

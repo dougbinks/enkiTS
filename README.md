@@ -3,7 +3,7 @@ Support development of enkiTS through our [Patreon](https://www.patreon.com/enki
 [<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
 
 # enkiTS
-[![Build Status for branch: dev](https://travis-ci.org/dougbinks/enkiTS.svg?branch=C++98)](https://travis-ci.org/dougbinks/enkiTS)
+[![Build Status for branch: C++98](https://travis-ci.org/dougbinks/enkiTS.svg?branch=C++98)](https://travis-ci.org/dougbinks/enkiTS)
 
 ## enki Task Scheduler
 

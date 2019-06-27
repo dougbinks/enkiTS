@@ -92,7 +92,7 @@ static const int REPEATS    = RUNS + WARMUPS;
 
 int main(int argc, const char * argv[])
 {
-    uint32_t maxThreads = std::thread::hardware_concurrency();
+    uint32_t maxThreads = enki::GetNumHardwareThreads();
     double* times = new double[ maxThreads ];
     double* stdev = new double[ maxThreads ];
 

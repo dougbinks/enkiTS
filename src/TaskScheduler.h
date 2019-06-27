@@ -190,7 +190,7 @@ namespace enki
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
         // should only be called from main thread, or within a task
-        ENKITS_API void            AddTaskSetToPipe( ITaskSet* pTaskSet );
+        ENKITS_API void            AddTaskSetToPipe( ITaskSet* pTaskSet_ );
 
         // Thread 0 is main thread, otherwise use threadNum
         ENKITS_API void            AddPinnedTask( IPinnedTask* pTask_ );

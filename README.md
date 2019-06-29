@@ -41,7 +41,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 
 1. *Lightweight* - enkiTS is designed to be lean so you can use it anywhere easily, and understand it.
 1. *Fast, then scalable* - enkiTS is designed for consumer devices first, so performance on a low number of threads is important, followed by scalability.
-1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System.
+1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System, and has a simple task interface for both data parallel and task parallelism.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
 1. **NEW** - *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.

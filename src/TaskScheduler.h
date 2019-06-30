@@ -140,7 +140,7 @@ namespace enki
         uint32_t                m_RangeToRun;
     };
 
-    // Subclass IPinnedTask to create tasks which cab be run on a given thread only.
+    // Subclass IPinnedTask to create tasks which can be run on a given thread only.
     class IPinnedTask : public ICompletable
     {
     public:

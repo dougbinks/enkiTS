@@ -23,7 +23,7 @@ enkiTS is primarily developed on x64 and x86 Intel architectures on MS Windows, 
 
 ## Examples
 
-Several examples exist in  the [example folder](https://github.com/dougbinks/enkiTS/tree/dev_C%2B%2B11/example). The example code requires C++ 11 for chrono.
+Several examples exist in  the [example folder](https://github.com/dougbinks/enkiTS/tree/master/example). The example code requires C++ 11 for chrono.
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 

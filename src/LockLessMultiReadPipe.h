@@ -285,7 +285,7 @@ namespace enki
                     if( pPrev != pTailPlus1 )
                     {
                         // pTailPlus1 is no longer the head, so pTailPlus1->pNext should be non NULL
-                        assert( pTailPlus1->pNext );
+                        while( NULL == pTailPlus1->pNext ) {;} // wait for pNext to be updated as head may have just changed.
                         tail.pNext = pTailPlus1->pNext;
                     }
                 }

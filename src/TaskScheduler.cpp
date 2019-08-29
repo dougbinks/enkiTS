@@ -155,6 +155,10 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
                 SpinWait( spinBackoffCount );
             }
         }
+        else
+        {
+            spinCount = 0; // have run a task so reset spin count.
+        }
     }
 
     pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_release );

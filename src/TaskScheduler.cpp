@@ -499,8 +499,11 @@ void    TaskScheduler::WaitforAll()
 
 void    TaskScheduler::WaitforAllAndShutdown()
 {
-    WaitforAll();
-    StopThreads(true);
+    if( m_bHaveThreads )
+    {
+        WaitforAll();
+        StopThreads(true);
+    }
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const

@@ -522,7 +522,6 @@ TaskScheduler::TaskScheduler()
         , m_NumPartitions(0)
         , m_bHaveThreads(false)
 {
-    memset(&m_ProfilerCallbacks, 0, sizeof(m_ProfilerCallbacks));
 }
 
 TaskScheduler::~TaskScheduler()

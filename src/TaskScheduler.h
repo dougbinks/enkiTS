@@ -95,6 +95,7 @@ namespace enki
     private:
         friend class            TaskScheduler;
         std::atomic<int32_t>   m_RunningCount;
+        mutable std::atomic<int32_t>   m_WaitingForTaskCount;
     };
 
     // Subclass ITaskSet to create tasks.

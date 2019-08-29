@@ -541,7 +541,17 @@ void    TaskScheduler::Initialize( uint32_t numThreads_ )
 
 void   TaskScheduler::Initialize()
 {
-    Initialize( std::thread::hardware_concurrency() );
+	uint32_t hardware_threads = 0;
+
+#if _MSC_VER >= 1200 && MSC_VER <= 1910
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	hardware_threads = sysinfo.dwNumberOfProcessors;
+
+#else
+	hardware_threads = std::thread::hardware_concurrency();
+#endif
+    Initialize( hardware_threads);
 }
 
 

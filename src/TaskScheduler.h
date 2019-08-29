@@ -254,14 +254,16 @@ namespace enki
     private:
         static void     TaskingThreadFunction( const ThreadArgs& args_ );
         bool            HaveTasks( uint32_t threadNum_ );
-        void            WaitForTasks( uint32_t threadNum_ );
+        void            WaitForNewTasks( uint32_t threadNum_ );
+        void            WaitForTaskCompletion( const ICompletable* pCompletable_ );
         void            RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
         void            StartThreads();
         void            StopThreads( bool bWait_ );
         void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
-        void            WakeThreads();
+        void            WakeThreadsForNewTasks();
+        void            WakeThreadsForTaskCompletion();
 
         TaskPipe*                                                m_pPipesPerThread[ TASK_PRIORITY_NUM ];
         PinnedTaskList*                                          m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
@@ -271,9 +273,11 @@ namespace enki
         std::thread**                                            m_pThreads;
         std::atomic<int32_t>                                     m_bRunning;
         std::atomic<int32_t>                                     m_NumThreadsRunning;
-        std::atomic<int32_t>                                     m_NumThreadsWaiting;
+        std::atomic<int32_t>                                     m_NumThreadsWaitingForNewTasks;
+        std::atomic<int32_t>                                     m_NumThreadsWaitingForTaskCompletion;
         uint32_t                                                 m_NumPartitions;
         semaphoreid_t*                                           m_pNewTaskSemaphore;
+        semaphoreid_t*                                           m_pTaskCompleteSemaphore;
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
         ProfilerCallbacks                                        m_ProfilerCallbacks;

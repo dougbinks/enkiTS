@@ -93,6 +93,7 @@ namespace
     }
 
     #if ( defined _WIN32 && ( defined _M_IX86  || defined _M_X64 ) ) || ( defined __i386__ || defined __x86_64__ )
+    // Note: see https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
     static void SpinWait( uint32_t spinCount_ )
     {
         uint64_t end = __rdtsc() + spinCount_;
@@ -145,12 +146,11 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
             ++spinCount;
             if( spinCount > SPIN_COUNT )
             {
-                pTS->WaitForTasks( threadNum );
+                pTS->WaitForNewTasks( threadNum );
                 spinCount = 0;
             }
             else
             {
-                // Note: see https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
                 uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
                 SpinWait( spinBackoffCount );
             }
@@ -177,7 +177,8 @@ void TaskScheduler::StartThreads()
         m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
     }
 
-    m_pNewTaskSemaphore = SemaphoreCreate();
+    m_pNewTaskSemaphore      = SemaphoreCreate();
+    m_pTaskCompleteSemaphore = SemaphoreCreate();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadArgStore   = new ThreadArgs[m_NumThreads];
@@ -225,7 +226,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         while( bWait_ && m_NumThreadsRunning > 1)
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
-           WakeThreads();
+           WakeThreadsForNewTasks();
         }
 
         for( uint32_t thread = 1; thread < m_NumThreads; ++thread )
@@ -242,9 +243,12 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
         SemaphoreDelete( m_pNewTaskSemaphore );
         m_pNewTaskSemaphore = 0;
+        SemaphoreDelete( m_pTaskCompleteSemaphore );
+        m_pTaskCompleteSemaphore = 0;
 
         m_bHaveThreads = false;
-        m_NumThreadsWaiting = 0;
+        m_NumThreadsWaitingForNewTasks = 0;
+        m_NumThreadsWaitingForTaskCompletion = 0;
         m_NumThreadsRunning = 0;
 
         for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
@@ -301,14 +305,21 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t
             SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
             SplitAndAddTask( threadNum, subTask, subTask.pTask->m_RangeToRun );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
-            taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
-
+            int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            if( 1 == prevCount ) // if previous count was 1 the current count is zero so task complete
+            {
+                WakeThreadsForTaskCompletion();
+            }
         }
         else
         {
             // the task has already been divided up by AddTaskSetToPipe, so just run it
             subTask.pTask->ExecuteRange( subTask.partition, threadNum );
-            subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            if( 1 == prevCount ) // if previous count was 1 the current count is zero so task complete
+            {
+                WakeThreadsForTaskCompletion();
+            }
         }
     }
 
@@ -335,7 +346,7 @@ bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
     return false;
 }
 
-void TaskScheduler::WaitForTasks( uint32_t threadNum )
+void TaskScheduler::WaitForNewTasks( uint32_t threadNum )
 {
     // We incrememt the number of threads waiting here in order
     // to ensure that the check for tasks occurs after the increment
@@ -347,23 +358,56 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
     if( !bHaveTasks )
     {
         SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
-        m_NumThreadsWaiting.fetch_add( 1, std::memory_order_acquire );
+        m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
         SemaphoreWait( *m_pNewTaskSemaphore );
         SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
     }
 }
 
-void TaskScheduler::WakeThreads()
+void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_ )
+{
+    m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
+
+    if( pCompletable_->GetIsComplete() )
+    {
+        m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_release );
+    }
+    else
+    {
+        SemaphoreWait( *m_pTaskCompleteSemaphore );
+    }
+}
+
+void TaskScheduler::WakeThreadsForNewTasks()
 {
     int32_t waiting;
     do
     {
-        waiting = m_NumThreadsWaiting;
-    } while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+        waiting = m_NumThreadsWaitingForNewTasks;
+    } while( waiting && !m_NumThreadsWaitingForNewTasks.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
 
     if( waiting )
     {
         SemaphoreSignal( *m_pNewTaskSemaphore, waiting );
+    }
+
+    // We also wake tasks waiting for completion as they can run tasks
+    WakeThreadsForTaskCompletion();
+}
+
+void TaskScheduler::WakeThreadsForTaskCompletion()
+{
+    // m_NumThreadsWaitingForTaskCompletion can go negative as this indicates that
+    // we signalled more threads than the number which ended up waiting
+    int32_t waiting;
+    do
+    {
+        waiting = m_NumThreadsWaitingForTaskCompletion;
+    } while( waiting > 0 && !m_NumThreadsWaitingForTaskCompletion.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+
+    if( waiting > 0 )
+    {
+        SemaphoreSignal( *m_pTaskCompleteSemaphore, waiting );
     }
 }
 
@@ -381,7 +425,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
         {
             if( numAdded > 1 )
             {
-                WakeThreads();
+                WakeThreadsForNewTasks();
             }
             numAdded = 0;
             // alter range to run the appropriate fraction
@@ -392,10 +436,12 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
             subTask_.pTask->m_RunningCount.fetch_sub( 1, std::memory_order_release );
+            // Do not call WakeThreadsForTaskCompletion() here as will wake all threads for new tasks below
         }
     }
 
-    WakeThreads();
+    // WakeThreadsForNewTasks also calls WakeThreadsForTaskCompletion() so do not need to do so above
+    WakeThreadsForNewTasks();
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
@@ -423,7 +469,7 @@ void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 
     pTask_->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
-    WakeThreads();
+    WakeThreadsForNewTasks();
 }
 
 void TaskScheduler::RunPinnedTasks()
@@ -445,28 +491,44 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         {
             pPinnedTaskSet->Execute();
             pPinnedTaskSet->m_RunningCount = 0;
+            WakeThreadsForTaskCompletion();
         }
     } while( pPinnedTaskSet );
 }
 
 void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ )
 {
-    uint32_t hintPipeToCheck_io = gtl_threadNum + 1;    // does not need to be clamped.
+    uint32_t threadNum = gtl_threadNum;
+    uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
 
     if( pCompletable_ )
     {
         // We need to ensure that the task we're waiting on can complete even if we're the only thread,
         // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
         priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
+        uint32_t spinCount = 0;
         while( !pCompletable_->GetIsComplete() )
         {
+            ++spinCount;
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
             {
-                if( TryRunTask( gtl_threadNum, priority, hintPipeToCheck_io ) )
+                if( TryRunTask( threadNum, priority, hintPipeToCheck_io ) )
                 {
+                    spinCount = 0; // reset spin as ran a task
                     break;
                 }
+                if( spinCount > SPIN_COUNT )
+                {
+                    WaitForTaskCompletion( pCompletable_ );
+                    spinCount = 0;
+                }
+                else
+                {
+                    uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                    SpinWait( spinBackoffCount );
+                }
             }
+
         }
     }
     else
@@ -486,7 +548,7 @@ void    TaskScheduler::WaitforAll()
     bool bHaveTasks = true;
     uint32_t hintPipeToCheck_io = gtl_threadNum  + 1;    // does not need to be clamped.
     int32_t numThreadsRunning = m_NumThreadsRunning.load( std::memory_order_relaxed ) - 1; // account for this thread
-    while( bHaveTasks || m_NumThreadsWaiting.load( std::memory_order_relaxed ) < numThreadsRunning )
+    while( bHaveTasks || m_NumThreadsWaitingForNewTasks.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
      }
@@ -518,7 +580,8 @@ TaskScheduler::TaskScheduler()
         , m_pThreads(NULL)
         , m_bRunning(0)
         , m_NumThreadsRunning(0)
-        , m_NumThreadsWaiting(0)
+        , m_NumThreadsWaitingForNewTasks(0)
+        , m_NumThreadsWaitingForTaskCompletion(0)
         , m_NumPartitions(0)
         , m_bHaveThreads(false)
 {

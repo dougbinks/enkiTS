@@ -378,6 +378,11 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_ )
     else
     {
         SemaphoreWait( *m_pTaskCompleteSemaphore );
+        if( !pCompletable_->GetIsComplete() )
+        {
+            // This thread which was not the one which was supposed to be awoken
+            WakeThreadsForTaskCompletion();
+        }
     }
 
     pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_release );

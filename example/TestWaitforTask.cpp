@@ -22,6 +22,7 @@
 #include <stdio.h>
 
 enki::TaskScheduler g_TS;
+uint32_t g_Iteration;
 
 struct SlowTask : enki::ITaskSet
 {
@@ -45,19 +46,17 @@ struct WaitingTask : enki::ITaskSet
 {
     virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum )
     {
-        if( depth < 4 )
+        int numWaitTasks = maxWaitasks - depth;
+        for( int t = 0; t < numWaitTasks; ++t )
         {
-            pWaitingTask0 = new WaitingTask;
-            pWaitingTask0->depth = depth + 1;
-            g_TS.AddTaskSetToPipe( pWaitingTask0 );
-            pWaitingTask1 = new WaitingTask;
-            pWaitingTask1->depth = depth + 1;
-            g_TS.AddTaskSetToPipe( pWaitingTask1 );
+            pWaitingTasks[t] = new WaitingTask;
+            pWaitingTasks[t]->depth = depth + 1;
+            g_TS.AddTaskSetToPipe( pWaitingTasks[t] );
         }
         for( SlowTask& task : tasks )
         {
-            task.m_SetSize = 10;
-            task.waitTimeMultiplier = 10.;
+            task.m_SetSize = rand() % 1000;
+            task.waitTimeMultiplier = 0.0001 * double( rand() % 100 );
             g_TS.AddTaskSetToPipe( &task );
         }
         for( SlowTask& task : tasks )
@@ -65,24 +64,24 @@ struct WaitingTask : enki::ITaskSet
             g_TS.WaitforTask( &task );
         }
 
-        if( pWaitingTask0 )
+        for( int t = 0; t < numWaitTasks; ++t )
         {
-            g_TS.WaitforTask( pWaitingTask0 );
-            g_TS.WaitforTask( pWaitingTask1 );
+            g_TS.WaitforTask( pWaitingTasks[t] );
         }
-        printf( "\t WaitingTask depth %d complete: thread: %d\n", depth, threadnum );
+        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n", g_Iteration, depth, threadnum );
     }
 
     virtual ~WaitingTask()
     {
-        delete pWaitingTask0;
-        delete pWaitingTask1;
+        for( WaitingTask* pWaitingTask : pWaitingTasks )
+        {
+            delete pWaitingTask;
+        }
     }
-
     SlowTask    tasks[10];
     int32_t     depth = 0;
-    WaitingTask* pWaitingTask0 = NULL;
-    WaitingTask* pWaitingTask1 = NULL;
+    static constexpr int maxWaitasks = 6;
+    WaitingTask* pWaitingTasks[maxWaitasks] = {};
 };
 
 
@@ -91,8 +90,7 @@ struct WaitingTask : enki::ITaskSet
 int main(int argc, const char * argv[])
 {
     g_TS.Initialize();
-
-    for( int i = 0; i < 100; ++i )
+    for( g_Iteration = 0; g_Iteration < 1000; ++g_Iteration )
     {
         WaitingTask taskRoot;
         g_TS.AddTaskSetToPipe( &taskRoot );

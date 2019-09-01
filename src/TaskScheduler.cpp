@@ -384,11 +384,8 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_ )
 
 void TaskScheduler::WakeThreadsForNewTasks()
 {
-    int32_t waiting;
-    do
-    {
-        waiting = m_NumThreadsWaitingForNewTasks;
-    } while( waiting && !m_NumThreadsWaitingForNewTasks.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+    int32_t waiting = m_NumThreadsWaitingForNewTasks.load( std::memory_order_relaxed );
+    while( waiting && !m_NumThreadsWaitingForNewTasks.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
 
     if( waiting )
     {

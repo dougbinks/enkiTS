@@ -495,7 +495,10 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         {
             pPinnedTaskSet->Execute();
             pPinnedTaskSet->m_RunningCount = 0;
-            WakeThreadsForTaskCompletion();
+            if( pPinnedTaskSet->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
+            {
+                WakeThreadsForTaskCompletion();
+            }
         }
     } while( pPinnedTaskSet );
 }

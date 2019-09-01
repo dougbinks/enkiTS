@@ -359,11 +359,8 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 
 void TaskScheduler::WakeThreads()
 {
-    int32_t waiting;
-    do
-    {
-        waiting = m_NumThreadsWaiting;
-    } while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+    int32_t waiting = m_NumThreadsWaiting.load( std::memory_order_relaxed );
+    while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
 
     if( waiting )
     {

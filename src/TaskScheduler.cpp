@@ -371,6 +371,9 @@ void TaskScheduler::WakeThreads()
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
     int32_t numAdded = 0;
+    int32_t numRun   = 0;
+    // ensure that an artificial completion is not registered whilst adding tasks by incrementing count
+    subTask_.pTask->m_RunningCount.fetch_add( 1, std::memory_order_acquire );
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
@@ -392,9 +395,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
                 subTask_.partition.start = taskToAdd.partition.end;
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
-            subTask_.pTask->m_RunningCount.fetch_sub( 1, std::memory_order_release );
+            ++numRun;
         }
     }
+    subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
 
     WakeThreads();
 }

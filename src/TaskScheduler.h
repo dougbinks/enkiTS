@@ -93,8 +93,8 @@ namespace enki
 
         TaskPriority            m_Priority;
     private:
-        friend class            TaskScheduler;
-        std::atomic<int32_t>   m_RunningCount;
+        friend class                   TaskScheduler;
+        std::atomic<int32_t>           m_RunningCount;
         mutable std::atomic<int32_t>   m_WaitingForTaskCount;
     };
 

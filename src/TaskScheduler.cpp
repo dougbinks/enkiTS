@@ -306,7 +306,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t
             SplitAndAddTask( threadNum, subTask, subTask.pTask->m_RangeToRun );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
             int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
-            if( 1 == prevCount && taskToRun.pTask->m_WaitingForTaskCount ) // if previous count was 1 the current count is zero so task complete
+            if( 1 == prevCount  &&
+                taskToRun.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
             {
                 WakeThreadsForTaskCompletion();
             }
@@ -316,7 +317,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t
             // the task has already been divided up by AddTaskSetToPipe, so just run it
             subTask.pTask->ExecuteRange( subTask.partition, threadNum );
             int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
-            if( 1 == prevCount && subTask.pTask->m_WaitingForTaskCount ) // if previous count was 1 the current count is zero so task complete
+            if( 1 == prevCount && 
+                subTask.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
             {
                 WakeThreadsForTaskCompletion();
             }
@@ -368,7 +370,6 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_ )
 {
     m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
     pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acquire );
-
 
     if( pCompletable_->GetIsComplete() )
     {

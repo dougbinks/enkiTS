@@ -400,11 +400,8 @@ void TaskScheduler::WakeThreadsForTaskCompletion()
 {
     // m_NumThreadsWaitingForTaskCompletion can go negative as this indicates that
     // we signalled more threads than the number which ended up waiting
-    int32_t waiting;
-    do
-    {
-        waiting = m_NumThreadsWaitingForTaskCompletion;
-    } while( waiting > 0 && !m_NumThreadsWaitingForTaskCompletion.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+    int32_t waiting = m_NumThreadsWaitingForTaskCompletion.load( std::memory_order_relaxed );
+    while( waiting > 0 && !m_NumThreadsWaitingForTaskCompletion.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
 
     if( waiting > 0 )
     {

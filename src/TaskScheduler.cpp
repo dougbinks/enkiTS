@@ -494,7 +494,7 @@ void    TaskScheduler::WaitforAll()
     while( bHaveTasks || m_NumThreadsWaiting.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-     }
+    }
 }
 
 void    TaskScheduler::WaitforAllAndShutdown()

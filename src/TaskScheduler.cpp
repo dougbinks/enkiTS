@@ -155,6 +155,10 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
                 SpinWait( spinBackoffCount );
             }
         }
+        else
+        {
+            spinCount = 0; // have run a task so reset spin count.
+        }
     }
 
     pTS->m_NumThreadsRunning.fetch_sub( 1, std::memory_order_release );
@@ -561,13 +565,16 @@ void    TaskScheduler::WaitforAll()
     while( bHaveTasks || m_NumThreadsWaitingForNewTasks.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-     }
+    }
 }
 
 void    TaskScheduler::WaitforAllAndShutdown()
 {
-    WaitforAll();
-    StopThreads(true);
+    if( m_bHaveThreads )
+    {
+        WaitforAll();
+        StopThreads(true);
+    }
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const
@@ -699,6 +706,7 @@ namespace enki
 #else // POSIX
 
 #include <semaphore.h>
+#include <errno.h>
 
 namespace enki
 {
@@ -721,8 +729,7 @@ namespace enki
     
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
-        int err = sem_wait( &semaphoreid.sem );
-        assert( err == 0 );
+        while( sem_wait( &semaphoreid.sem ) == -1 && errno == EINTR ) {}
     }
     
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )

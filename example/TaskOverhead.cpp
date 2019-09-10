@@ -114,7 +114,6 @@ int main(int argc, const char * argv[])
     double* avTimeTakenMS = new double[ DATA_POINTS ];
     double* avSerialTimeTakenMS = new double[ DATA_POINTS ];
 
-    // now measure parallel
     for( uint32_t dataPoint = 0; dataPoint < DATA_POINTS; ++dataPoint )
     {
         
@@ -124,12 +123,13 @@ int main(int argc, const char * argv[])
         uint32_t setSize = GetSetSizeForDataPoint( dataPoint );
 
 
-        // start by measuring serial
         double avSerialTimeMS = 0.0f;
         uint64_t sumSerial;
         for( int run = 0; run< REPEATS; ++run )
         {
+            printf("Run %d.....\n", run);
 
+            // start by measuring serial
             ParallelSumTaskSet serialTask( setSize );
             serialTask.Init( 1 );
             TaskSetPartition range = { 0, setSize };
@@ -141,20 +141,10 @@ int main(int argc, const char * argv[])
             sumSerial = serialTask.m_pPartialSums[0].count;
 
             tSerial.Stop();
-
-            if( run >= WARMUPS )
-            {
-                avSerialTimeMS += tSerial.GetTimeMS() / RUNS;
-            }
             printf("Serial Example complete in \t%fms,\t sum: %" PRIu64 "\n", tSerial.GetTimeMS(), sumSerial );
-        }
-        avSerialTimeTakenMS[ dataPoint ] = avSerialTimeMS;
-
-        for( int run = 0; run< REPEATS; ++run )
-        {
-            printf("Run %d.....\n", run);
 
 
+            // Now measure parallel
             ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
 
             Timer tParallel;
@@ -165,9 +155,8 @@ int main(int argc, const char * argv[])
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
 
             tParallel.Stop();
-
-
             printf("Parallel Example complete in \t%fms,\t sum: %" PRIu64 "\n", tParallel.GetTimeMS(), parallelReductionSumTaskSet.m_FinalSum );
+
             if( sumSerial != parallelReductionSumTaskSet.m_FinalSum )
             {
                 printf("ERROR, sums do not match\n");
@@ -176,14 +165,16 @@ int main(int argc, const char * argv[])
 
             if( run >= WARMUPS )
             {
+                avSerialTimeMS += tSerial.GetTimeMS() / RUNS;
                 avTimeMS += tParallel.GetTimeMS() / RUNS;
             }
         }
-        avTimeTakenMS[ dataPoint ] = avTimeMS;
-        printf("\nAverage time for set size %d: %f\n", setSize, (float)avTimeMS );
+        avSerialTimeTakenMS[ dataPoint ] = avSerialTimeMS;
+        avTimeTakenMS[ dataPoint ]       = avTimeMS;
+        printf("\nAverage time for set size %d: %fms parallel, %fms serial\n", setSize, (float)avTimeMS, (float)avSerialTimeMS );
     }
 
-    printf("\nSet Size,\tTime Parallel,\tTime Serial\n" );
+    printf("\nSet Size,\tTime Parallel/ms,\tTime Serial/ms\n" );
     for( uint32_t dataPoint = 0; dataPoint < DATA_POINTS; ++dataPoint )
     {
         printf("%8d,\t%f,\t%f\n", GetSetSizeForDataPoint( dataPoint ), (float)avTimeTakenMS[ dataPoint ], (float)avSerialTimeTakenMS[ dataPoint ] );

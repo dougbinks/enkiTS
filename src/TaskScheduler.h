@@ -232,11 +232,12 @@ namespace enki
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
 
         // Waits for all task sets to complete - not guaranteed to work unless we know we
-        // are in a situation where tasks aren't being continuosly added.
+        // are in a situation where tasks aren't being continuously added.
         ENKITS_API void            WaitforAll();
 
         // Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
-        // are in a situation where tasks aren't being continuosly added.
+        // are in a situation where tasks aren't being continuously added.
+        // This function can be safely called even if TaskScheduler::Initialize() has not been called.
         ENKITS_API void            WaitforAllAndShutdown();
 
         // Returns the number of threads created for running tasks + 1

@@ -359,11 +359,8 @@ void TaskScheduler::WaitForTasks( uint32_t threadNum )
 
 void TaskScheduler::WakeThreads()
 {
-    int32_t waiting;
-    do
-    {
-        waiting = m_NumThreadsWaiting;
-    } while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_relaxed ) );
+    int32_t waiting = m_NumThreadsWaiting.load( std::memory_order_relaxed );
+    while( waiting && !m_NumThreadsWaiting.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
 
     if( waiting )
     {
@@ -374,6 +371,9 @@ void TaskScheduler::WakeThreads()
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
     int32_t numAdded = 0;
+    int32_t numRun   = 0;
+    // ensure that an artificial completion is not registered whilst adding tasks by incrementing count
+    subTask_.pTask->m_RunningCount.fetch_add( 1, std::memory_order_acquire );
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
@@ -395,9 +395,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
                 subTask_.partition.start = taskToAdd.partition.end;
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
-            subTask_.pTask->m_RunningCount.fetch_sub( 1, std::memory_order_release );
+            ++numRun;
         }
     }
+    subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
 
     WakeThreads();
 }
@@ -493,13 +494,16 @@ void    TaskScheduler::WaitforAll()
     while( bHaveTasks || m_NumThreadsWaiting.load( std::memory_order_relaxed ) < numThreadsRunning )
     {
         bHaveTasks = TryRunTask( gtl_threadNum, hintPipeToCheck_io );
-     }
+    }
 }
 
 void    TaskScheduler::WaitforAllAndShutdown()
 {
-    WaitforAll();
-    StopThreads(true);
+    if( m_bHaveThreads )
+    {
+        WaitforAll();
+        StopThreads(true);
+    }
 }
 
 uint32_t        TaskScheduler::GetNumTaskThreads() const
@@ -652,8 +656,7 @@ namespace enki
     
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
-        int err = sem_wait( &semaphoreid.sem );
-        assert( err == 0 );
+        while( sem_wait( &semaphoreid.sem ) == -1 && errno == EINTR ) {}
     }
     
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )

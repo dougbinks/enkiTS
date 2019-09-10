@@ -371,6 +371,8 @@ void TaskScheduler::WakeAll()
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
+    int32_t numRun = 0;
+    AtomicAdd( &subTask_.pTask->m_RunningCount, 1 );
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
@@ -387,14 +389,14 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
                 subTask_.partition.start = taskToAdd.partition.end;
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
-            AtomicAdd( &subTask_.pTask->m_RunningCount, -1 );
+            ++numRun;
         }
         else
         {
             WakeOne();
         }
     }
-
+    AtomicAdd( &subTask_.pTask->m_RunningCount, -1 - numRun);
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )

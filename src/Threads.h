@@ -168,6 +168,7 @@ namespace enki
 #else // POSIX
 
 #include <semaphore.h>
+#include <errno.h>
 
 namespace enki
 {
@@ -190,8 +191,7 @@ namespace enki
     
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
-        int err = sem_wait( &semaphoreid.sem );
-        assert( err == 0 );
+        while( sem_wait( &semaphoreid.sem ) == -1 && errno == EINTR ) {}
     }
     
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )

@@ -634,6 +634,7 @@ namespace enki
 #else // POSIX
 
 #include <semaphore.h>
+#include <errno.h>
 
 namespace enki
 {

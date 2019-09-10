@@ -257,7 +257,7 @@ namespace enki
         static void     TaskingThreadFunction( const ThreadArgs& args_ );
         bool            HaveTasks( uint32_t threadNum_ );
         void            WaitForNewTasks( uint32_t threadNum_ );
-        void            WaitForTaskCompletion( const ICompletable* pCompletable_ );
+        void            WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ );
         void            RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );

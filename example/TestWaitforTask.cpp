@@ -94,7 +94,7 @@ int main(int argc, const char * argv[])
     {
         WaitingTask taskRoot;
         g_TS.AddTaskSetToPipe( &taskRoot );
-        g_TS.WaitforTask( &taskRoot );
+        g_TS.WaitforAll();
     }
     return 0;
 }

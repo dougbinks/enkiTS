@@ -26,7 +26,7 @@
 
 void LowPriorityTask( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
 {
-    int wait = (int)ceilf( 0.1f * (float)( ( end_ - start_ ) * (float)CLOCKS_PER_SEC) );
+    int wait = (int)( 0.1f * (float)( ( end_ - start_ ) * (float)CLOCKS_PER_SEC) );
     clock_t endTime = (clock_t)wait  + clock();
     while( clock() < endTime )
     {

@@ -149,7 +149,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
     while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
     {
-        if(!pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
+        if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
         {
             // no tasks, will spin then wait
             ++spinCount;
@@ -375,12 +375,12 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum )
     bool bHaveTasks = HaveTasks( threadNum );
     if( !bHaveTasks )
     {
-        SafeCallback( m_ProfilerCallbacks.waitStart, threadNum );
+        SafeCallback( m_ProfilerCallbacks.waitForNewTaskSuspendStart, threadNum );
         m_pThreadArgStore[threadNum].threadState = THREAD_STATE_WAIT_NEW_TASKS;
         m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
         SemaphoreWait( *m_pNewTaskSemaphore );
         m_pThreadArgStore[threadNum].threadState = THREAD_STATE_RUNNING;
-        SafeCallback( m_ProfilerCallbacks.waitStop, threadNum );
+        SafeCallback( m_ProfilerCallbacks.waitForNewTaskSuspendStop, threadNum );
     }
 }
 
@@ -395,16 +395,16 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     }
     else
     {
-        SafeCallback( m_ProfilerCallbacks.waitStart, threadNum_ );
+        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteSuspendStart, threadNum_ );
         m_pThreadArgStore[threadNum_].threadState = THREAD_STATE_WAIT_TASK_COMPLETION;
         SemaphoreWait( *m_pTaskCompleteSemaphore );
         if( !pCompletable_->GetIsComplete() )
         {
-            // This thread which was not the one which was supposed to be awoken
+            // This thread which may not the one which was supposed to be awoken
             WakeThreadsForTaskCompletion();
         }
         m_pThreadArgStore[threadNum_].threadState = THREAD_STATE_RUNNING;
-        SafeCallback( m_ProfilerCallbacks.waitStop, threadNum_ );
+        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteSuspendStop, threadNum_ );
     }
 
     pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_release );
@@ -533,8 +533,9 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
     uint32_t threadNum = gtl_threadNum;
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
 
-    if( pCompletable_ )
+    if( pCompletable_ && !pCompletable_->GetIsComplete() )
     {
+        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteStart, threadNum );
         // We need to ensure that the task we're waiting on can complete even if we're the only thread,
         // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
         priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
@@ -562,6 +563,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
             }
 
         }
+        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteSuspendStop, threadNum );
     }
     else
     {

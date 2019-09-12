@@ -186,8 +186,12 @@ namespace enki
     {
         ProfilerCallbackFunc threadStart;
         ProfilerCallbackFunc threadStop;
-        ProfilerCallbackFunc waitStart;
-        ProfilerCallbackFunc waitStop;
+        ProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
+        ProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
+        ProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
+        ProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
+        ProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
+        ProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
     };
 
     class TaskScheduler

@@ -24,6 +24,9 @@
 enki::TaskScheduler g_TS;
 uint32_t g_Iteration;
 
+std::atomic<int32_t> g_WaitForTaskCompletion(0);
+std::atomic<int32_t> g_WaitCount(0);
+
 struct SlowTask : enki::ITaskSet
 {
     virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum )
@@ -31,15 +34,12 @@ struct SlowTask : enki::ITaskSet
         // fake slow task with timer
         Timer timer;
         timer.Start();
-        double tWaittime = (double)( range.end - range.start ) * waitTimeMultiplier;
-        while( timer.GetTimeMS() < tWaittime )
+        while( timer.GetTimeMS() < waitTime )
         {
         }
-        //printf( "\t SlowTask range complete: thread: %d, start: %d, end: %d\n",
-        //        threadnum, range.start, range.end );
     }
 
-    double waitTimeMultiplier;
+    double waitTime;
 };
 
 struct WaitingTask : enki::ITaskSet
@@ -55,20 +55,22 @@ struct WaitingTask : enki::ITaskSet
         }
         for( SlowTask& task : tasks )
         {
-            task.m_SetSize = rand() % 1000;
-            task.waitTimeMultiplier = 0.0001 * double( rand() % 100 );
+            task.m_SetSize = 1000;
+            task.waitTime = 0.00001 * double( rand() % 100 );
             g_TS.AddTaskSetToPipe( &task );
         }
         for( SlowTask& task : tasks )
         {
+            ++g_WaitCount;
             g_TS.WaitforTask( &task );
         }
 
         for( int t = 0; t < numWaitTasks; ++t )
         {
+            ++g_WaitCount;
             g_TS.WaitforTask( pWaitingTasks[t] );
         }
-        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n", g_Iteration, depth, threadnum );
+        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n\t\tWaits: %d blocking waits: %d\n", g_Iteration, depth, threadnum, g_WaitCount.load(), g_WaitForTaskCompletion.load() );
     }
 
     virtual ~WaitingTask()
@@ -78,17 +80,20 @@ struct WaitingTask : enki::ITaskSet
             delete pWaitingTask;
         }
     }
-    SlowTask    tasks[10];
+    SlowTask    tasks[4];
     int32_t     depth = 0;
-    static constexpr int maxWaitasks = 6;
+    static constexpr int maxWaitasks = 4;
     WaitingTask* pWaitingTasks[maxWaitasks] = {};
 };
+
 
 
 // This example demonstrates how to run a long running task alongside tasks
 // which must complete as early as possible using priorities.
 int main(int argc, const char * argv[])
 {
+    g_TS.GetProfilerCallbacks()->waitForTaskCompleteStart        = []( uint32_t threadnum_ ) { ++g_WaitCount; };
+    g_TS.GetProfilerCallbacks()->waitForTaskCompleteSuspendStart = []( uint32_t threadnum_ ) { ++g_WaitForTaskCompletion; };
     g_TS.Initialize();
     for( g_Iteration = 0; g_Iteration < 1000; ++g_Iteration )
     {

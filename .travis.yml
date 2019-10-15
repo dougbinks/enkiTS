@@ -5,6 +5,19 @@ dist: trusty
 os:
   - linux
   - osx
+  
+arch:
+  - amd64
+  - arm64
+
+matrix:
+  include:
+   - os: linux
+     arch: amd64
+   - os: linux
+     arch: arm64
+   - os: osx
+     arch: amd64
 
 addons:
     apt:

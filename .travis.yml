@@ -2,9 +2,14 @@ language: cpp
 sudo: false
 dist: trusty
 
-os:
-  - linux
-  - osx
+matrix:
+  include:
+   - os: linux
+     arch: amd64
+   - os: linux
+     arch: arm64
+   - os: osx
+     arch: amd64
 
 addons:
     apt:

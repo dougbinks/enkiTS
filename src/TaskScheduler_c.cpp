@@ -184,7 +184,7 @@ uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 
 enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
 {
-    assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks) );
+    static_assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks), "enkiTS profiler callback structs do not match" );
     return (enkiProfilerCallbacks*)pETS_->GetProfilerCallbacks();
 }
 

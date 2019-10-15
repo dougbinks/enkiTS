@@ -181,7 +181,7 @@ namespace enki
     };
 
     // TaskScheduler implements several callbacks intended for profilers
-    typedef std::function<void ( uint32_t threadnum_ )> ProfilerCallbackFunc;
+    typedef void (*ProfilerCallbackFunc)( uint32_t threadnum_ );
     struct ProfilerCallbacks
     {
         ProfilerCallbackFunc threadStart;

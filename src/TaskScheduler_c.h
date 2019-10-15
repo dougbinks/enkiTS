@@ -139,8 +139,12 @@ struct enkiProfilerCallbacks
 {
     enkiProfilerCallbackFunc threadStart;
     enkiProfilerCallbackFunc threadStop;
-    enkiProfilerCallbackFunc waitStart;
-    enkiProfilerCallbackFunc waitStop;
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
+    enkiProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
 };
 
 // Get the callback structure so it can be set 

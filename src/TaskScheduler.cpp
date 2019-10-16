@@ -529,6 +529,7 @@ TaskScheduler::TaskScheduler()
         , m_NumThreadsWaiting(0)
         , m_NumPartitions(0)
         , m_bHaveThreads(false)
+        , m_ProfilerCallbacks()
 {
 }
 

@@ -93,8 +93,9 @@ namespace enki
 
         TaskPriority            m_Priority;
     private:
-        friend class            TaskScheduler;
-        std::atomic<int32_t>   m_RunningCount;
+        friend class                   TaskScheduler;
+        std::atomic<int32_t>           m_RunningCount;
+        mutable std::atomic<int32_t>   m_WaitingForTaskCount;
     };
 
     // Subclass ITaskSet to create tasks.
@@ -185,8 +186,12 @@ namespace enki
     {
         ProfilerCallbackFunc threadStart;
         ProfilerCallbackFunc threadStop;
-        ProfilerCallbackFunc waitStart;
-        ProfilerCallbackFunc waitStop;
+        ProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
+        ProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
+        ProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
+        ProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
+        ProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
+        ProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
     };
 
     class TaskScheduler
@@ -215,17 +220,19 @@ namespace enki
         ENKITS_API void            AddTaskSetToPipe( ITaskSet* pTaskSet_ );
 
         // Thread 0 is main thread, otherwise use threadNum
+        // Pinned tasks can be added from any thread
         ENKITS_API void            AddPinnedTask( IPinnedTask* pTask_ );
 
         // This function will run any IPinnedTask* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.
         ENKITS_API void            RunPinnedTasks();
 
-       // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
+        // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
         // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
         // Default is lowest priority available.
+        // Only wait for child tasks of the current task otherwise a deadlock could occur.
         ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // WaitforTaskSet, deprecated interface use WaitforTask
@@ -255,14 +262,16 @@ namespace enki
     private:
         static void     TaskingThreadFunction( const ThreadArgs& args_ );
         bool            HaveTasks( uint32_t threadNum_ );
-        void            WaitForTasks( uint32_t threadNum_ );
+        void            WaitForNewTasks( uint32_t threadNum_ );
+        void            WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ );
         void            RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
         bool            TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
         void            StartThreads();
         void            StopThreads( bool bWait_ );
         void            SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
-        void            WakeThreads();
+        void            WakeThreadsForNewTasks();
+        void            WakeThreadsForTaskCompletion();
 
         TaskPipe*                                                m_pPipesPerThread[ TASK_PRIORITY_NUM ];
         PinnedTaskList*                                          m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
@@ -272,9 +281,11 @@ namespace enki
         std::thread**                                            m_pThreads;
         std::atomic<int32_t>                                     m_bRunning;
         std::atomic<int32_t>                                     m_NumThreadsRunning;
-        std::atomic<int32_t>                                     m_NumThreadsWaiting;
+        std::atomic<int32_t>                                     m_NumThreadsWaitingForNewTasks;
+        std::atomic<int32_t>                                     m_NumThreadsWaitingForTaskCompletion;
         uint32_t                                                 m_NumPartitions;
         semaphoreid_t*                                           m_pNewTaskSemaphore;
+        semaphoreid_t*                                           m_pTaskCompleteSemaphore;
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
         ProfilerCallbacks                                        m_ProfilerCallbacks;

@@ -99,6 +99,7 @@ ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTask_ );
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
 
 // Schedule a pinned task
+// Pinned tasks can be added from any thread
 ENKITS_API void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
                                            void* pArgs_ );
 
@@ -112,17 +113,21 @@ ENKITS_API int                 enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS
 // Wait for a given task.
 // should only be called from thread which created the taskscheduler , or within a task
 // if called with 0 it will try to run tasks, and return if none available.
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
 // enkiWaitForTaskSetPriority as enkiWaitForTaskSet but only runs other tasks with priority <= maxPriority_
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForTaskSetPriority( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, int maxPriority_ );
 
 // Wait for a given pinned task.
 // should only be called from thread which created the taskscheduler, or within a task
 // if called with 0 it will try to run tasks, and return if none available.
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // enkiWaitForPinnedTaskPriority as enkiWaitForPinnedTask but only runs other tasks with priority <= maxPriority_
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, int maxPriority_ );
 
 // Waits for all task sets to complete - not guaranteed to work unless we know we
@@ -139,8 +144,12 @@ struct enkiProfilerCallbacks
 {
     enkiProfilerCallbackFunc threadStart;
     enkiProfilerCallbackFunc threadStop;
-    enkiProfilerCallbackFunc waitStart;
-    enkiProfilerCallbackFunc waitStop;
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
+    enkiProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
 };
 
 // Get the callback structure so it can be set 

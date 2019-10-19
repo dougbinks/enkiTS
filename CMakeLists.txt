@@ -92,6 +92,9 @@ if( ENKITS_BUILD_EXAMPLES )
     add_executable( TaskOverhead example/TaskOverhead.cpp example/Timer.h )
     target_link_libraries(TaskOverhead enkiTS )
 
+    add_executable( TestWaitforTask example/TestWaitforTask.cpp )
+    target_link_libraries(TestWaitforTask enkiTS )
+
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )
     target_link_libraries(ParallelSum_c enkiTS )

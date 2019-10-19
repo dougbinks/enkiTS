@@ -220,17 +220,19 @@ namespace enki
         ENKITS_API void            AddTaskSetToPipe( ITaskSet* pTaskSet_ );
 
         // Thread 0 is main thread, otherwise use threadNum
+        // Pinned tasks can be added from any thread
         ENKITS_API void            AddPinnedTask( IPinnedTask* pTask_ );
 
         // This function will run any IPinnedTask* for current thread, but not run other
         // Main thread should call this or use a wait to ensure it's tasks are run.
         ENKITS_API void            RunPinnedTasks();
 
-       // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
+        // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
         // should only be called from thread which created the taskscheduler , or within a task
         // if called with 0 it will try to run tasks, and return if none available.
         // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
         // Default is lowest priority available.
+        // Only wait for child tasks of the current task otherwise a deadlock could occur.
         ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // WaitforTaskSet, deprecated interface use WaitforTask

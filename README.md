@@ -3,11 +3,11 @@ Support development of enkiTS through our [Patreon](https://www.patreon.com/enki
 [<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
 
 # enkiTS
-[![Build Status for branch: master](https://travis-ci.org/dougbinks/enkiTS.svg?branch=master)](https://travis-ci.org/dougbinks/enkiTS)
+[![Build Status for branch: C++11](https://travis-ci.org/dougbinks/enkiTS.svg?branch=C++11)](https://travis-ci.org/dougbinks/enkiTS)
 
 ## enki Task Scheduler
 
-A permissively licensed C and C++ Task Scheduler for creating parallel programs. **NEW** The master branch now requires C++11 support, [A C++98 branch exists](https://github.com/dougbinks/enkiTS/tree/C++98) for those without access to a C++11 compiler or for ease in porting to pure C, though it may be deprecated in time.
+A permissively licensed C and C++ Task Scheduler for creating parallel programs. Requires C++11 support.
 
 * [C++ API via src/TaskScheduler.h](src/TaskScheduler.h)
 * [C API via src/TaskScheduler_c.h](src/TaskScheduler_c.h)
@@ -23,7 +23,7 @@ enkiTS is primarily developed on x64 and x86 Intel architectures on MS Windows, 
 
 ## Examples
 
-Several examples exist in  the [example folder](https://github.com/dougbinks/enkiTS/tree/master/example). The example code requires C++ 11 for chrono.
+Several examples exist in  the [example folder](https://github.com/dougbinks/enkiTS/tree/master/example).
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
@@ -44,7 +44,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Braided parallelism* - enkiTS can issue tasks from another task as well as from the thread which created the Task System, and has a simple task interface for both data parallel and task parallelism.
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
-1. **NEW** - *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
+1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
  
 ## Usage
 
@@ -72,7 +72,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-C++ 11 lambda usage (not available on C++98 branch):
+C++ 11 lambda usage:
 ```C
 #include "TaskScheduler.h"
 
@@ -200,6 +200,8 @@ int main(int argc, const char * argv[]) {
 - C# [EnkiTasks C#](https://github.com/nxrighthere/EnkiTasks-CSharp)
 
 ## Deprecated
+
+[The C++98 compatible branch](https://github.com/dougbinks/enkiTS/tree/C++98) has been deprecated as I'm not aware of anyone needing it.
 
 The user thread versions are no longer being maintained as they are no longer in use.
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.

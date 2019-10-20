@@ -563,7 +563,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
             }
 
         }
-        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteSuspendStop, threadNum );
+        SafeCallback( m_ProfilerCallbacks.waitForTaskCompleteStop, threadNum );
     }
     else
     {

@@ -1,6 +1,10 @@
 # enkiTS
 [![Build Status for branch: UserThread](https://travis-ci.org/dougbinks/enkiTS.svg?branch=UserThread)](https://travis-ci.org/dougbinks/enkiTS)
 
+**This branch is the deprecated UserThreads branch.**
+
+This UserThreads and UserThreads_C++11 branches are no longer maintained.
+
 ## enki Task Scheduler
 
 A permissively licensed C and C++ Task Scheduler for creating parallel programs.

@@ -5,6 +5,10 @@ Support development of enkiTS through our [Patreon](https://www.patreon.com/enki
 # enkiTS
 [![Build Status for branch: C++98](https://travis-ci.org/dougbinks/enkiTS.svg?branch=C++98)](https://travis-ci.org/dougbinks/enkiTS)
 
+**This branch is the deprecated C++98 branch.**
+
+enkiTS now requires a C++11 compatible compiler. This C++98 compatible branch is no longer maintained.
+
 ## enki Task Scheduler
 
 A permissively licensed C and C++ Task Scheduler for creating parallel programs. **NEW** The master branch now requires C++11 support, [A C++98 branch exists](https://github.com/dougbinks/enkiTS/tree/C++98) for those without access to a C++11 compiler or for ease in porting to pure C, though it may be deprecated in time.

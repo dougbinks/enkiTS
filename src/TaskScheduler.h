@@ -57,8 +57,11 @@ namespace enki
     class  TaskPipe;
     class  PinnedTaskList;
     struct ThreadArgs;
+    struct ThreadDataStore;
     struct SubTaskSet;
     struct semaphoreid_t;
+
+    uint32_t GetNumHardwareThreads();
 
 
     enum TaskPriority
@@ -194,25 +197,46 @@ namespace enki
         ProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
     };
 
+    // TaskSchedulerConfig - configuration struct for advanced Initialize
+    struct TaskSchedulerConfig
+    {
+        // numTaskThreadsToCreate - Number of tasking threads the task scheduler will create. Must be > 0.
+        // Defaults to GetNumHardwareThreads()-1 threads as thread which calls initialize is thread 0.
+        uint32_t          numTaskThreadsToCreate = GetNumHardwareThreads()-1;
+
+        // numExternalTaskThreads - Advanced use. Number of external threads which need to use TaskScheduler API.
+        // See TaskScheduler::RegisterExternalTaskThread() for usage.
+        // Defaults to 0, the thread used to initialize the TaskScheduler. 
+        uint32_t          numExternalTaskThreads = 0;
+
+        ProfilerCallbacks profilerCallbacks = {};
+    };
+
     class TaskScheduler
     {
     public:
         ENKITS_API TaskScheduler();
         ENKITS_API ~TaskScheduler();
 
-        // Call either Initialize() or Initialize( numThreads_ ) before adding tasks.
+        // Call an Initialize function before adding tasks.
 
-        // Initialize() will create GetNumHardwareThreads()-1 threads, which is
+        // Initialize() will create GetNumHardwareThreads()-1 tasking threads, which is
         // sufficient to fill the system when including the main thread.
         // Initialize can be called multiple times - it will wait for completion
         // before re-initializing.
         ENKITS_API void            Initialize();
 
-        // Initialize( numThreads_ ) - numThreads_ (must be > 0)
-        // will create numThreads_-1 threads, as thread 0 is
+        // Initialize( numThreadsTotal_ )
+        // will create numThreadsTotal_-1 threads, as thread 0 is
         // the thread on which the initialize was called.
-        ENKITS_API void            Initialize( uint32_t numThreads_ );
+        // numThreadsTotal_ must be > 0
+        ENKITS_API void            Initialize( uint32_t numThreadsTotal_ );
 
+        // Initialize with advanced TaskSchedulerConfig settings. See TaskSchedulerConfig.
+        ENKITS_API void            Initialize( TaskSchedulerConfig config_ );
+
+        // Get config. Can be called before Initialize to get the defaults.
+        ENKITS_API TaskSchedulerConfig GetConfig() const;
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
@@ -235,7 +259,7 @@ namespace enki
         // Only wait for child tasks of the current task otherwise a deadlock could occur.
         ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
-        // WaitforTaskSet, deprecated interface use WaitforTask
+        // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask
         inline void     WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
 
         // Waits for all task sets to complete - not guaranteed to work unless we know we
@@ -247,17 +271,37 @@ namespace enki
         // This function can be safely called even if TaskScheduler::Initialize() has not been called.
         ENKITS_API void            WaitforAllAndShutdown();
 
-        // Returns the number of threads created for running tasks + 1
-        // to account for the main thread.
+        // Returns the number of threads created for running tasks + number of external threads
+        // plus 1 to account for the thread used to initialize the task scheduler.
+        // Equivalent to config values: numTaskThreadsToCreate + numExternalTaskThreads + 1.
+        // It is guaranteed that GetThreadNum() < GetNumTaskThreads()
         ENKITS_API uint32_t        GetNumTaskThreads() const;
 
         // Returns the current task threadNum
-        // Will return 0 for main thread and all other non-enkiTS threads, and < GetNumTaskThreads()
+        // Will return 0 for thread which initialized the task scheduler,
+        // and all other non-enkiTS threads which have not been registered ( see RegisterExternalTaskThread() ),
+        // and < GetNumTaskThreads() for all threads.
+        // It is guaranteed that GetThreadNum() < GetNumTaskThreads()
         ENKITS_API uint32_t        GetThreadNum() const;
 
+        // DEPRECATED - GetProfilerCallbacks. Use TaskSchedulerConfig to initialize.
         // Returns the ProfilerCallbacks structure so that it can be modified to
-        // set the callbacks.
+        // set the callbacks. Should be set prior to initialization.
         ENKITS_API ProfilerCallbacks* GetProfilerCallbacks();
+
+        // Call on a thread to register the thread to use the TaskScheduling API.
+        // This is implicitly done for the thread which initializes the TaskScheduler
+        // Intended for developers who have threads who need to call the TaskScheduler API
+        // Returns true if successfull, false if not.
+        // Can only have numExternalTaskThreads registered at any one time, which must be set
+        // at initialization time.
+        ENKITS_API bool            RegisterExternalTaskThread();
+
+        // Call on a thread on which RegisterExternalTaskThread has been called to deregister that thread.
+        ENKITS_API void            DeRegisterExternalTaskThread();
+
+        // Get the number of registered external task threads.
+        ENKITS_API uint32_t        GetNumRegisteredExternalTaskThreads();
 
     private:
         static void     TaskingThreadFunction( const ThreadArgs& args_ );
@@ -277,10 +321,10 @@ namespace enki
         PinnedTaskList*                                          m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
 
         uint32_t                                                 m_NumThreads;
-        ThreadArgs*                                              m_pThreadArgStore;
+        ThreadDataStore*                                         m_pThreadDataStore;
         std::thread**                                            m_pThreads;
         std::atomic<int32_t>                                     m_bRunning;
-        std::atomic<int32_t>                                     m_NumThreadsRunning;
+        std::atomic<int32_t>                                     m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>                                     m_NumThreadsWaitingForNewTasks;
         std::atomic<int32_t>                                     m_NumThreadsWaitingForTaskCompletion;
         uint32_t                                                 m_NumPartitions;
@@ -288,7 +332,8 @@ namespace enki
         semaphoreid_t*                                           m_pTaskCompleteSemaphore;
         uint32_t                                                 m_NumInitialPartitions;
         bool                                                     m_bHaveThreads;
-        ProfilerCallbacks                                        m_ProfilerCallbacks;
+        TaskSchedulerConfig                                      m_Config;
+        std::atomic<int32_t>                                     m_NumExternalTaskThreadsRegistered;
 
         TaskScheduler( const TaskScheduler& nocopy );
         TaskScheduler& operator=( const TaskScheduler& nocopy );

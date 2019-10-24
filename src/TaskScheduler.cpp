@@ -720,7 +720,7 @@ void TaskScheduler::WaitforAll()
             // ignore our thread
             if( thread != threadNum )
             {
-                switch( m_pThreadDataStore[thread].threadState )
+                switch( m_pThreadDataStore[thread].threadState.load( std::memory_order_acquire ) )
                 {
                 case THREAD_STATE_RUNNING:
                 case THREAD_STATE_WAIT_TASK_COMPLETION:

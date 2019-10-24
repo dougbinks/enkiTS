@@ -80,7 +80,6 @@ namespace enki
 
     struct ThreadDataStore
     {
-        uint32_t                 threadNum;
         std::atomic<ThreadState> threadState;
     };
 
@@ -245,13 +244,11 @@ void TaskScheduler::StartThreads()
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
     {
-        m_pThreadDataStore[thread].threadNum      = thread;
         m_pThreadDataStore[thread].threadState    = THREAD_STATE_EXTERNAL_UNREGISTERED;
         m_pThreads[thread]                       = nullptr;
     }
     for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadDataStore[thread].threadNum      = thread;
         m_pThreadDataStore[thread].threadState    = THREAD_STATE_RUNNING;
         m_pThreads[thread]                       = new std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;

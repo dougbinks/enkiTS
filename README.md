@@ -50,6 +50,8 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 ## Usage
 
 C++ usage:
+- full example in (example/ParallelSum.cpp)[example/ParallelSum.cpp]
+- C example in (example/ParallelSum_c.c)[example/ParallelSum_c.c]
 ```C
 #include "TaskScheduler.h"
 
@@ -57,23 +59,25 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct ParallelTaskSet : enki::ITaskSet {
-   virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
-      // do something here, can issue tasks with g_TS
-   }
+    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+        // do something here, can issue tasks with g_TS
+    }
 };
 
 int main(int argc, const char * argv[]) {
-   g_TS.Initialize();
-   ParallelTaskSet task; // default constructor has a set size of 1
-   g_TS.AddTaskSetToPipe( &task );
+    g_TS.Initialize();
+    ParallelTaskSet task; // default constructor has a set size of 1
+    g_TS.AddTaskSetToPipe( &task );
 
-   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   g_TS.WaitforTask( &task );
-   return 0;
+    // wait for task set (running tasks if they exist)
+    since we've just added it and it has no range we'll likely run it.
+    g_TS.WaitforTask( &task );
+    return 0;
 }
 ```
 
 C++ 11 lambda usage:
+- full example in (example/LambdaTask.cpp)[example/LambdaTask.cpp]
 ```C
 #include "TaskScheduler.h"
 
@@ -92,7 +96,9 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-Task priorities usage in C++  (see example/Priorities_c.c for C example).
+Task priorities usage in C++:
+- full example in (example/Priorities.cpp)[example/Priorities.cpp]
+- C example in (example/Priorities_c.c)[example/Priorities_c.c]
 ```C
 // See full example in Priorities.cpp
 #include "TaskScheduler.h"
@@ -137,7 +143,9 @@ int main(int argc, const char * argv[])
 }
 ```
 
-Pinned Tasks usage in C++ (see example/PinnedTask_c.c for C example).
+Pinned Tasks usage in C++:
+- full example in (example/PinnedTask.cpp)[example/PinnedTask.cpp]
+- C example in (example/PinnedTask_c.c)[example/PinnedTask_c.c]
 ```C
 #include "TaskScheduler.h"
 
@@ -147,25 +155,28 @@ enki::TaskScheduler g_TS;
 struct PinnedTask : enki::IPinnedTask {
     virtual void    Execute() {
       // do something here, can issue tasks with g_TS
-   }
+    }
 };
 
 int main(int argc, const char * argv[]) {
-   g_TS.Initialize();
-   PinnedTask task; //default constructor sets thread for pinned task to 0 (main thread)
-   g_TS.AddPinnedTask( &task );
-   
-   // RunPinnedTasks must be called on main thread to run any pinned tasks for that thread.
-   // Tasking threads automatically do this in their task loop.
-   g_TS.RunPinnedTasks();
-   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
-   g_TS.WaitforTask( &task );
-   return 0;
+    g_TS.Initialize();
+    PinnedTask task; //default constructor sets thread for pinned task to 0 (main thread)
+    g_TS.AddPinnedTask( &task );
+
+    // RunPinnedTasks must be called on main thread to run any pinned tasks for that thread.
+    // Tasking threads automatically do this in their task loop.
+    g_TS.RunPinnedTasks();
+
+    // wait for task set (running tasks if they exist)
+    // since we've just added it and it has no range we'll likely run it.
+    g_TS.WaitforTask( &task );
+    return 0;
 }
 ```
 
-External thread usage in C++ (full example in example/ExternalTaskThread.cpp,
-C example in example/ExternalTaskThread_c.c)
+External thread usage in C++:
+- full example in (example/ExternalTaskThread.cpp)[example/ExternalTaskThread.cpp]
+- C example in (example/ExternalTaskThread_c.c)[example/ExternalTaskThread_c.c]
 ```C
 #include "TaskScheduler.h"
 
@@ -221,13 +232,14 @@ int main(int argc, const char * argv[]) {
    enkiTaskSet* pTask;
    g_pTS = enkiNewTaskScheduler();
    enkiInitTaskScheduler( g_pTS );
-	
+
    // create a task, can re-use this to get allocation occurring on startup
-   pTask	= enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
+   pTask = enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
 
    enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
 
-   // wait for task set (running tasks if they exist) - since we've just added it and it has no range we'll likely run it.
+   // wait for task set (running tasks if they exist)
+   // since we've just added it and it has no range we'll likely run it.
    enkiWaitForTaskSet( g_pTS, pTask );
    
    enkiDeleteTaskSet( pTask );

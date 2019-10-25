@@ -31,12 +31,12 @@ struct ParallelTaskSet : ITaskSet
 {
     ParallelTaskSet() { m_SetSize = 100; }
 
-    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
-        printf(" Run %d: This could run on any thread, currently thread %d\n", g_Run.load(), threadnum);
+        printf(" Run %d: This could run on any thread, currently thread %d\n", g_Run.load(), threadnum_);
 
         // sleep used as a 'pretend' workload
-        std::chrono::milliseconds sleepTime( range.end - range.start );
+        std::chrono::milliseconds sleepTime( range_.end - range_.start );
         std::this_thread::sleep_for( sleepTime );
     }
 };

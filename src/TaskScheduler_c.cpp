@@ -31,9 +31,9 @@ struct enkiTaskSet : ITaskSet
 {
     enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
 
-    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
+    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
     {
-        taskFun( range.start, range.end, threadnum, pArgs );
+        taskFun( range_.start, range_.end, threadnum_, pArgs );
     }
 
     enkiTaskExecuteRange taskFun;

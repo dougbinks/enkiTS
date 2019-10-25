@@ -39,11 +39,11 @@ struct PinnedTaskHelloWorld : IPinnedTask
 struct ParallelTaskSet : ITaskSet
 {
     PinnedTaskHelloWorld pinnedTask;
-    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
         g_TS.AddPinnedTask( &pinnedTask );
 
-        printf("This could run on any thread, currently thread %d\n", threadnum);
+        printf("This could run on any thread, currently thread %d\n", threadnum_);
 
         g_TS.WaitforTask( &pinnedTask );
     }

@@ -60,15 +60,15 @@ struct ParallelSumTaskSet : ITaskSet
         memset( m_pPartialSums, 0, sizeof(Count)*m_NumPartialSums );
     }
 
-    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
         assert( m_pPartialSums && m_NumPartialSums );
-        uint64_t sum = m_pPartialSums[threadnum].count;
-        for( uint64_t i = range.start; i < range.end; ++i )
+        uint64_t sum = m_pPartialSums[threadnum_].count;
+        for( uint64_t i = range_.start; i < range_.end; ++i )
         {
             sum += i + 1;
         }
-        m_pPartialSums[threadnum].count = sum;
+        m_pPartialSums[threadnum_].count = sum;
     }
   
 };
@@ -83,7 +83,7 @@ struct ParallelReductionSumTaskSet : ITaskSet
             m_ParallelSumTaskSet.Init( g_TS.GetNumTaskThreads() );
     }
 
-    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
         g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
         g_TS.WaitforTask( &m_ParallelSumTaskSet );

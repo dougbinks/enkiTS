@@ -27,24 +27,24 @@ struct ExampleTask : enki::ITaskSet
 {
     ExampleTask( uint32_t size_ ) { m_SetSize = size_; }
 
-    virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum )
+    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
     {
         if( m_Priority == enki::TASK_PRIORITY_LOW )
         {
             // fake slow task with timer
             Timer timer;
             timer.Start();
-            double tWaittime = (double)( range.end - range.start ) * 100.;
+            double tWaittime = (double)( range_.end - range_.start ) * 100.;
             while( timer.GetTimeMS() < tWaittime )
             {
             }
             printf( "\tLOW PRIORITY TASK range complete: thread: %d, start: %d, end: %d\n",
-                    threadnum, range.start, range.end );
+                    threadnum_, range_.start, range_.end );
         }
         else
         {
             printf( "HIGH PRIORITY TASK range complete: thread: %d, start: %d, end: %d\n",
-                    threadnum, range.start, range.end );
+                    threadnum_, range_.start, range_.end );
         }
     }
 };

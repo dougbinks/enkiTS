@@ -96,7 +96,7 @@ namespace enki
 
 namespace
 {
-    SubTaskSet       SplitTask( SubTaskSet& subTask_, uint32_t rangeToSplit_ )
+    SubTaskSet SplitTask( SubTaskSet& subTask_, uint32_t rangeToSplit_ )
     {
         SubTaskSet splitTask = subTask_;
         uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
@@ -132,11 +132,11 @@ namespace
     #endif
 }
 
-static void SafeCallback(ProfilerCallbackFunc func_, uint32_t threadnum_)
+static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
 {
     if( func_ != nullptr )
     {
-        func_(threadnum_);
+        func_( threadnum_ );
     }
 }
 
@@ -345,21 +345,21 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_i
     return false;
 }
 
-bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t& hintPipeToCheck_io_ )
+bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ )
 {
     // Run any tasks for this thread
-    RunPinnedTasks( threadNum, priority_ );
+    RunPinnedTasks( threadNum_, priority_ );
 
     // check for tasks
     SubTaskSet subTask;
-    bool bHaveTask = m_pPipesPerThread[ priority_ ][ threadNum ].WriterTryReadFront( &subTask );
+    bool bHaveTask = m_pPipesPerThread[ priority_ ][ threadNum_ ].WriterTryReadFront( &subTask );
 
     uint32_t threadToCheck = hintPipeToCheck_io_;
     uint32_t checkCount = 0;
     while( !bHaveTask && checkCount < m_NumThreads )
     {
         threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
-        if( threadToCheck != threadNum )
+        if( threadToCheck != threadNum_ )
         {
             bHaveTask = m_pPipesPerThread[ priority_ ][ threadToCheck ].ReaderTryReadBack( &subTask );
         }
@@ -375,8 +375,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t
         if( subTask.pTask->m_RangeToRun < partitionSize )
         {
             SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
-            SplitAndAddTask( threadNum, subTask, subTask.pTask->m_RangeToRun );
-            taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum );
+            SplitAndAddTask( threadNum_, subTask, subTask.pTask->m_RangeToRun );
+            taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum_ );
             int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
             if( 1 == prevCount  &&
                 taskToRun.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
@@ -387,7 +387,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum, uint32_t priority_, uint32_t
         else
         {
             // the task has already been divided up by AddTaskSetToPipe, so just run it
-            subTask.pTask->ExecuteRange( subTask.partition, threadNum );
+            subTask.pTask->ExecuteRange( subTask.partition, threadNum_ );
             int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
             if( 1 == prevCount && 
                 subTask.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
@@ -420,7 +420,7 @@ bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
     return false;
 }
 
-void TaskScheduler::WaitForNewTasks( uint32_t threadNum )
+void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
 {
     // We incrememt the number of threads waiting here in order
     // to ensure that the check for tasks occurs after the increment
@@ -428,16 +428,16 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum )
     // This will occasionally result in threads being mistakenly awoken,
     // but they will then go back to sleep.
 
-    bool bHaveTasks = HaveTasks( threadNum );
+    bool bHaveTasks = HaveTasks( threadNum_ );
     if( !bHaveTasks )
     {
-        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStart, threadNum );
-        ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
-        m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_WAIT_NEW_TASKS, std::memory_order_relaxed ); // rely on fetch_add acquire for order
+        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStart, threadNum_ );
+        ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
+        m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_NEW_TASKS, std::memory_order_relaxed ); // rely on fetch_add acquire for order
         m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
         SemaphoreWait( *m_pNewTaskSemaphore );
-        m_pThreadDataStore[threadNum].threadState.store( prevThreadState, std::memory_order_release );
-        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStop, threadNum );
+        m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
+        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStop, threadNum_ );
     }
 }
 

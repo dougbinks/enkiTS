@@ -93,9 +93,10 @@ struct WaitingTask : enki::ITaskSet
 // which must complete as early as possible using priorities.
 int main(int argc, const char * argv[])
 {
-    g_TS.GetProfilerCallbacks()->waitForTaskCompleteStart        = []( uint32_t threadnum_ ) { ++g_WaitCount; };
-    g_TS.GetProfilerCallbacks()->waitForTaskCompleteSuspendStart = []( uint32_t threadnum_ ) { ++g_WaitForTaskCompletion; };
-    g_TS.Initialize();
+    enki::TaskSchedulerConfig config;
+    config.profilerCallbacks.waitForTaskCompleteStart         = []( uint32_t threadnum_ ) { ++g_WaitCount; };
+    config.profilerCallbacks.waitForTaskCompleteSuspendStart  = []( uint32_t threadnum_ ) { ++g_WaitForTaskCompletion; };
+    g_TS.Initialize( config );
     for( g_Iteration = 0; g_Iteration < 1000; ++g_Iteration )
     {
         WaitingTask taskRoot;

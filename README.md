@@ -164,7 +164,8 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-External thread usage in C++ (full example in example/ExternalTaskThread.cpp)
+External thread usage in C++ (full example in example/ExternalTaskThread.cpp,
+C example in example/ExternalTaskThread_c.c)
 ```C
 #include "TaskScheduler.h"
 

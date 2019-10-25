@@ -179,18 +179,16 @@ struct ParallelTaskSet : ITaskSet
 
 void threadFunction()
 {
-    bool bRegistered = g_TS.RegisterExternalTaskThread();
-    assert( bRegistered );
-    if( bRegistered )
-    {
-        // sleep for a while instead of doing something such as file IO
-        std::this_thread::sleep_for( std::chrono::milliseconds( num_ * 100 ) );
+    g_TS.RegisterExternalTaskThread();
 
-        ParallelTaskSet task;
-        g_TS.AddTaskSetToPipe( &task );
-        g_TS.WaitforTask( &task);
-        g_TS.DeRegisterExternalTaskThread();
-    }
+    // sleep for a while instead of doing something such as file IO
+    std::this_thread::sleep_for( std::chrono::milliseconds( num_ * 100 ) );
+
+    ParallelTaskSet task;
+    g_TS.AddTaskSetToPipe( &task );
+    g_TS.WaitforTask( &task);
+
+    g_TS.DeRegisterExternalTaskThread();
 }
 
 int main(int argc, const char * argv[])

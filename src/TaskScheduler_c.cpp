@@ -215,6 +215,11 @@ uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
     return pETS_->GetNumTaskThreads();
 }
 
+ENKITS_API uint32_t enkiGetThreadNum( enkiTaskScheduler* pETS_ )
+{
+    return pETS_->GetThreadNum();
+}
+
 ENKITS_API int enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
 {
     return (int)pETS_->RegisterExternalTaskThread();

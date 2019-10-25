@@ -168,8 +168,18 @@ ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler*
 // are in a situation where tasks aren't being continuosly added.
 ENKITS_API void                enkiWaitForAll( enkiTaskScheduler* pETS_ );
 
-// get number of threads
+// Returns the number of threads created for running tasks + number of external threads
+// plus 1 to account for the thread used to initialize the task scheduler.
+// Equivalent to config values: numTaskThreadsToCreate + numExternalTaskThreads + 1.
+// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
 ENKITS_API uint32_t            enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
+
+// Returns the current task threadNum
+// Will return 0 for thread which initialized the task scheduler,
+// and all other non-enkiTS threads which have not been registered ( see enkiRegisterExternalTaskThread() ),
+// and < enkiGetNumTaskThreads() for all threads.
+// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
+ENKITS_API uint32_t            enkiGetThreadNum( enkiTaskScheduler* pETS_ );
 
 // Call on a thread to register the thread to use the TaskScheduling API.
 // This is implicitly done for the thread which initializes the TaskScheduler

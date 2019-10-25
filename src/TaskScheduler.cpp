@@ -140,11 +140,6 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     }
 }
 
-ProfilerCallbacks* TaskScheduler::GetProfilerCallbacks()
-{
-    return &m_Config.profilerCallbacks;
-}
-
 ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
 {
     bool bRegistered = false;

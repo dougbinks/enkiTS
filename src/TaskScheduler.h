@@ -44,6 +44,7 @@
     #define ENKITS_API
 #endif
 
+
 namespace enki
 {
 
@@ -259,9 +260,6 @@ namespace enki
         // Only wait for child tasks of the current task otherwise a deadlock could occur.
         ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
-        // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask
-        inline void                WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
-
         // Waits for all task sets to complete - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuously added.
         ENKITS_API void            WaitforAll();
@@ -284,12 +282,7 @@ namespace enki
         // It is guaranteed that GetThreadNum() < GetNumTaskThreads()
         ENKITS_API uint32_t        GetThreadNum() const;
 
-        // DEPRECATED - GetProfilerCallbacks. 
-        // Returns the ProfilerCallbacks structure so that it can be modified to
-        // set the callbacks. Should be set prior to initialization.
-        ENKITS_API ProfilerCallbacks* GetProfilerCallbacks();
-
-        // Call on a thread to register the thread to use the TaskScheduling API.
+         // Call on a thread to register the thread to use the TaskScheduling API.
         // This is implicitly done for the thread which initializes the TaskScheduler
         // Intended for developers who have threads who need to call the TaskScheduler API
         // Returns true if successfull, false if not.
@@ -302,6 +295,17 @@ namespace enki
 
         // Get the number of registered external task threads.
         ENKITS_API uint32_t        GetNumRegisteredExternalTaskThreads();
+
+
+        // ------------- Start DEPRECATED Functions -------------
+        // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask
+        inline void                WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
+
+        // DEPRECATED - GetProfilerCallbacks.  Use TaskSchedulerConfig instead
+        // Returns the ProfilerCallbacks structure so that it can be modified to
+        // set the callbacks. Should be set prior to initialization.
+        inline ProfilerCallbacks* GetProfilerCallbacks() { return &m_Config.profilerCallbacks; }
+        // -------------  End DEPRECATED Functions  -------------
 
     private:
         static void TaskingThreadFunction( const ThreadArgs& args_ );

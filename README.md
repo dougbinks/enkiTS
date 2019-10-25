@@ -50,8 +50,8 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 ## Usage
 
 C++ usage:
-- full example in (example/ParallelSum.cpp)[example/ParallelSum.cpp]
-- C example in (example/ParallelSum_c.c)[example/ParallelSum_c.c]
+- full example in [example/ParallelSum.cpp](example/ParallelSum.cpp)
+- C example in [example/ParallelSum_c.c](example/ParallelSum_c.c)
 ```C
 #include "TaskScheduler.h"
 
@@ -77,7 +77,7 @@ int main(int argc, const char * argv[]) {
 ```
 
 C++ 11 lambda usage:
-- full example in (example/LambdaTask.cpp)[example/LambdaTask.cpp]
+- full example in [example/LambdaTask.cpp](example/LambdaTask.cpp)
 ```C
 #include "TaskScheduler.h"
 
@@ -97,8 +97,8 @@ int main(int argc, const char * argv[]) {
 ```
 
 Task priorities usage in C++:
-- full example in (example/Priorities.cpp)[example/Priorities.cpp]
-- C example in (example/Priorities_c.c)[example/Priorities_c.c]
+- full example in [example/Priorities.cpp](example/Priorities.cpp)
+- C example in [example/Priorities_c.c](example/Priorities_c.c)
 ```C
 // See full example in Priorities.cpp
 #include "TaskScheduler.h"
@@ -144,8 +144,8 @@ int main(int argc, const char * argv[])
 ```
 
 Pinned Tasks usage in C++:
-- full example in (example/PinnedTask.cpp)[example/PinnedTask.cpp]
-- C example in (example/PinnedTask_c.c)[example/PinnedTask_c.c]
+- full example in [example/PinnedTask.cpp](example/PinnedTask.cpp)
+- C example in [example/PinnedTask_c.c](example/PinnedTask_c.c)
 ```C
 #include "TaskScheduler.h"
 
@@ -175,8 +175,8 @@ int main(int argc, const char * argv[]) {
 ```
 
 External thread usage in C++:
-- full example in (example/ExternalTaskThread.cpp)[example/ExternalTaskThread.cpp]
-- C example in (example/ExternalTaskThread_c.c)[example/ExternalTaskThread_c.c]
+- full example in [example/ExternalTaskThread.cpp](example/ExternalTaskThread.cpp)
+- C example in [example/ExternalTaskThread_c.c](example/ExternalTaskThread_c.c)
 ```C
 #include "TaskScheduler.h"
 

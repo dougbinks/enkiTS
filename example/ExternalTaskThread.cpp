@@ -43,14 +43,14 @@ struct ParallelTaskSet : ITaskSet
 
 // Example thread function
 // May want to use threads for blocking IO, during which enkiTS task threads can do work
-void threadFunction()
+void threadFunction( uint32_t num_ )
 {
     bool bRegistered = g_TS.RegisterExternalTaskThread();
     assert( bRegistered );
     if( bRegistered )
     {
         // sleep for a while instead of doing something such as file IO
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( num_ * 100 ) );
 
 
         ParallelTaskSet task;
@@ -78,8 +78,12 @@ int main(int argc, const char * argv[])
 
         for( uint32_t iThread = 0; iThread < NUMEXTERNALTHREADS; ++iThread )
         {
-            threads[ iThread ] = std::thread( threadFunction );
+            threads[ iThread ] = std::thread( threadFunction, iThread );
         }
+
+        // check that out of order Deregister / Register works...
+        threads[ 0 ].join();
+        threads[ 0 ] = std::thread( threadFunction, 0 );
 
         for( uint32_t iThread = 0; iThread < NUMEXTERNALTHREADS; ++iThread )
         {

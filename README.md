@@ -45,6 +45,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
 1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
+1. **NEW** *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
  
 ## Usage
 
@@ -163,6 +164,49 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
+External thread usage in C++ (full example in example/ExternalTaskThread.cpp)
+```C
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+struct ParallelTaskSet : ITaskSet
+{
+    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    {
+        // Do something
+    }
+};
+
+void threadFunction()
+{
+    bool bRegistered = g_TS.RegisterExternalTaskThread();
+    assert( bRegistered );
+    if( bRegistered )
+    {
+        // sleep for a while instead of doing something such as file IO
+        std::this_thread::sleep_for( std::chrono::milliseconds( num_ * 100 ) );
+
+        ParallelTaskSet task;
+        g_TS.AddTaskSetToPipe( &task );
+        g_TS.WaitforTask( &task);
+        g_TS.DeRegisterExternalTaskThread();
+    }
+}
+
+int main(int argc, const char * argv[])
+{
+    enki::TaskSchedulerConfig config;
+    config.numExternalTaskThreads = 1; // we have one extra external thread
+
+    g_TS.Initialize( config );
+
+    std::thread exampleThread( threadFunction );
+
+    exampleThread.join();
+
+    return 0;
+}
+```
 
 C usage:
 ```C
@@ -194,6 +238,7 @@ int main(int argc, const char * argv[]) {
    return 0;
 }
 ```
+
 
 ## Bindings
 

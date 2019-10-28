@@ -133,10 +133,13 @@ namespace enki
         // is to allow per-thread data buckets for output.
         virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) = 0;
 
-        // Size of set - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
+        // Set Size - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
         uint32_t     m_SetSize;
 
-        // Minimum size of of TaskSetPartition range when splitting a task set into partitions.
+        // Min Range - Minimum size of of TaskSetPartition range when splitting a task set into partitions.
+        // Designed for reducing scheduling overhead by preventing set being
+        // divided up too small. Ranges passed to ExecuteRange will *not* be a mulitple of this,
+        // only attempts to deliver range sizes larger than this most of the time.
         // This should be set to a value which results in computation effort of at least 10k
         // clock cycles to minimize tast scheduler overhead.
         // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple

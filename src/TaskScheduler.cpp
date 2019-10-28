@@ -228,16 +228,16 @@ void TaskScheduler::StartThreads()
 
     for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
     {
-        m_pPipesPerThread[ priority ]          = new TaskPipe[ m_NumThreads ];
-        m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
+        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads );
+        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads );
     }
 
-    m_pNewTaskSemaphore      = SemaphoreCreate();
-    m_pTaskCompleteSemaphore = SemaphoreCreate();
+    m_pNewTaskSemaphore      = SemaphoreNew();
+    m_pTaskCompleteSemaphore = SemaphoreNew();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadDataStore   = new ThreadDataStore[m_NumThreads];
-    m_pThreads          = new std::thread*[m_NumThreads];
+    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads );
+    m_pThreads          = NewArray<std::thread*>( m_NumThreads );
     m_bRunning = 1;
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
@@ -248,7 +248,7 @@ void TaskScheduler::StartThreads()
     for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
     {
         m_pThreadDataStore[thread].threadState    = THREAD_STATE_RUNNING;
-        m_pThreads[thread]                       = new std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
+        m_pThreads[thread]                       = New<std::thread>( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;
     }
 
@@ -298,12 +298,11 @@ void TaskScheduler::StopThreads( bool bWait_ )
         {
             assert( m_pThreads[thread] );
             m_pThreads[thread]->detach();
-            delete m_pThreads[thread];
+            Delete( m_pThreads[thread] );
         }
 
-        m_NumThreads = 0;
-        delete[] m_pThreadDataStore;
-        delete[] m_pThreads;
+        DeleteArray( m_pThreadDataStore, m_NumThreads );
+        DeleteArray( m_pThreads, m_NumThreads );
         m_pThreadDataStore = 0;
         m_pThreads = 0;
 
@@ -320,11 +319,12 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
         for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
         {
-            delete[] m_pPipesPerThread[ priority ];
+            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads );
             m_pPipesPerThread[ priority ] = NULL;
-            delete[] m_pPinnedTaskListPerThread[ priority ];
+            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads );
             m_pPinnedTaskListPerThread[ priority ] = NULL;
         }
+        m_NumThreads = 0;
     }
 }
 
@@ -757,6 +757,50 @@ uint32_t TaskScheduler::GetThreadNum() const
     return gtl_threadNum;
 }
 
+template<typename T>
+T* TaskScheduler::NewArray( size_t num_ )
+{
+    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.customData );
+    if( !std::is_pod<T>::value )
+    {
+		T* pCurr = pRet;
+        for( size_t i = 0; i < num_; ++i )
+        {
+			void* pBuffer = pCurr;
+            pCurr = new(pBuffer) T;
+			++pCurr;
+        }
+    }
+    return pRet;
+}
+
+template<typename T>
+void TaskScheduler::DeleteArray( T* p_, size_t num_ )
+{
+    if( !std::is_pod<T>::value )
+    {
+        size_t i = num_;
+        while(i)
+        {
+            p_[--i].~T();
+        }
+    }
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.customData );
+}
+
+template<class T, class... Args>
+T* TaskScheduler::New( Args&&... args_ )
+{
+    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.customData );
+    return new(pRet) T( std::forward<Args>(args_)... );
+}
+
+template< typename T >
+void TaskScheduler::Delete( T* p_ )
+{
+    p_->~T(); 
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.customData );
+}
 
 TaskScheduler::TaskScheduler()
         : m_pPipesPerThread()
@@ -915,18 +959,16 @@ namespace enki
 }
 #endif
 
-namespace enki
-{
-    semaphoreid_t* SemaphoreCreate()
-    {
-        semaphoreid_t* pSemaphore = new semaphoreid_t;
-        SemaphoreCreate( *pSemaphore );
-        return pSemaphore;
-    }
 
-    void SemaphoreDelete( semaphoreid_t* pSemaphore_ )
-    {
-        SemaphoreClose( *pSemaphore_ );
-        delete pSemaphore_;
-    }
+semaphoreid_t* TaskScheduler::SemaphoreNew()
+{
+    semaphoreid_t* pSemaphore = New<semaphoreid_t>();
+    SemaphoreCreate( *pSemaphore );
+    return pSemaphore;
+}
+
+void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
+{
+    SemaphoreClose( *pSemaphore_ );
+    Delete( pSemaphore_ );
 }

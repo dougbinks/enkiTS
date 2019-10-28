@@ -201,6 +201,18 @@ namespace enki
         ProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
     };
 
+    // Custom allocator, set in TaskSchedulerConfig
+    typedef void* (*AllocFunc)( size_t size_, void* customData_ );
+    typedef void  (*FreeFunc)(  void* ptr_,   void* customData_ );
+    static inline void* DefaultAllocFunc( size_t size_, void* customData_ ) { (void)customData_; return malloc( size_ ); };
+    static inline void  DefaultFreeFunc(  void* ptr_,   void* customData_ ) { (void)customData_; free( ptr_ ); };
+    struct CustomAllocator
+    {
+        AllocFunc alloc      = DefaultAllocFunc;
+        FreeFunc  free       = DefaultFreeFunc;
+        void*     customData = nullptr;
+    };
+
     // TaskSchedulerConfig - configuration struct for advanced Initialize
     struct TaskSchedulerConfig
     {
@@ -214,6 +226,8 @@ namespace enki
         uint32_t          numExternalTaskThreads = 0;
 
         ProfilerCallbacks profilerCallbacks = {};
+
+        CustomAllocator   customAllocator;
     };
 
     class TaskScheduler
@@ -323,6 +337,13 @@ namespace enki
         void        SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
+
+        template< typename T > T*   NewArray( size_t num_ = 1 );
+        template< typename T > void DeleteArray( T* p_, size_t num_ = 1 );
+        template<class T, class... Args> T* New( Args&&... args_ );
+        template< typename T > void Delete( T* p_ );
+        semaphoreid_t* SemaphoreNew();
+        void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
 
         TaskPipe*              m_pPipesPerThread[ TASK_PRIORITY_NUM ];
         PinnedTaskList*        m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];

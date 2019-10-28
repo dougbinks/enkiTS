@@ -91,6 +91,10 @@ struct enkiTaskSchedulerConfig
 // Create a new task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
 
+// Create a new task scheduler using a custom allocator to
+// Note still need to enkiInitTaskSchedulerWithConfig using the custom allocator
+ENKITS_API enkiTaskScheduler*  enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ );
+
 // Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults
 ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ );
 
@@ -142,7 +146,7 @@ ENKITS_API int                 enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, 
 ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
 // Delete a pinned task.
-ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTask_ );
+ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pPinnedTask_ );
 
 // Set PinnedTask ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );

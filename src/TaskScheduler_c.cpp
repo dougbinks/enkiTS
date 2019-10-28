@@ -29,27 +29,29 @@ struct enkiTaskScheduler : TaskScheduler
 
 struct enkiTaskSet : ITaskSet
 {
-    enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
+    enkiTaskSet( TaskScheduler* pETS_, enkiTaskExecuteRange taskFun_ ) : pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
     virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
     {
         taskFun( range_.start, range_.end, threadnum_, pArgs );
     }
 
+    TaskScheduler* pETS;
     enkiTaskExecuteRange taskFun;
     void* pArgs;
 };
 
 struct enkiPinnedTask : IPinnedTask
 {
-    enkiPinnedTask( enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
-        : IPinnedTask( threadNum_ ), taskFun(taskFun_), pArgs(NULL) {}
+    enkiPinnedTask( TaskScheduler* pETS_, enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
+        : IPinnedTask( threadNum_ ), pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
     virtual void Execute()
     {
         taskFun( pArgs );
     }
 
+    TaskScheduler* pETS;
     enkiPinnedTaskExecute taskFun;
     void* pArgs;
 };
@@ -57,6 +59,13 @@ struct enkiPinnedTask : IPinnedTask
 enkiTaskScheduler* enkiNewTaskScheduler()
 {
     enkiTaskScheduler* pETS = new enkiTaskScheduler();
+    return pETS;
+}
+
+ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
+{
+    enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc( sizeof(enkiTaskScheduler), customAllocator_.customData );
+    new(pETS) enkiTaskScheduler;
     return pETS;
 }
 
@@ -111,17 +120,26 @@ ENKITS_API void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struc
 
 void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
-    delete pETS_;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
+    pETS_->~enkiTaskScheduler();
+    customAllocator.free( pETS_, customAllocator.customData );
 }
 
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
-    return new enkiTaskSet( taskFunc_ );
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc( sizeof(enkiTaskSet), customAllocator.customData );
+    new(pTask) enkiTaskSet( pETS_, taskFunc_ );
+
+    return pTask;
 }
 
 void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 {
-    delete pTaskSet_;
+    const CustomAllocator& customAllocator = pTaskSet_->pETS->GetConfig().customAllocator;
+
+    pTaskSet_->~enkiTaskSet();
+    customAllocator.free( pTaskSet_, customAllocator.customData );
 }
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
@@ -159,12 +177,18 @@ int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 
 enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
-    return new enkiPinnedTask( taskFunc_, threadNum_ );
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc( sizeof(enkiPinnedTask), customAllocator.customData );
+    new(pTask) enkiPinnedTask( pETS_, taskFunc_, threadNum_ );
+    return pTask;
 }
 
-void enkiDeletePinnedTask(enkiPinnedTask* pTaskSet_)
+void enkiDeletePinnedTask(enkiPinnedTask* pPinnedTask_ )
 {
-    delete pTaskSet_;
+    const CustomAllocator& customAllocator = pPinnedTask_->pETS->GetConfig().customAllocator;
+
+    pPinnedTask_->~enkiPinnedTask();
+    customAllocator.free( pPinnedTask_, customAllocator.customData );
 }
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )

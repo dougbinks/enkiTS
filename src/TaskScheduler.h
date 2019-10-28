@@ -141,7 +141,7 @@ namespace enki
         // divided up too small. Ranges passed to ExecuteRange will *not* be a mulitple of this,
         // only attempts to deliver range sizes larger than this most of the time.
         // This should be set to a value which results in computation effort of at least 10k
-        // clock cycles to minimize tast scheduler overhead.
+        // clock cycles to minimize task scheduler overhead.
         // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
         // of m_MinRange.
         // Also known as grain size in literature.
@@ -209,7 +209,7 @@ namespace enki
     struct CustomAllocator
     {
         AllocFunc alloc      = DefaultAllocFunc;
-        FreeFunc  free       = DefaultFreeFunc;
+         FreeFunc  free       = DefaultFreeFunc;
         void*     customData = nullptr;
     };
 

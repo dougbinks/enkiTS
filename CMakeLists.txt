@@ -98,6 +98,9 @@ if( ENKITS_BUILD_EXAMPLES )
     add_executable( ExternalTaskThread example/ExternalTaskThread.cpp )
     target_link_libraries(ExternalTaskThread enkiTS )
 
+    add_executable( CustomAllocator example/CustomAllocator.cpp )
+    target_link_libraries(CustomAllocator enkiTS )
+
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )
     target_link_libraries(ParallelSum_c enkiTS )
@@ -112,6 +115,9 @@ if( ENKITS_BUILD_C_INTERFACE )
 
     add_executable( ExternalTaskThread_c example/ExternalTaskThread_c.c )
     target_link_libraries(ExternalTaskThread_c enkiTS )
+
+    add_executable( CustomAllocator_c example/CustomAllocator_c.c )
+    target_link_libraries(CustomAllocator_c enkiTS )
 
 endif()    
 endif()

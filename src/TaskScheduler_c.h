@@ -91,8 +91,9 @@ struct enkiTaskSchedulerConfig
 // Create a new task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
 
-// Create a new task scheduler using a custom allocator to
-// Note still need to enkiInitTaskSchedulerWithConfig using the custom allocator
+// Create a new task scheduler using a custom allocator
+// This will  use the custom allocator to allocate the task scheduler struct
+// and additionally will set the custom allocator in enkiTaskSchedulerConfig of the task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ );
 
 // Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults

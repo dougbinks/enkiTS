@@ -57,11 +57,7 @@ int main(int argc, const char * argv[])
     customAllocator.customData = "enkiTS";
 
     pETS = enkiNewTaskSchedulerWithCustomAllocator( customAllocator );
-
-    // get default config and request one external thread
-    config = enkiGetTaskSchedulerConfig( pETS );
-    config.customAllocator = customAllocator;
-    enkiInitTaskSchedulerWithConfig( pETS, config );
+    enkiInitTaskScheduler( pETS );
 
     pParallelTask = enkiCreateTaskSet( pETS, ParallelFunc );
 

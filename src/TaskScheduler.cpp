@@ -972,3 +972,8 @@ void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
     SemaphoreClose( *pSemaphore_ );
     Delete( pSemaphore_ );
 }
+
+void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
+{
+    m_Config.customAllocator = customAllocator_;
+}

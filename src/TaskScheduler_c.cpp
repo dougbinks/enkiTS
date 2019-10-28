@@ -25,6 +25,10 @@ using namespace enki;
 
 struct enkiTaskScheduler : TaskScheduler
 {
+    void enkiSetCustomAllocator( CustomAllocator customAllocator_ )
+    {
+        SetCustomAllocator( customAllocator_ );
+    }
 };
 
 struct enkiTaskSet : ITaskSet
@@ -65,7 +69,14 @@ enkiTaskScheduler* enkiNewTaskScheduler()
 ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
 {
     enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc( sizeof(enkiTaskScheduler), customAllocator_.customData );
+
+    CustomAllocator customAllocatorCpp;
+    customAllocatorCpp.alloc      = customAllocator_.alloc;
+    customAllocatorCpp.free       = customAllocator_.free;
+    customAllocatorCpp.customData = customAllocator_.customData;
+
     new(pETS) enkiTaskScheduler;
+    pETS->enkiSetCustomAllocator( customAllocatorCpp );
     return pETS;
 }
 

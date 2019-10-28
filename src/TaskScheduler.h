@@ -365,6 +365,9 @@ namespace enki
 
         TaskScheduler( const TaskScheduler& nocopy_ );
         TaskScheduler& operator=( const TaskScheduler& nocopy_ );
+
+    protected:
+        void SetCustomAllocator( CustomAllocator customAllocator_ ); // for C interface
     };
 
     inline uint32_t GetNumHardwareThreads()

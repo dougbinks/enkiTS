@@ -73,7 +73,10 @@ ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskSc
     configC.profilerCallbacks.waitForTaskCompleteStart         = config.profilerCallbacks.waitForTaskCompleteStart;         
     configC.profilerCallbacks.waitForTaskCompleteStop          = config.profilerCallbacks.waitForTaskCompleteStop;          
     configC.profilerCallbacks.waitForTaskCompleteSuspendStart  = config.profilerCallbacks.waitForTaskCompleteSuspendStart;  
-    configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;   
+    configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;
+    configC.customAllocator.alloc                              = config.customAllocator.alloc;
+    configC.customAllocator.free                               = config.customAllocator.free;
+    configC.customAllocator.customData                         = config.customAllocator.customData;
     return configC;
 }
 
@@ -100,7 +103,10 @@ ENKITS_API void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struc
     config.profilerCallbacks.waitForTaskCompleteStop          = config_.profilerCallbacks.waitForTaskCompleteStop;          
     config.profilerCallbacks.waitForTaskCompleteSuspendStart  = config_.profilerCallbacks.waitForTaskCompleteSuspendStart;  
     config.profilerCallbacks.waitForTaskCompleteSuspendStop   = config_.profilerCallbacks.waitForTaskCompleteSuspendStop;   
-    pETS_->Initialize( config );
+    config.customAllocator.alloc                              = config_.customAllocator.alloc;
+    config.customAllocator.free                               = config_.customAllocator.free;
+    config.customAllocator.customData                         = config_.customAllocator.customData;
+   pETS_->Initialize( config );
 }
 
 void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )

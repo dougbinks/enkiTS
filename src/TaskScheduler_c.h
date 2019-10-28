@@ -58,6 +58,19 @@ struct enkiProfilerCallbacks
     enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
 };
 
+// Custom allocator, set in enkiTaskSchedulerConfig
+typedef void* (*enkiAllocFunc)( size_t size_, void* customData_ );
+typedef void  (*enkiFreeFunc)(  void* ptr_,   void* customData_ );
+struct enkiCustomAllocator
+{
+    enkiAllocFunc alloc;
+    enkiFreeFunc  free;
+    void*         customData;
+};
+
+// enkiTaskSchedulerConfig - configuration struct for advanced Initialize
+// Always use enkiGetTaskSchedulerConfig() to get defaults prior to altering and
+// initializing with enkiInitTaskSchedulerWithConfig().
 struct enkiTaskSchedulerConfig
 {
     // numTaskThreadsToCreate - Number of tasking threads the task scheduler will create. Must be > 0.
@@ -70,6 +83,8 @@ struct enkiTaskSchedulerConfig
     uint32_t              numExternalTaskThreads;
 
     struct enkiProfilerCallbacks profilerCallbacks;
+
+    struct enkiCustomAllocator   customAllocator;
 };
 
 

@@ -31,9 +31,9 @@ struct enkiTaskSet : ITaskSet
 {
     enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
 
-    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum  )
+    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
     {
-        taskFun( range.start, range.end, threadnum, pArgs );
+        taskFun( range_.start, range_.end, threadnum_, pArgs );
     }
 
     enkiTaskExecuteRange taskFun;
@@ -60,6 +60,23 @@ enkiTaskScheduler* enkiNewTaskScheduler()
     return pETS;
 }
 
+ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ )
+{
+    TaskSchedulerConfig config = pETS_->GetConfig();
+    enkiTaskSchedulerConfig configC;
+    configC.numExternalTaskThreads                             = config.numExternalTaskThreads;
+    configC.numTaskThreadsToCreate                             = config.numTaskThreadsToCreate;
+    configC.profilerCallbacks.threadStart                      = config.profilerCallbacks.threadStart;                      
+    configC.profilerCallbacks.threadStop                       = config.profilerCallbacks.threadStop;                       
+    configC.profilerCallbacks.waitForNewTaskSuspendStart       = config.profilerCallbacks.waitForNewTaskSuspendStart;      
+    configC.profilerCallbacks.waitForNewTaskSuspendStop        = config.profilerCallbacks.waitForNewTaskSuspendStop;        
+    configC.profilerCallbacks.waitForTaskCompleteStart         = config.profilerCallbacks.waitForTaskCompleteStart;         
+    configC.profilerCallbacks.waitForTaskCompleteStop          = config.profilerCallbacks.waitForTaskCompleteStop;          
+    configC.profilerCallbacks.waitForTaskCompleteSuspendStart  = config.profilerCallbacks.waitForTaskCompleteSuspendStart;  
+    configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;   
+    return configC;
+}
+
 void enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
     pETS_->Initialize();
@@ -68,6 +85,22 @@ void enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 void enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ )
 {
     pETS_->Initialize( numThreads_ );
+}
+
+ENKITS_API void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ )
+{
+    TaskSchedulerConfig config;
+    config.numExternalTaskThreads                             = config_.numExternalTaskThreads;
+    config.numTaskThreadsToCreate                             = config_.numTaskThreadsToCreate;
+    config.profilerCallbacks.threadStart                      = config_.profilerCallbacks.threadStart;                      
+    config.profilerCallbacks.threadStop                       = config_.profilerCallbacks.threadStop;                       
+    config.profilerCallbacks.waitForNewTaskSuspendStart       = config_.profilerCallbacks.waitForNewTaskSuspendStart;      
+    config.profilerCallbacks.waitForNewTaskSuspendStop        = config_.profilerCallbacks.waitForNewTaskSuspendStop;        
+    config.profilerCallbacks.waitForTaskCompleteStart         = config_.profilerCallbacks.waitForTaskCompleteStart;         
+    config.profilerCallbacks.waitForTaskCompleteStop          = config_.profilerCallbacks.waitForTaskCompleteStop;          
+    config.profilerCallbacks.waitForTaskCompleteSuspendStart  = config_.profilerCallbacks.waitForTaskCompleteSuspendStart;  
+    config.profilerCallbacks.waitForTaskCompleteSuspendStop   = config_.profilerCallbacks.waitForTaskCompleteSuspendStop;   
+    pETS_->Initialize( config );
 }
 
 void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
@@ -180,6 +213,26 @@ void enkiWaitForAll( enkiTaskScheduler* pETS_ )
 uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 {
     return pETS_->GetNumTaskThreads();
+}
+
+ENKITS_API uint32_t enkiGetThreadNum( enkiTaskScheduler* pETS_ )
+{
+    return pETS_->GetThreadNum();
+}
+
+ENKITS_API int enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
+{
+    return (int)pETS_->RegisterExternalTaskThread();
+}
+
+ENKITS_API void enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
+{
+    return pETS_->DeRegisterExternalTaskThread();
+}
+
+ENKITS_API uint32_t enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_)
+{
+    return pETS_->GetNumRegisteredExternalTaskThreads();
 }
 
 enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )

@@ -44,9 +44,40 @@ typedef struct enkiPinnedTask    enkiPinnedTask;
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
 typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 
+// TaskScheduler implements several callbacks intended for profilers
+typedef void (*enkiProfilerCallbackFunc)( uint32_t threadnum_ );
+struct enkiProfilerCallbacks
+{
+    enkiProfilerCallbackFunc threadStart;
+    enkiProfilerCallbackFunc threadStop;
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
+    enkiProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
+    enkiProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
+    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
+};
+
+struct enkiTaskSchedulerConfig
+{
+    // numTaskThreadsToCreate - Number of tasking threads the task scheduler will create. Must be > 0.
+    // Defaults to GetNumHardwareThreads()-1 threads as thread which calls initialize is thread 0.
+    uint32_t              numTaskThreadsToCreate;
+
+    // numExternalTaskThreads - Advanced use. Number of external threads which need to use TaskScheduler API.
+    // See enkiRegisterExternalTaskThread() for usage.
+    // Defaults to 0, the thread used to initialize the TaskScheduler. 
+    uint32_t              numExternalTaskThreads;
+
+    struct enkiProfilerCallbacks profilerCallbacks;
+};
+
 
 // Create a new task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
+
+// Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults
+ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ );
 
 // Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
@@ -57,7 +88,10 @@ ENKITS_API void                enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ 
 // Initialize a task scheduler with numThreads_ (must be > 0)
 // will create numThreads_-1 threads, as thread 0 is
 // the thread on which the initialize was called.
-ENKITS_API void                enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThreads_ );
+ENKITS_API void                enkiInitTaskSchedulerNumThreads( enkiTaskScheduler* pETS_, uint32_t numThreads_ );
+
+// Initialize a task scheduler with config, see enkiTaskSchedulerConfig for details
+ENKITS_API void                enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ );
 
 
 // Delete a task scheduler
@@ -134,26 +168,39 @@ ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler*
 // are in a situation where tasks aren't being continuosly added.
 ENKITS_API void                enkiWaitForAll( enkiTaskScheduler* pETS_ );
 
-
-// get number of threads
+// Returns the number of threads created for running tasks + number of external threads
+// plus 1 to account for the thread used to initialize the task scheduler.
+// Equivalent to config values: numTaskThreadsToCreate + numExternalTaskThreads + 1.
+// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
 ENKITS_API uint32_t            enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
 
-// TaskScheduler implements several callbacks intended for profilers
-typedef void (*enkiProfilerCallbackFunc)( uint32_t threadnum_ );
-struct enkiProfilerCallbacks
-{
-    enkiProfilerCallbackFunc threadStart;
-    enkiProfilerCallbackFunc threadStop;
-    enkiProfilerCallbackFunc waitForNewTaskSuspendStart;      // thread suspended waiting for new tasks
-    enkiProfilerCallbackFunc waitForNewTaskSuspendStop;       // thread unsuspended
-    enkiProfilerCallbackFunc waitForTaskCompleteStart;        // thread waiting for task completion
-    enkiProfilerCallbackFunc waitForTaskCompleteStop;         // thread stopped waiting
-    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStart; // thread suspended waiting task completion
-    enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
-};
+// Returns the current task threadNum
+// Will return 0 for thread which initialized the task scheduler,
+// and all other non-enkiTS threads which have not been registered ( see enkiRegisterExternalTaskThread() ),
+// and < enkiGetNumTaskThreads() for all threads.
+// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
+ENKITS_API uint32_t            enkiGetThreadNum( enkiTaskScheduler* pETS_ );
 
+// Call on a thread to register the thread to use the TaskScheduling API.
+// This is implicitly done for the thread which initializes the TaskScheduler
+// Intended for developers who have threads who need to call the TaskScheduler API
+// Returns true if successfull, false if not.
+// Can only have numExternalTaskThreads registered at any one time, which must be set
+// at initialization time.
+ENKITS_API int                 enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_);
+
+// Call on a thread on which RegisterExternalTaskThread has been called to deregister that thread.
+ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_);
+
+// Get the number of registered external task threads.
+ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_);
+
+// ------------- Start DEPRECATED Functions -------------
+// DEPRECATED - enkiGetProfilerCallbacks.  Use enkiTaskSchedulerConfig instead
 // Get the callback structure so it can be set 
 ENKITS_API struct enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ );
+// -------------  End DEPRECATED Functions  -------------
+
 
 #ifdef __cplusplus
 }

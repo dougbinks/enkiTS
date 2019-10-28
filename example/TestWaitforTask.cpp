@@ -29,7 +29,7 @@ std::atomic<int32_t> g_WaitCount(0);
 
 struct SlowTask : enki::ITaskSet
 {
-    virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum )
+    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
     {
         // fake slow task with timer
         Timer timer;
@@ -44,7 +44,7 @@ struct SlowTask : enki::ITaskSet
 
 struct WaitingTask : enki::ITaskSet
 {
-    virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum )
+    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
     {
         int numWaitTasks = maxWaitasks - depth;
         for( int t = 0; t < numWaitTasks; ++t )
@@ -70,7 +70,8 @@ struct WaitingTask : enki::ITaskSet
             ++g_WaitCount;
             g_TS.WaitforTask( pWaitingTasks[t] );
         }
-        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n\t\tWaits: %d blocking waits: %d\n", g_Iteration, depth, threadnum, g_WaitCount.load(), g_WaitForTaskCompletion.load() );
+        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n\t\tWaits: %d blocking waits: %d\n",
+            g_Iteration, depth, threadnum_, g_WaitCount.load(), g_WaitForTaskCompletion.load() );
     }
 
     virtual ~WaitingTask()
@@ -92,9 +93,10 @@ struct WaitingTask : enki::ITaskSet
 // which must complete as early as possible using priorities.
 int main(int argc, const char * argv[])
 {
-    g_TS.GetProfilerCallbacks()->waitForTaskCompleteStart        = []( uint32_t threadnum_ ) { ++g_WaitCount; };
-    g_TS.GetProfilerCallbacks()->waitForTaskCompleteSuspendStart = []( uint32_t threadnum_ ) { ++g_WaitForTaskCompletion; };
-    g_TS.Initialize();
+    enki::TaskSchedulerConfig config;
+    config.profilerCallbacks.waitForTaskCompleteStart         = []( uint32_t threadnum_ ) { ++g_WaitCount; };
+    config.profilerCallbacks.waitForTaskCompleteSuspendStart  = []( uint32_t threadnum_ ) { ++g_WaitForTaskCompletion; };
+    g_TS.Initialize( config );
     for( g_Iteration = 0; g_Iteration < 1000; ++g_Iteration )
     {
         WaitingTask taskRoot;

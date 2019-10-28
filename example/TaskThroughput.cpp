@@ -48,9 +48,9 @@ struct ConsumeTask : ITaskSet
     static Count*   pCount;
     static uint32_t numCount;
 
-    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
-        ++pCount[threadnum].count;
+        ++pCount[threadnum_].count;
     }
 
     static void Init()
@@ -62,7 +62,7 @@ struct ConsumeTask : ITaskSet
     }
 };
 
-ConsumeTask                 ConsumeTask::tasks[numTasks];
+ConsumeTask              ConsumeTask::tasks[numTasks];
 ConsumeTask::Count*      ConsumeTask::pCount = NULL;
 uint32_t                 ConsumeTask::numCount = 0;
 
@@ -74,9 +74,9 @@ struct CreateTasks : ITaskSet
     {
         m_SetSize = numTasks;
     }
-    virtual void    ExecuteRange( TaskSetPartition range, uint32_t threadnum )
+    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
-        for( uint32_t i=range.start; i <range.end; ++i )
+        for( uint32_t i=range_.start; i <range_.end; ++i )
         {
             ConsumeTask& task = ConsumeTask::tasks[ i ];
             g_TS.AddTaskSetToPipe( &task );

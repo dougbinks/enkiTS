@@ -31,12 +31,14 @@
 
 using namespace enki;
 
-
-static const uint32_t PIPESIZE_LOG2              = 8;
-static const uint32_t SPIN_COUNT                 = 10;
-static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 100;
-static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
-static const uint32_t CACHE_LINE_SIZE            = 64; // awaiting std::hardware_constructive_interference_size
+namespace enki
+{
+    static const uint32_t PIPESIZE_LOG2              = 8;
+    static const uint32_t SPIN_COUNT                 = 10;
+    static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 100;
+    static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
+    static const uint32_t CACHE_LINE_SIZE            = 64; // awaiting std::hardware_constructive_interference_size
+};
 
 // thread_local not well supported yet by C++11 compilers.
 #ifdef _MSC_VER
@@ -82,9 +84,9 @@ namespace enki
     struct ThreadDataStore
     {
         std::atomic<ThreadState> threadState;
-        char prevent_false_Share[ CACHE_LINE_SIZE - sizeof(std::atomic<ThreadState>) ];
+        char prevent_false_Share[ enki::CACHE_LINE_SIZE - sizeof(std::atomic<ThreadState>) ];
     };
-    static_assert( sizeof( ThreadDataStore ) >= CACHE_LINE_SIZE, "ThreadDataStore may exhibit false sharing" );
+    static_assert( sizeof( ThreadDataStore ) >= enki::CACHE_LINE_SIZE, "ThreadDataStore may exhibit false sharing" );
 
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 

@@ -33,23 +33,22 @@ void ParallelFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pAr
     printf("ParallelFunc running on thread %d (could be any thread)\n", threadnum_ );
 }
 
-void* CustomAllocFunc( size_t size_, void* customData_ )
+void* CustomAllocFunc( size_t size_, const void* customData_ )
 {
     totalAllocations += size_;
-    printf("Allocating %g bytes in domain %s, total %g\n", (double)size_, (char*)customData_, (double)totalAllocations );
+    printf("Allocating %g bytes in domain %s, total %g\n", (double)size_, (const char*)customData_, (double)totalAllocations );
     return malloc( size_ );
 };
 
-void  CustomFreeFunc(  void* ptr_,   void* customData_ )
+void  CustomFreeFunc(  void* ptr_,   const void* customData_ )
 {
-    printf("Freeing %p in domain %s\n", ptr_, (char*)customData_ );
+    printf("Freeing %p in domain %s\n", ptr_, (const char*)customData_ );
     free( ptr_ );
 };
 
 
 int main(int argc, const char * argv[])
 {
-    struct enkiTaskSchedulerConfig config;
     struct enkiCustomAllocator customAllocator;
 
     customAllocator.alloc = CustomAllocFunc;

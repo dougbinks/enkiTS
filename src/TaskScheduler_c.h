@@ -36,6 +36,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct enkiTaskScheduler enkiTaskScheduler;
 typedef struct enkiTaskSet       enkiTaskSet;
@@ -59,13 +60,13 @@ struct enkiProfilerCallbacks
 };
 
 // Custom allocator, set in enkiTaskSchedulerConfig
-typedef void* (*enkiAllocFunc)( size_t size_, void* customData_ );
-typedef void  (*enkiFreeFunc)(  void* ptr_,   void* customData_ );
+typedef void* (*enkiAllocFunc)( size_t size_, const void* customData_ );
+typedef void  (*enkiFreeFunc)(  void* ptr_,   const void* customData_ );
 struct enkiCustomAllocator
 {
     enkiAllocFunc alloc;
     enkiFreeFunc  free;
-    void*         customData;
+    const void*   customData;
 };
 
 // enkiTaskSchedulerConfig - configuration struct for advanced Initialize

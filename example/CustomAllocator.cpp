@@ -30,22 +30,20 @@ size_t totalAllocations = 0;
 
 struct ParallelTaskSet : ITaskSet
 {
-    ParallelTaskSet() { m_SetSize = 100; }
-
     virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
     {
         printf(" This could run on any thread, currently thread %d\n", threadnum_);
     }
 };
 
-void* CustomAllocFunc( size_t size_, void* customData_ )
+void* CustomAllocFunc( size_t size_, const void* customData_ )
 {
     totalAllocations += size_;
     printf("Allocating %g bytes in domain %s, total %g\n", (double)size_, (char*)customData_, (double)totalAllocations );
     return malloc( size_ );
 };
 
-void  CustomFreeFunc(  void* ptr_,   void* customData_ )
+void  CustomFreeFunc(  void* ptr_,   const void* customData_ )
 {
     printf("Freeing %p in domain %s\n", ptr_, (char*)customData_ );
     free( ptr_ );

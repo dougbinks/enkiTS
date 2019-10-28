@@ -50,14 +50,17 @@ void  CustomFreeFunc(  void* ptr_,   void* customData_ )
 int main(int argc, const char * argv[])
 {
     struct enkiTaskSchedulerConfig config;
+    struct enkiCustomAllocator customAllocator;
 
-    pETS = enkiNewTaskScheduler();
+    customAllocator.alloc = CustomAllocFunc;
+    customAllocator.free  = CustomFreeFunc;
+    customAllocator.customData = "enkiTS";
+
+    pETS = enkiNewTaskSchedulerWithCustomAllocator( customAllocator );
 
     // get default config and request one external thread
     config = enkiGetTaskSchedulerConfig( pETS );
-    config.customAllocator.alloc = CustomAllocFunc;
-    config.customAllocator.free  = CustomFreeFunc;
-    config.customAllocator.customData = "enkiTS";
+    config.customAllocator = customAllocator;
     enkiInitTaskSchedulerWithConfig( pETS, config );
 
     pParallelTask = enkiCreateTaskSet( pETS, ParallelFunc );

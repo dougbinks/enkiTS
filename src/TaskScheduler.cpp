@@ -553,13 +553,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
 
 ENKITS_API TaskSchedulerConfig enki::TaskScheduler::GetConfig() const
 {
-    TaskSchedulerConfig config;
-    if( m_bHaveThreads )
-    {
-        config.numTaskThreadsToCreate = m_NumThreads;
-        config.numExternalTaskThreads = 0;
-    }
-    return config;
+    return m_Config;
 }
 
 void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )

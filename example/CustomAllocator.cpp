@@ -41,13 +41,13 @@ struct CustomData
     const char* domainName;
 };
 
-void* CustomAllocFunc( size_t size_, void* userData_, const char* file_, int line_ )
+void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
 {
     CustomData* data = (CustomData*)userData_;
     totalAllocations += size_;
     printf("Allocating %g bytes in domain %s, total %g. File %s, line %d.\n",
         (double)size_, data->domainName, (double)totalAllocations, file_, line_ );
-    return malloc( size_ );
+    return DefaultAllocFunc( align_, size_, userData_, file_, line_ );
 };
 
 void  CustomFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
@@ -55,7 +55,7 @@ void  CustomFreeFunc(  void* ptr_,   void* userData_, const char* file_, int lin
     CustomData* data = (CustomData*)userData_;
     printf("Freeing %p in domain %s. File %s, line %d.\n",
         ptr_, data->domainName, file_, line_ );
-    free( ptr_ );
+    DefaultFreeFunc( ptr_, userData_, file_, line_ );
 };
 
 

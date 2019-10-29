@@ -202,9 +202,9 @@ namespace enki
     };
 
     // Custom allocator, set in TaskSchedulerConfig
-    typedef void* (*AllocFunc)( size_t size_, void* userData_, const char* file_, int line_ );
+    typedef void* (*AllocFunc)( size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
     typedef void  (*FreeFunc)(  void* ptr_,   void* userData_, const char* file_, int line_ );
-    ENKITS_API void* DefaultAllocFunc( size_t size_, void* userData_, const char* file_, int line_ );
+    ENKITS_API void* DefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
     ENKITS_API void  DefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ );
     struct CustomAllocator
     {

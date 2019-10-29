@@ -23,6 +23,16 @@
 
 using namespace enki;
 
+ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
+{
+    return enki::DefaultAllocFunc( align_, size_, userData_, file_, line_ );
+}
+
+ENKITS_API void  enkiDefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
+{
+    return enki::DefaultFreeFunc( ptr_, userData_, file_, line_ );
+}
+
 struct enkiTaskScheduler : TaskScheduler
 {
     void enkiSetCustomAllocator( CustomAllocator customAllocator_ )
@@ -69,7 +79,7 @@ enkiTaskScheduler* enkiNewTaskScheduler()
 ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
 {
     enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc(
-        sizeof(enkiTaskScheduler), customAllocator_.userData, __FILE__, __LINE__ );
+        alignof(enkiTaskScheduler), sizeof(enkiTaskScheduler), customAllocator_.userData, __FILE__, __LINE__ );
 
     CustomAllocator customAllocatorCpp;
     customAllocatorCpp.alloc      = customAllocator_.alloc;
@@ -141,7 +151,7 @@ enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange t
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
     enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc(
-        sizeof(enkiTaskSet), customAllocator.userData, __FILE__, __LINE__ );
+        alignof(enkiTaskSet), sizeof(enkiTaskSet), customAllocator.userData, __FILE__, __LINE__ );
     new(pTask) enkiTaskSet( pETS_, taskFunc_ );
 
     return pTask;
@@ -192,7 +202,7 @@ enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExe
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
     enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc(
-        sizeof(enkiPinnedTask), customAllocator.userData, __FILE__, __LINE__ );
+        alignof(enkiPinnedTask), sizeof(enkiPinnedTask), customAllocator.userData, __FILE__, __LINE__ );
     new(pTask) enkiPinnedTask( pETS_, taskFunc_, threadNum_ );
     return pTask;
 }

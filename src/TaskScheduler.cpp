@@ -81,7 +81,7 @@ namespace enki
         TaskScheduler*           pTaskScheduler;
     };
 
-    struct ThreadDataStore
+    struct alignas(enki::ENKI_CACHE_LINE_SIZE) ThreadDataStore 
     {
         std::atomic<ThreadState> threadState;
         char prevent_false_Share[ enki::ENKI_CACHE_LINE_SIZE - sizeof(std::atomic<ThreadState>) ];
@@ -143,16 +143,26 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
 }
 
    
-ENKITS_API void* enki::DefaultAllocFunc( size_t size_, void* userData_, const char* file_, int line_ )
+ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
 { 
     (void)userData_; (void)file_; (void)line_;
-    return malloc( size_ );
+    void* pRet;
+#ifdef _WIN32
+    pRet = (void*)_aligned_malloc( size_, align_ );
+#else
+    int retval = posix_memalign( &pRet, align_, size_ );
+    (void)retval;	//unused
+#endif
+    return pRet;
 };
 
 ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
 {
-    (void)userData_; (void)file_; (void)line_;
+#ifdef _WIN32
+    _aligned_free( ptr_ );
+#else
     free( ptr_ );
+#endif
 };
 
 ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
@@ -773,9 +783,9 @@ uint32_t TaskScheduler::GetThreadNum() const
 }
 
 template<typename T>
-T* TaskScheduler::NewArray( size_t num_ )
+T* TaskScheduler::NewArray( size_t num_  )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
     if( !std::is_pod<T>::value )
     {
 		T* pCurr = pRet;
@@ -806,7 +816,7 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_ )
 template<class T, class... Args>
 T* TaskScheduler::New( Args&&... args_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
     return new(pRet) T( std::forward<Args>(args_)... );
 }
 

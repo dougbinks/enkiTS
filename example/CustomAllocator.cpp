@@ -70,6 +70,7 @@ int main(int argc, const char * argv[])
     ParallelTaskSet task;
     g_TS.AddTaskSetToPipe( &task );
     g_TS.WaitforTask( &task );
+    g_TS.WaitforAllAndShutdown(); // ensure we shutdown before user data is destroyed.
 
     return 0;
 }

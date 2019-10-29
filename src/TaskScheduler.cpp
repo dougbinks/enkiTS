@@ -262,18 +262,17 @@ void TaskScheduler::StartThreads()
 
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads );
-    m_pThreads          = NewArray<std::thread*>( m_NumThreads );
+    m_pThreads           = NewArray<std::thread>( m_NumThreads );
     m_bRunning = 1;
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
     {
-        m_pThreadDataStore[thread].threadState    = THREAD_STATE_EXTERNAL_UNREGISTERED;
-        m_pThreads[thread]                       = nullptr;
+        m_pThreadDataStore[thread].threadState   = THREAD_STATE_EXTERNAL_UNREGISTERED;
     }
     for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadDataStore[thread].threadState    = THREAD_STATE_RUNNING;
-        m_pThreads[thread]                       = New<std::thread>( TaskingThreadFunction, ThreadArgs{ thread, this } );
+        m_pThreadDataStore[thread].threadState   = THREAD_STATE_RUNNING;
+        m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;
     }
 
@@ -321,9 +320,8 @@ void TaskScheduler::StopThreads( bool bWait_ )
         // detach threads starting with thread 1 (as 0 is initialization thread).
         for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
         {
-            assert( m_pThreads[thread] );
-            m_pThreads[thread]->detach();
-            Delete( m_pThreads[thread] );
+            assert( m_pThreads[thread].joinable() );
+            m_pThreads[thread].join();
         }
 
         DeleteArray( m_pThreadDataStore, m_NumThreads );

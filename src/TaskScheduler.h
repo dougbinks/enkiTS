@@ -350,7 +350,7 @@ namespace enki
 
         uint32_t               m_NumThreads;
         ThreadDataStore*       m_pThreadDataStore;
-        std::thread**          m_pThreads;
+        std::thread*           m_pThreads;
         std::atomic<int32_t>   m_bRunning;
         std::atomic<int32_t>   m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>   m_NumThreadsWaitingForNewTasks;

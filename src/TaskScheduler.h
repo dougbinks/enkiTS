@@ -338,10 +338,10 @@ namespace enki
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
 
-        template< typename T > T*   NewArray( size_t num_ = 1 );
-        template< typename T > void DeleteArray( T* p_, size_t num_ = 1 );
-        template<class T, class... Args> T* New( Args&&... args_ );
-        template< typename T > void Delete( T* p_ );
+        template< typename T > T*   NewArray( size_t num_, const char* file_, int line_  );
+        template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );
+        template<class T, class... Args> T* New( const char* file_, int line_,  Args&&... args_ );
+        template< typename T > void Delete( T* p_, const char* file_, int line_ );
         semaphoreid_t* SemaphoreNew();
         void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
 

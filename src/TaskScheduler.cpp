@@ -253,16 +253,16 @@ void TaskScheduler::StartThreads()
 
     for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
     {
-        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads );
-        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads );
+        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads, __FILE__, __LINE__ );
+        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads, __FILE__, __LINE__ );
     }
 
     m_pNewTaskSemaphore      = SemaphoreNew();
     m_pTaskCompleteSemaphore = SemaphoreNew();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads );
-    m_pThreads           = NewArray<std::thread>( m_NumThreads );
+    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, __FILE__, __LINE__ );
+    m_pThreads           = NewArray<std::thread>( m_NumThreads, __FILE__, __LINE__ );
     m_bRunning = 1;
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
@@ -324,8 +324,8 @@ void TaskScheduler::StopThreads( bool bWait_ )
             m_pThreads[thread].join();
         }
 
-        DeleteArray( m_pThreadDataStore, m_NumThreads );
-        DeleteArray( m_pThreads, m_NumThreads );
+        DeleteArray( m_pThreadDataStore, m_NumThreads, __FILE__, __LINE__ );
+        DeleteArray( m_pThreads, m_NumThreads, __FILE__, __LINE__ );
         m_pThreadDataStore = 0;
         m_pThreads = 0;
 
@@ -342,9 +342,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
         for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
         {
-            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads );
+            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads, __FILE__, __LINE__ );
             m_pPipesPerThread[ priority ] = NULL;
-            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads );
+            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads, __FILE__, __LINE__ );
             m_pPinnedTaskListPerThread[ priority ] = NULL;
         }
         m_NumThreads = 0;
@@ -775,9 +775,9 @@ uint32_t TaskScheduler::GetThreadNum() const
 }
 
 template<typename T>
-T* TaskScheduler::NewArray( size_t num_  )
+T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, file_, line_ );
     if( !std::is_pod<T>::value )
     {
 		T* pCurr = pRet;
@@ -792,7 +792,7 @@ T* TaskScheduler::NewArray( size_t num_  )
 }
 
 template<typename T>
-void TaskScheduler::DeleteArray( T* p_, size_t num_ )
+void TaskScheduler::DeleteArray( T* p_, size_t num_, const char* file_, int line_ )
 {
     if( !std::is_pod<T>::value )
     {
@@ -802,21 +802,21 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_ )
             p_[--i].~T();
         }
     }
-    m_Config.customAllocator.free( p_, sizeof(T)*num_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    m_Config.customAllocator.free( p_, sizeof(T)*num_, m_Config.customAllocator.userData, file_, line_ );
 }
 
 template<class T, class... Args>
-T* TaskScheduler::New( Args&&... args_ )
+T* TaskScheduler::New( const char* file_, int line_, Args&&... args_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, file_, line_ );
     return new(pRet) T( std::forward<Args>(args_)... );
 }
 
 template< typename T >
-void TaskScheduler::Delete( T* p_ )
+void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
 {
     p_->~T(); 
-    m_Config.customAllocator.free( p_, sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    m_Config.customAllocator.free( p_, sizeof(T), m_Config.customAllocator.userData, file_, line_ );
 }
 
 TaskScheduler::TaskScheduler()
@@ -979,7 +979,7 @@ namespace enki
 
 semaphoreid_t* TaskScheduler::SemaphoreNew()
 {
-    semaphoreid_t* pSemaphore = New<semaphoreid_t>();
+    semaphoreid_t* pSemaphore = New<semaphoreid_t>( __FILE__, __LINE__ );
     SemaphoreCreate( *pSemaphore );
     return pSemaphore;
 }
@@ -987,7 +987,7 @@ semaphoreid_t* TaskScheduler::SemaphoreNew()
 void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
 {
     SemaphoreClose( *pSemaphore_ );
-    Delete( pSemaphore_ );
+    Delete( pSemaphore_, __FILE__, __LINE__ );
 }
 
 void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )

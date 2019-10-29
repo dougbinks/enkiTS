@@ -28,9 +28,9 @@ ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userD
     return enki::DefaultAllocFunc( align_, size_, userData_, file_, line_ );
 }
 
-ENKITS_API void  enkiDefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
+ENKITS_API void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
 {
-    return enki::DefaultFreeFunc( ptr_, userData_, file_, line_ );
+    return enki::DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
 }
 
 struct enkiTaskScheduler : TaskScheduler
@@ -144,7 +144,7 @@ void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
     CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     pETS_->~enkiTaskScheduler();
-    customAllocator.free( pETS_, customAllocator.userData, __FILE__, __LINE__ );
+    customAllocator.free( pETS_, sizeof(enkiTaskScheduler), customAllocator.userData, __FILE__, __LINE__ );
 }
 
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
@@ -162,7 +162,7 @@ void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
     const CustomAllocator& customAllocator = pTaskSet_->pETS->GetConfig().customAllocator;
 
     pTaskSet_->~enkiTaskSet();
-    customAllocator.free( pTaskSet_, customAllocator.userData, __FILE__, __LINE__ );
+    customAllocator.free( pTaskSet_, sizeof(enkiTaskSet), customAllocator.userData, __FILE__, __LINE__ );
 }
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
@@ -212,7 +212,7 @@ void enkiDeletePinnedTask(enkiPinnedTask* pPinnedTask_ )
     const CustomAllocator& customAllocator = pPinnedTask_->pETS->GetConfig().customAllocator;
 
     pPinnedTask_->~enkiPinnedTask();
-    customAllocator.free( pPinnedTask_, customAllocator.userData, __FILE__, __LINE__ );
+    customAllocator.free( pPinnedTask_, sizeof(enkiPinnedTask), customAllocator.userData, __FILE__, __LINE__ );
 }
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )

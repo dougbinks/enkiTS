@@ -156,7 +156,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
     return pRet;
 };
 
-ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
+ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userData_, const char* file_, int line_ )
 {
 #ifdef _WIN32
     _aligned_free( ptr_ );
@@ -802,7 +802,7 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_ )
             p_[--i].~T();
         }
     }
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    m_Config.customAllocator.free( p_, sizeof(T)*num_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
 }
 
 template<class T, class... Args>
@@ -816,7 +816,7 @@ template< typename T >
 void TaskScheduler::Delete( T* p_ )
 {
     p_->~T(); 
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
+    m_Config.customAllocator.free( p_, sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
 }
 
 TaskScheduler::TaskScheduler()

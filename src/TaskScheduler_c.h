@@ -61,9 +61,9 @@ struct enkiProfilerCallbacks
 
 // Custom allocator, set in enkiTaskSchedulerConfig
 typedef void* (*enkiAllocFunc)( size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
-typedef void  (*enkiFreeFunc)(  void* ptr_,   void* userData_, const char* file_, int line_ );
+typedef void  (*enkiFreeFunc)(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
 ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
-ENKITS_API void  enkiDefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ );
+ENKITS_API void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
 struct enkiCustomAllocator
 {
     enkiAllocFunc alloc;

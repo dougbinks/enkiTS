@@ -42,11 +42,12 @@ void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char*
     return enkiDefaultAllocFunc( align_, size_, userData_, file_, line_ );
 };
 
-void  CustomFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
+void  CustomFreeFunc(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
 {
-    printf("Freeing %p in domain %s. File %s, line %d.\n",
-        ptr_, (const char*)userData_, file_, line_ );
-    enkiDefaultFreeFunc( ptr_, userData_, file_, line_ );
+    totalAllocations -= size_;
+    printf("Freeing %p in domain %s, total %g. File %s, line %d.\n",
+        ptr_, (const char*)userData_, (double)totalAllocations, file_, line_ );
+    enkiDefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
 };
 
 

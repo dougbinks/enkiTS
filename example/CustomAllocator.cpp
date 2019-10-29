@@ -35,8 +35,8 @@ struct ParallelTaskSet : ITaskSet
 
 struct CustomData
 {
-    const char* domainName = "";
-    size_t totalAllocations = 0;
+    const char* domainName;
+    size_t totalAllocations;
 };
 
 void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
@@ -63,7 +63,7 @@ int main(int argc, const char * argv[])
     enki::TaskSchedulerConfig config;
     config.customAllocator.alloc = CustomAllocFunc;
     config.customAllocator.free  = CustomFreeFunc;
-    CustomData data{ "enkITS" };
+    CustomData data{ "enkITS", 0 };
     config.customAllocator.userData = &data;
 
     g_TS.Initialize( config );

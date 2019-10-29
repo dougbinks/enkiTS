@@ -68,7 +68,8 @@ enkiTaskScheduler* enkiNewTaskScheduler()
 
 ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
 {
-    enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc( sizeof(enkiTaskScheduler), customAllocator_.userData );
+    enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc(
+        sizeof(enkiTaskScheduler), customAllocator_.userData, __FILE__, __LINE__ );
 
     CustomAllocator customAllocatorCpp;
     customAllocatorCpp.alloc      = customAllocator_.alloc;
@@ -133,13 +134,14 @@ void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
     CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     pETS_->~enkiTaskScheduler();
-    customAllocator.free( pETS_, customAllocator.userData );
+    customAllocator.free( pETS_, customAllocator.userData, __FILE__, __LINE__ );
 }
 
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
-    enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc( sizeof(enkiTaskSet), customAllocator.userData );
+    enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc(
+        sizeof(enkiTaskSet), customAllocator.userData, __FILE__, __LINE__ );
     new(pTask) enkiTaskSet( pETS_, taskFunc_ );
 
     return pTask;
@@ -150,7 +152,7 @@ void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
     const CustomAllocator& customAllocator = pTaskSet_->pETS->GetConfig().customAllocator;
 
     pTaskSet_->~enkiTaskSet();
-    customAllocator.free( pTaskSet_, customAllocator.userData );
+    customAllocator.free( pTaskSet_, customAllocator.userData, __FILE__, __LINE__ );
 }
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
@@ -189,7 +191,8 @@ int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
-    enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc( sizeof(enkiPinnedTask), customAllocator.userData );
+    enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc(
+        sizeof(enkiPinnedTask), customAllocator.userData, __FILE__, __LINE__ );
     new(pTask) enkiPinnedTask( pETS_, taskFunc_, threadNum_ );
     return pTask;
 }
@@ -199,7 +202,7 @@ void enkiDeletePinnedTask(enkiPinnedTask* pPinnedTask_ )
     const CustomAllocator& customAllocator = pPinnedTask_->pETS->GetConfig().customAllocator;
 
     pPinnedTask_->~enkiPinnedTask();
-    customAllocator.free( pPinnedTask_, customAllocator.userData );
+    customAllocator.free( pPinnedTask_, customAllocator.userData, __FILE__, __LINE__ );
 }
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
@@ -281,4 +284,3 @@ enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
     static_assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks), "enkiTS profiler callback structs do not match" );
     return (enkiProfilerCallbacks*)pETS_->GetProfilerCallbacks();
 }
-

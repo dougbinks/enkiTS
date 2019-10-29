@@ -142,6 +142,19 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     }
 }
 
+   
+ENKITS_API void* enki::DefaultAllocFunc( size_t size_, void* userData_, const char* file_, int line_ )
+{ 
+    (void)userData_; (void)file_; (void)line_;
+    return malloc( size_ );
+};
+
+ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   void* userData_, const char* file_, int line_ )
+{
+    (void)userData_; (void)file_; (void)line_;
+    free( ptr_ );
+};
+
 ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
 {
     bool bRegistered = false;
@@ -762,7 +775,7 @@ uint32_t TaskScheduler::GetThreadNum() const
 template<typename T>
 T* TaskScheduler::NewArray( size_t num_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.userData );
+    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
     if( !std::is_pod<T>::value )
     {
 		T* pCurr = pRet;
@@ -787,13 +800,13 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_ )
             p_[--i].~T();
         }
     }
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData );
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
 }
 
 template<class T, class... Args>
 T* TaskScheduler::New( Args&&... args_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.userData );
+    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.userData, __FILE__, __LINE__ );
     return new(pRet) T( std::forward<Args>(args_)... );
 }
 
@@ -801,7 +814,7 @@ template< typename T >
 void TaskScheduler::Delete( T* p_ )
 {
     p_->~T(); 
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData );
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData, __FILE__, __LINE__ );
 }
 
 TaskScheduler::TaskScheduler()

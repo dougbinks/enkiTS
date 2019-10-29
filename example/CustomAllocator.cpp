@@ -36,25 +36,34 @@ struct ParallelTaskSet : ITaskSet
     }
 };
 
-void* CustomAllocFunc( size_t size_, const void* customData_ )
+struct CustomData
 {
+    const char* domainName;
+};
+
+void* CustomAllocFunc( size_t size_, void* userData_ )
+{
+    CustomData* data = (CustomData*)userData_;
     totalAllocations += size_;
-    printf("Allocating %g bytes in domain %s, total %g\n", (double)size_, (char*)customData_, (double)totalAllocations );
+    printf("Allocating %g bytes in domain %s, total %g\n", (double)size_, data->domainName, (double)totalAllocations );
     return malloc( size_ );
 };
 
-void  CustomFreeFunc(  void* ptr_,   const void* customData_ )
+void  CustomFreeFunc(  void* ptr_,   void* userData_ )
 {
-    printf("Freeing %p in domain %s\n", ptr_, (char*)customData_ );
+    CustomData* data = (CustomData*)userData_;
+    printf("Freeing %p in domain %s\n", ptr_, data->domainName );
     free( ptr_ );
 };
+
 
 int main(int argc, const char * argv[])
 {
     enki::TaskSchedulerConfig config;
     config.customAllocator.alloc = CustomAllocFunc;
     config.customAllocator.free  = CustomFreeFunc;
-    config.customAllocator.customData = "enkiTS";
+    CustomData data{ "enkITS" };
+    config.customAllocator.userData = &data;
 
     g_TS.Initialize( config );
 

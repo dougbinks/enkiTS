@@ -762,7 +762,7 @@ uint32_t TaskScheduler::GetThreadNum() const
 template<typename T>
 T* TaskScheduler::NewArray( size_t num_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.customData );
+    T* pRet = (T*)m_Config.customAllocator.alloc( num_*sizeof(T), m_Config.customAllocator.userData );
     if( !std::is_pod<T>::value )
     {
 		T* pCurr = pRet;
@@ -787,13 +787,13 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_ )
             p_[--i].~T();
         }
     }
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.customData );
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData );
 }
 
 template<class T, class... Args>
 T* TaskScheduler::New( Args&&... args_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.customData );
+    T* pRet = (T*)m_Config.customAllocator.alloc( sizeof(T), m_Config.customAllocator.userData );
     return new(pRet) T( std::forward<Args>(args_)... );
 }
 
@@ -801,7 +801,7 @@ template< typename T >
 void TaskScheduler::Delete( T* p_ )
 {
     p_->~T(); 
-    m_Config.customAllocator.free( p_, m_Config.customAllocator.customData );
+    m_Config.customAllocator.free( p_, m_Config.customAllocator.userData );
 }
 
 TaskScheduler::TaskScheduler()

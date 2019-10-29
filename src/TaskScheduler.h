@@ -202,15 +202,15 @@ namespace enki
     };
 
     // Custom allocator, set in TaskSchedulerConfig
-    typedef void* (*AllocFunc)( size_t size_, const void* customData_ );
-    typedef void  (*FreeFunc)(  void* ptr_,   const void* customData_ );
-    static inline void* DefaultAllocFunc( size_t size_, const void* customData_ ) { (void)customData_; return malloc( size_ ); };
-    static inline void  DefaultFreeFunc(  void* ptr_,   const void* customData_ ) { (void)customData_; free( ptr_ ); };
+    typedef void* (*AllocFunc)( size_t size_, void* userData_ );
+    typedef void  (*FreeFunc)(  void* ptr_,   void* userData_ );
+    static inline void* DefaultAllocFunc( size_t size_, void* userData_ ) { (void)userData_; return malloc( size_ ); };
+    static inline void  DefaultFreeFunc(  void* ptr_,   void* userData_ ) { (void)userData_; free( ptr_ ); };
     struct CustomAllocator
     {
         AllocFunc alloc        = DefaultAllocFunc;
         FreeFunc  free         = DefaultFreeFunc;
-        const void* customData = nullptr;
+        void* userData = nullptr;
     };
 
     // TaskSchedulerConfig - configuration struct for advanced Initialize

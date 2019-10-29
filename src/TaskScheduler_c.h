@@ -60,13 +60,13 @@ struct enkiProfilerCallbacks
 };
 
 // Custom allocator, set in enkiTaskSchedulerConfig
-typedef void* (*enkiAllocFunc)( size_t size_, const void* customData_ );
-typedef void  (*enkiFreeFunc)(  void* ptr_,   const void* customData_ );
+typedef void* (*enkiAllocFunc)( size_t size_, void* userData_ );
+typedef void  (*enkiFreeFunc)(  void* ptr_,   void* userData_ );
 struct enkiCustomAllocator
 {
     enkiAllocFunc alloc;
     enkiFreeFunc  free;
-    const void*   customData;
+    void*         userData;
 };
 
 // enkiTaskSchedulerConfig - configuration struct for advanced Initialize

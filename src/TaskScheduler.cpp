@@ -33,11 +33,11 @@ using namespace enki;
 
 namespace enki
 {
-    static const uint32_t PIPESIZE_LOG2              = 8;
-    static const uint32_t SPIN_COUNT                 = 10;
-    static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 100;
-    static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
-    static const uint32_t ENKI_CACHE_LINE_SIZE            = 64; // awaiting std::hardware_constructive_interference_size
+    static const uint32_t gc_PipeSizeLog2            = 8;
+    static const uint32_t gc_SpinCount               = 10;
+    static const uint32_t gc_SpinBackOffMulitplier   = 100;
+    static const uint32_t gc_MaxNumInitialPartitions = 8;
+    static const uint32_t gc_CacheLineSize           = 64; // awaiting std::hardware_constructive_interference_size
 };
 
 // thread_local not well supported yet by C++11 compilers.
@@ -63,7 +63,7 @@ namespace enki
     };
 
     // we derive class TaskPipe rather than typedef to get forward declaration working easily
-    class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::SubTaskSet> {};
+    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2,enki::SubTaskSet> {};
 
     enum ThreadState : int32_t
     {
@@ -81,12 +81,12 @@ namespace enki
         TaskScheduler*           pTaskScheduler;
     };
 
-    struct alignas(enki::ENKI_CACHE_LINE_SIZE) ThreadDataStore 
+    struct alignas(enki::gc_CacheLineSize) ThreadDataStore 
     {
         std::atomic<ThreadState> threadState;
-        char prevent_false_Share[ enki::ENKI_CACHE_LINE_SIZE - sizeof(std::atomic<ThreadState>) ];
+        char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) ];
     };
-    static_assert( sizeof( ThreadDataStore ) >= enki::ENKI_CACHE_LINE_SIZE, "ThreadDataStore may exhibit false sharing" );
+    static_assert( sizeof( ThreadDataStore ) >= enki::gc_CacheLineSize, "ThreadDataStore may exhibit false sharing" );
 
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 
@@ -217,14 +217,14 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
         {
             // no tasks, will spin then wait
             ++spinCount;
-            if( spinCount > SPIN_COUNT )
+            if( spinCount > gc_SpinCount )
             {
                 pTS->WaitForNewTasks( threadNum );
                 spinCount = 0;
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -297,9 +297,9 @@ void TaskScheduler::StartThreads()
         numThreadsToPartitionFor = std::min( m_NumThreads, GetNumHardwareThreads() );
         m_NumPartitions = numThreadsToPartitionFor * (numThreadsToPartitionFor - 1);
         m_NumInitialPartitions = numThreadsToPartitionFor - 1;
-        if( m_NumInitialPartitions > MAX_NUM_INITIAL_PARTITIONS )
+        if( m_NumInitialPartitions > gc_MaxNumInitialPartitions )
         {
-            m_NumInitialPartitions = MAX_NUM_INITIAL_PARTITIONS;
+            m_NumInitialPartitions = gc_MaxNumInitialPartitions;
         }
     }
 
@@ -660,14 +660,14 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
                     spinCount = 0; // reset spin as ran a task
                     break;
                 }
-                if( spinCount > SPIN_COUNT )
+                if( spinCount > gc_SpinCount )
                 {
                     WaitForTaskCompletion( pCompletable_, threadNum );
                     spinCount = 0;
                 }
                 else
                 {
-                    uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                    uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
                     SpinWait( spinBackoffCount );
                 }
             }
@@ -714,7 +714,7 @@ void TaskScheduler::WaitforAll()
         {
             spinCount = 0; // reset spin as ran a task
         }
-        if( spinCount > SPIN_COUNT )
+        if( spinCount > gc_SpinCount )
         {
             // find a running thread and add a dummy wait task
             int32_t countThreadsToCheck = m_NumThreads - 1;
@@ -734,7 +734,7 @@ void TaskScheduler::WaitforAll()
         }
         else
         {
-            uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
             SpinWait( spinBackoffCount );
         }
 

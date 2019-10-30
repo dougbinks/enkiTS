@@ -43,8 +43,18 @@ void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char*
 {
     CustomData* data = (CustomData*)userData_;
     data->totalAllocations += size_;
+
+    // We don't need to use this macro as file_ and line_ will be valid and printable just not useful
+    // But for this example it makes prettier output :) 
+#ifdef ENKI_CUSTOM_ALLOC_FILE_AND_LINE
     printf("Allocating %g bytes in domain %s, total %g. File %s, line %d.\n",
         (double)size_, data->domainName, (double)data->totalAllocations, file_, line_ );
+#else
+    (void)file_; (void)line_;
+    printf("Allocating %g bytes in domain %s, total %g.\n",
+        (double)size_, data->domainName, (double)data->totalAllocations );
+#endif
+
     return DefaultAllocFunc( align_, size_, userData_, file_, line_ );
 };
 
@@ -52,8 +62,18 @@ void  CustomFreeFunc(  void* ptr_,    size_t size_, void* userData_, const char*
 {
     CustomData* data = (CustomData*)userData_;
     data->totalAllocations -= size_;
+
+    // we don't need to use this macro as file_ and line_ will be valid and printable just not useful
+    // But for this example it makes prettier output :) 
+#ifdef ENKI_CUSTOM_ALLOC_FILE_AND_LINE
     printf("Freeing %p in domain %s, total %g. File %s, line %d.\n",
         ptr_, data->domainName, (double)data->totalAllocations, file_, line_ );
+#else
+    (void)file_; (void)line_;
+    printf("Freeing %p in domain %s, total %g.\n",
+        ptr_, data->domainName, (double)data->totalAllocations );
+#endif
+
     DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
 };
 

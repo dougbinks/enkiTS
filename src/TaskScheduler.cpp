@@ -31,6 +31,17 @@
 
 using namespace enki;
 
+#if defined(ENKI_CUSTOM_ALLOC_FILE_AND_LINE)
+#define ENKI_FILE_AND_LINE __FILE__, __LINE__
+#else
+namespace
+{
+    const char* gc_File    = "";
+    const uint32_t gc_Line = 0;
+}
+#define ENKI_FILE_AND_LINE  gc_File, gc_Line
+#endif
+
 namespace enki
 {
     static const uint32_t gc_PipeSizeLog2            = 8;
@@ -253,16 +264,16 @@ void TaskScheduler::StartThreads()
 
     for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
     {
-        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads, __FILE__, __LINE__ );
-        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads, __FILE__, __LINE__ );
+        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads, ENKI_FILE_AND_LINE );
+        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads, ENKI_FILE_AND_LINE );
     }
 
     m_pNewTaskSemaphore      = SemaphoreNew();
     m_pTaskCompleteSemaphore = SemaphoreNew();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, __FILE__, __LINE__ );
-    m_pThreads           = NewArray<std::thread>( m_NumThreads, __FILE__, __LINE__ );
+    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, ENKI_FILE_AND_LINE );
+    m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_bRunning = 1;
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
@@ -324,8 +335,8 @@ void TaskScheduler::StopThreads( bool bWait_ )
             m_pThreads[thread].join();
         }
 
-        DeleteArray( m_pThreadDataStore, m_NumThreads, __FILE__, __LINE__ );
-        DeleteArray( m_pThreads, m_NumThreads, __FILE__, __LINE__ );
+        DeleteArray( m_pThreadDataStore, m_NumThreads, ENKI_FILE_AND_LINE );
+        DeleteArray( m_pThreads, m_NumThreads, ENKI_FILE_AND_LINE );
         m_pThreadDataStore = 0;
         m_pThreads = 0;
 
@@ -342,9 +353,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
         for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
         {
-            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads, __FILE__, __LINE__ );
+            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads, ENKI_FILE_AND_LINE );
             m_pPipesPerThread[ priority ] = NULL;
-            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads, __FILE__, __LINE__ );
+            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads, ENKI_FILE_AND_LINE );
             m_pPinnedTaskListPerThread[ priority ] = NULL;
         }
         m_NumThreads = 0;
@@ -979,7 +990,7 @@ namespace enki
 
 semaphoreid_t* TaskScheduler::SemaphoreNew()
 {
-    semaphoreid_t* pSemaphore = New<semaphoreid_t>( __FILE__, __LINE__ );
+    semaphoreid_t* pSemaphore = New<semaphoreid_t>( ENKI_FILE_AND_LINE );
     SemaphoreCreate( *pSemaphore );
     return pSemaphore;
 }
@@ -987,7 +998,7 @@ semaphoreid_t* TaskScheduler::SemaphoreNew()
 void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
 {
     SemaphoreClose( *pSemaphore_ );
-    Delete( pSemaphore_, __FILE__, __LINE__ );
+    Delete( pSemaphore_, ENKI_FILE_AND_LINE );
 }
 
 void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )

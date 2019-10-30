@@ -31,6 +31,14 @@
     #define ENKITS_API
 #endif
 
+// Define ENKI_CUSTOM_ALLOC_FILE_AND_LINE (at project level) to get file and line report in custom allocators,
+// this is default in Debug - to turn off define ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE
+#ifndef ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#if defined(_DEBUG ) && !defined(ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE)
+#define ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,7 +67,7 @@ struct enkiProfilerCallbacks
     enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
 };
 
-// Custom allocator, set in enkiTaskSchedulerConfig
+// Custom allocator, set in enkiTaskSchedulerConfig. Also see ENKI_CUSTOM_ALLOC_FILE_AND_LINE for file_ and line_
 typedef void* (*enkiAllocFunc)( size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
 typedef void  (*enkiFreeFunc)(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
 ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ );

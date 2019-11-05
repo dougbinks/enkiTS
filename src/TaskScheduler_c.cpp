@@ -23,33 +23,60 @@
 
 using namespace enki;
 
+#if defined(ENKI_CUSTOM_ALLOC_FILE_AND_LINE)
+#define ENKI_FILE_AND_LINE __FILE__, __LINE__
+#else
+namespace
+{
+    const char* gc_File    = "";
+    const uint32_t gc_Line = 0;
+}
+#define ENKI_FILE_AND_LINE  gc_File, gc_Line
+#endif
+
+ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
+{
+    return enki::DefaultAllocFunc( align_, size_, userData_, file_, line_ );
+}
+
+ENKITS_API void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
+{
+    return enki::DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
+}
+
 struct enkiTaskScheduler : TaskScheduler
 {
+    void enkiSetCustomAllocator( CustomAllocator customAllocator_ )
+    {
+        SetCustomAllocator( customAllocator_ );
+    }
 };
 
 struct enkiTaskSet : ITaskSet
 {
-    enkiTaskSet( enkiTaskExecuteRange taskFun_ ) : taskFun(taskFun_), pArgs(NULL) {}
+    enkiTaskSet( TaskScheduler* pETS_, enkiTaskExecuteRange taskFun_ ) : pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
     virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
     {
         taskFun( range_.start, range_.end, threadnum_, pArgs );
     }
 
+    TaskScheduler* pETS;
     enkiTaskExecuteRange taskFun;
     void* pArgs;
 };
 
 struct enkiPinnedTask : IPinnedTask
 {
-    enkiPinnedTask( enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
-        : IPinnedTask( threadNum_ ), taskFun(taskFun_), pArgs(NULL) {}
+    enkiPinnedTask( TaskScheduler* pETS_, enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
+        : IPinnedTask( threadNum_ ), pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
     virtual void Execute()
     {
         taskFun( pArgs );
     }
 
+    TaskScheduler* pETS;
     enkiPinnedTaskExecute taskFun;
     void* pArgs;
 };
@@ -57,6 +84,21 @@ struct enkiPinnedTask : IPinnedTask
 enkiTaskScheduler* enkiNewTaskScheduler()
 {
     enkiTaskScheduler* pETS = new enkiTaskScheduler();
+    return pETS;
+}
+
+ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
+{
+    enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc(
+        alignof(enkiTaskScheduler), sizeof(enkiTaskScheduler), customAllocator_.userData, ENKI_FILE_AND_LINE );
+
+    CustomAllocator customAllocatorCpp;
+    customAllocatorCpp.alloc      = customAllocator_.alloc;
+    customAllocatorCpp.free       = customAllocator_.free;
+    customAllocatorCpp.userData = customAllocator_.userData;
+
+    new(pETS) enkiTaskScheduler;
+    pETS->enkiSetCustomAllocator( customAllocatorCpp );
     return pETS;
 }
 
@@ -73,7 +115,10 @@ ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskSc
     configC.profilerCallbacks.waitForTaskCompleteStart         = config.profilerCallbacks.waitForTaskCompleteStart;         
     configC.profilerCallbacks.waitForTaskCompleteStop          = config.profilerCallbacks.waitForTaskCompleteStop;          
     configC.profilerCallbacks.waitForTaskCompleteSuspendStart  = config.profilerCallbacks.waitForTaskCompleteSuspendStart;  
-    configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;   
+    configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;
+    configC.customAllocator.alloc                              = config.customAllocator.alloc;
+    configC.customAllocator.free                               = config.customAllocator.free;
+    configC.customAllocator.userData                         = config.customAllocator.userData;
     return configC;
 }
 
@@ -100,22 +145,35 @@ ENKITS_API void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struc
     config.profilerCallbacks.waitForTaskCompleteStop          = config_.profilerCallbacks.waitForTaskCompleteStop;          
     config.profilerCallbacks.waitForTaskCompleteSuspendStart  = config_.profilerCallbacks.waitForTaskCompleteSuspendStart;  
     config.profilerCallbacks.waitForTaskCompleteSuspendStop   = config_.profilerCallbacks.waitForTaskCompleteSuspendStop;   
-    pETS_->Initialize( config );
+    config.customAllocator.alloc                              = config_.customAllocator.alloc;
+    config.customAllocator.free                               = config_.customAllocator.free;
+    config.customAllocator.userData                         = config_.customAllocator.userData;
+   pETS_->Initialize( config );
 }
 
 void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
 {
-    delete pETS_;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
+    pETS_->~enkiTaskScheduler();
+    customAllocator.free( pETS_, sizeof(enkiTaskScheduler), customAllocator.userData, ENKI_FILE_AND_LINE );
 }
 
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
-    return new enkiTaskSet( taskFunc_ );
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc(
+        alignof(enkiTaskSet), sizeof(enkiTaskSet), customAllocator.userData, ENKI_FILE_AND_LINE );
+    new(pTask) enkiTaskSet( pETS_, taskFunc_ );
+
+    return pTask;
 }
 
 void enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ )
 {
-    delete pTaskSet_;
+    const CustomAllocator& customAllocator = pTaskSet_->pETS->GetConfig().customAllocator;
+
+    pTaskSet_->~enkiTaskSet();
+    customAllocator.free( pTaskSet_, sizeof(enkiTaskSet), customAllocator.userData, ENKI_FILE_AND_LINE );
 }
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
@@ -153,12 +211,19 @@ int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 
 enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
-    return new enkiPinnedTask( taskFunc_, threadNum_ );
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc(
+        alignof(enkiPinnedTask), sizeof(enkiPinnedTask), customAllocator.userData, ENKI_FILE_AND_LINE );
+    new(pTask) enkiPinnedTask( pETS_, taskFunc_, threadNum_ );
+    return pTask;
 }
 
-void enkiDeletePinnedTask(enkiPinnedTask* pTaskSet_)
+void enkiDeletePinnedTask(enkiPinnedTask* pPinnedTask_ )
 {
-    delete pTaskSet_;
+    const CustomAllocator& customAllocator = pPinnedTask_->pETS->GetConfig().customAllocator;
+
+    pPinnedTask_->~enkiPinnedTask();
+    customAllocator.free( pPinnedTask_, sizeof(enkiPinnedTask), customAllocator.userData, ENKI_FILE_AND_LINE );
 }
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
@@ -240,4 +305,3 @@ enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )
     static_assert( sizeof(enkiProfilerCallbacks) == sizeof(enki::ProfilerCallbacks), "enkiTS profiler callback structs do not match" );
     return (enkiProfilerCallbacks*)pETS_->GetProfilerCallbacks();
 }
-

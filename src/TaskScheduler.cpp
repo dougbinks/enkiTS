@@ -31,13 +31,24 @@
 
 using namespace enki;
 
+#if defined(ENKI_CUSTOM_ALLOC_FILE_AND_LINE)
+#define ENKI_FILE_AND_LINE __FILE__, __LINE__
+#else
+namespace
+{
+    const char* gc_File    = "";
+    const uint32_t gc_Line = 0;
+}
+#define ENKI_FILE_AND_LINE  gc_File, gc_Line
+#endif
+
 namespace enki
 {
-    static const uint32_t PIPESIZE_LOG2              = 8;
-    static const uint32_t SPIN_COUNT                 = 10;
-    static const uint32_t SPIN_BACKOFF_MULTIPLIER    = 100;
-    static const uint32_t MAX_NUM_INITIAL_PARTITIONS = 8;
-    static const uint32_t ENKI_CACHE_LINE_SIZE            = 64; // awaiting std::hardware_constructive_interference_size
+    static const uint32_t gc_PipeSizeLog2            = 8;
+    static const uint32_t gc_SpinCount               = 10;
+    static const uint32_t gc_SpinBackOffMulitplier   = 100;
+    static const uint32_t gc_MaxNumInitialPartitions = 8;
+    static const uint32_t gc_CacheLineSize           = 64; // awaiting std::hardware_constructive_interference_size
 };
 
 // thread_local not well supported yet by C++11 compilers.
@@ -63,7 +74,7 @@ namespace enki
     };
 
     // we derive class TaskPipe rather than typedef to get forward declaration working easily
-    class TaskPipe : public LockLessMultiReadPipe<PIPESIZE_LOG2,enki::SubTaskSet> {};
+    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2,enki::SubTaskSet> {};
 
     enum ThreadState : int32_t
     {
@@ -81,12 +92,12 @@ namespace enki
         TaskScheduler*           pTaskScheduler;
     };
 
-    struct ThreadDataStore
+    struct alignas(enki::gc_CacheLineSize) ThreadDataStore 
     {
         std::atomic<ThreadState> threadState;
-        char prevent_false_Share[ enki::ENKI_CACHE_LINE_SIZE - sizeof(std::atomic<ThreadState>) ];
+        char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) ];
     };
-    static_assert( sizeof( ThreadDataStore ) >= enki::ENKI_CACHE_LINE_SIZE, "ThreadDataStore may exhibit false sharing" );
+    static_assert( sizeof( ThreadDataStore ) >= enki::gc_CacheLineSize, "ThreadDataStore may exhibit false sharing" );
 
     class PinnedTaskList : public LocklessMultiWriteIntrusiveList<IPinnedTask> {};
 
@@ -142,6 +153,29 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     }
 }
 
+   
+ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
+{ 
+    (void)userData_; (void)file_; (void)line_;
+    void* pRet;
+#ifdef _WIN32
+    pRet = (void*)_aligned_malloc( size_, align_ );
+#else
+    int retval = posix_memalign( &pRet, align_, size_ );
+    (void)retval;	//unused
+#endif
+    return pRet;
+};
+
+ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userData_, const char* file_, int line_ )
+{
+#ifdef _WIN32
+    _aligned_free( ptr_ );
+#else
+    free( ptr_ );
+#endif
+};
+
 ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
 {
     bool bRegistered = false;
@@ -194,14 +228,14 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
         {
             // no tasks, will spin then wait
             ++spinCount;
-            if( spinCount > SPIN_COUNT )
+            if( spinCount > gc_SpinCount )
             {
                 pTS->WaitForNewTasks( threadNum );
                 spinCount = 0;
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -230,27 +264,26 @@ void TaskScheduler::StartThreads()
 
     for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
     {
-        m_pPipesPerThread[ priority ]          = new TaskPipe[ m_NumThreads ];
-        m_pPinnedTaskListPerThread[ priority ] = new PinnedTaskList[ m_NumThreads ];
+        m_pPipesPerThread[ priority ]          = NewArray<TaskPipe>( m_NumThreads, ENKI_FILE_AND_LINE );
+        m_pPinnedTaskListPerThread[ priority ] = NewArray<PinnedTaskList>( m_NumThreads, ENKI_FILE_AND_LINE );
     }
 
-    m_pNewTaskSemaphore      = SemaphoreCreate();
-    m_pTaskCompleteSemaphore = SemaphoreCreate();
+    m_pNewTaskSemaphore      = SemaphoreNew();
+    m_pTaskCompleteSemaphore = SemaphoreNew();
 
     // we create one less thread than m_NumThreads as the main thread counts as one
-    m_pThreadDataStore   = new ThreadDataStore[m_NumThreads];
-    m_pThreads          = new std::thread*[m_NumThreads];
+    m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, ENKI_FILE_AND_LINE );
+    m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_bRunning = 1;
 
     for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
     {
-        m_pThreadDataStore[thread].threadState    = THREAD_STATE_EXTERNAL_UNREGISTERED;
-        m_pThreads[thread]                       = nullptr;
+        m_pThreadDataStore[thread].threadState   = THREAD_STATE_EXTERNAL_UNREGISTERED;
     }
     for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadDataStore[thread].threadState    = THREAD_STATE_RUNNING;
-        m_pThreads[thread]                       = new std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
+        m_pThreadDataStore[thread].threadState   = THREAD_STATE_RUNNING;
+        m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;
     }
 
@@ -274,9 +307,9 @@ void TaskScheduler::StartThreads()
         numThreadsToPartitionFor = std::min( m_NumThreads, GetNumHardwareThreads() );
         m_NumPartitions = numThreadsToPartitionFor * (numThreadsToPartitionFor - 1);
         m_NumInitialPartitions = numThreadsToPartitionFor - 1;
-        if( m_NumInitialPartitions > MAX_NUM_INITIAL_PARTITIONS )
+        if( m_NumInitialPartitions > gc_MaxNumInitialPartitions )
         {
-            m_NumInitialPartitions = MAX_NUM_INITIAL_PARTITIONS;
+            m_NumInitialPartitions = gc_MaxNumInitialPartitions;
         }
     }
 
@@ -298,14 +331,12 @@ void TaskScheduler::StopThreads( bool bWait_ )
         // detach threads starting with thread 1 (as 0 is initialization thread).
         for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
         {
-            assert( m_pThreads[thread] );
-            m_pThreads[thread]->detach();
-            delete m_pThreads[thread];
+            assert( m_pThreads[thread].joinable() );
+            m_pThreads[thread].join();
         }
 
-        m_NumThreads = 0;
-        delete[] m_pThreadDataStore;
-        delete[] m_pThreads;
+        DeleteArray( m_pThreadDataStore, m_NumThreads, ENKI_FILE_AND_LINE );
+        DeleteArray( m_pThreads, m_NumThreads, ENKI_FILE_AND_LINE );
         m_pThreadDataStore = 0;
         m_pThreads = 0;
 
@@ -322,11 +353,12 @@ void TaskScheduler::StopThreads( bool bWait_ )
 
         for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
         {
-            delete[] m_pPipesPerThread[ priority ];
+            DeleteArray( m_pPipesPerThread[ priority ], m_NumThreads, ENKI_FILE_AND_LINE );
             m_pPipesPerThread[ priority ] = NULL;
-            delete[] m_pPinnedTaskListPerThread[ priority ];
+            DeleteArray( m_pPinnedTaskListPerThread[ priority ], m_NumThreads, ENKI_FILE_AND_LINE );
             m_pPinnedTaskListPerThread[ priority ] = NULL;
         }
+        m_NumThreads = 0;
     }
 }
 
@@ -631,14 +663,14 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
                     spinCount = 0; // reset spin as ran a task
                     break;
                 }
-                if( spinCount > SPIN_COUNT )
+                if( spinCount > gc_SpinCount )
                 {
                     WaitForTaskCompletion( pCompletable_, threadNum );
                     spinCount = 0;
                 }
                 else
                 {
-                    uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+                    uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
                     SpinWait( spinBackoffCount );
                 }
             }
@@ -685,7 +717,7 @@ void TaskScheduler::WaitforAll()
         {
             spinCount = 0; // reset spin as ran a task
         }
-        if( spinCount > SPIN_COUNT )
+        if( spinCount > gc_SpinCount )
         {
             // find a running thread and add a dummy wait task
             int32_t countThreadsToCheck = m_NumThreads - 1;
@@ -705,7 +737,7 @@ void TaskScheduler::WaitforAll()
         }
         else
         {
-            uint32_t spinBackoffCount = spinCount * SPIN_BACKOFF_MULTIPLIER;
+            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
             SpinWait( spinBackoffCount );
         }
 
@@ -753,6 +785,50 @@ uint32_t TaskScheduler::GetThreadNum() const
     return gtl_threadNum;
 }
 
+template<typename T>
+T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
+{
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, file_, line_ );
+    if( !std::is_pod<T>::value )
+    {
+		T* pCurr = pRet;
+        for( size_t i = 0; i < num_; ++i )
+        {
+			void* pBuffer = pCurr;
+            pCurr = new(pBuffer) T;
+			++pCurr;
+        }
+    }
+    return pRet;
+}
+
+template<typename T>
+void TaskScheduler::DeleteArray( T* p_, size_t num_, const char* file_, int line_ )
+{
+    if( !std::is_pod<T>::value )
+    {
+        size_t i = num_;
+        while(i)
+        {
+            p_[--i].~T();
+        }
+    }
+    m_Config.customAllocator.free( p_, sizeof(T)*num_, m_Config.customAllocator.userData, file_, line_ );
+}
+
+template<class T, class... Args>
+T* TaskScheduler::New( const char* file_, int line_, Args&&... args_ )
+{
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, file_, line_ );
+    return new(pRet) T( std::forward<Args>(args_)... );
+}
+
+template< typename T >
+void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
+{
+    p_->~T(); 
+    m_Config.customAllocator.free( p_, sizeof(T), m_Config.customAllocator.userData, file_, line_ );
+}
 
 TaskScheduler::TaskScheduler()
         : m_pPipesPerThread()
@@ -911,18 +987,21 @@ namespace enki
 }
 #endif
 
-namespace enki
-{
-    semaphoreid_t* SemaphoreCreate()
-    {
-        semaphoreid_t* pSemaphore = new semaphoreid_t;
-        SemaphoreCreate( *pSemaphore );
-        return pSemaphore;
-    }
 
-    void SemaphoreDelete( semaphoreid_t* pSemaphore_ )
-    {
-        SemaphoreClose( *pSemaphore_ );
-        delete pSemaphore_;
-    }
+semaphoreid_t* TaskScheduler::SemaphoreNew()
+{
+    semaphoreid_t* pSemaphore = New<semaphoreid_t>( ENKI_FILE_AND_LINE );
+    SemaphoreCreate( *pSemaphore );
+    return pSemaphore;
+}
+
+void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
+{
+    SemaphoreClose( *pSemaphore_ );
+    Delete( pSemaphore_, ENKI_FILE_AND_LINE );
+}
+
+void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
+{
+    m_Config.customAllocator = customAllocator_;
 }

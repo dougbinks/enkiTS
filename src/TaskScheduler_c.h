@@ -31,11 +31,20 @@
     #define ENKITS_API
 #endif
 
+// Define ENKI_CUSTOM_ALLOC_FILE_AND_LINE (at project level) to get file and line report in custom allocators,
+// this is default in Debug - to turn off define ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE
+#ifndef ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#if defined(_DEBUG ) && !defined(ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE)
+#define ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct enkiTaskScheduler enkiTaskScheduler;
 typedef struct enkiTaskSet       enkiTaskSet;
@@ -58,6 +67,21 @@ struct enkiProfilerCallbacks
     enkiProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
 };
 
+// Custom allocator, set in enkiTaskSchedulerConfig. Also see ENKI_CUSTOM_ALLOC_FILE_AND_LINE for file_ and line_
+typedef void* (*enkiAllocFunc)( size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
+typedef void  (*enkiFreeFunc)(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
+ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
+ENKITS_API void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
+struct enkiCustomAllocator
+{
+    enkiAllocFunc alloc;
+    enkiFreeFunc  free;
+    void*         userData;
+};
+
+// enkiTaskSchedulerConfig - configuration struct for advanced Initialize
+// Always use enkiGetTaskSchedulerConfig() to get defaults prior to altering and
+// initializing with enkiInitTaskSchedulerWithConfig().
 struct enkiTaskSchedulerConfig
 {
     // numTaskThreadsToCreate - Number of tasking threads the task scheduler will create. Must be > 0.
@@ -70,11 +94,18 @@ struct enkiTaskSchedulerConfig
     uint32_t              numExternalTaskThreads;
 
     struct enkiProfilerCallbacks profilerCallbacks;
+
+    struct enkiCustomAllocator   customAllocator;
 };
 
 
 // Create a new task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
+
+// Create a new task scheduler using a custom allocator
+// This will  use the custom allocator to allocate the task scheduler struct
+// and additionally will set the custom allocator in enkiTaskSchedulerConfig of the task scheduler
+ENKITS_API enkiTaskScheduler*  enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ );
 
 // Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults
 ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ );
@@ -127,7 +158,7 @@ ENKITS_API int                 enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, 
 ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
 // Delete a pinned task.
-ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pTask_ );
+ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pPinnedTask_ );
 
 // Set PinnedTask ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );

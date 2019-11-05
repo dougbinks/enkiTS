@@ -1,6 +1,6 @@
-Support development of enkiTS through our [Patreon](https://www.patreon.com/enkisoftware)
+Support development of enkiTS through [Github Sponsors](https://github.com/sponsors/dougbinks) or [Patreon](https://www.patreon.com/enkisoftware)
 
-[<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
+[<img src="https://img.shields.io/static/v1?logo=github&label=Github&message=Sponsor&color=#ea4aaa" width="200"/>](https://github.com/sponsors/dougbinks)    [<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
 
 # enkiTS
 [![Build Status for branch: master](https://travis-ci.org/dougbinks/enkiTS.svg?branch=master)](https://travis-ci.org/dougbinks/enkiTS)
@@ -45,7 +45,8 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Up-front Allocation friendly* - enkiTS is designed for zero allocations during scheduling.
 1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
 1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
-1. **NEW** *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
+1. *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
+1. **NEW** *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
  
 ## Usage
 

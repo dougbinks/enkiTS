@@ -44,6 +44,15 @@
     #define ENKITS_API
 #endif
 
+// Define ENKI_CUSTOM_ALLOC_FILE_AND_LINE (at project level) to get file and line report in custom allocators,
+// this is default in Debug - to turn off define ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE
+#ifndef ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#if defined(_DEBUG ) && !defined(ENKI_CUSTOM_ALLOC_NO_FILE_AND_LINE)
+#define ENKI_CUSTOM_ALLOC_FILE_AND_LINE
+#endif
+#endif
+
+
 
 namespace enki
 {
@@ -141,7 +150,7 @@ namespace enki
         // divided up too small. Ranges passed to ExecuteRange will *not* be a mulitple of this,
         // only attempts to deliver range sizes larger than this most of the time.
         // This should be set to a value which results in computation effort of at least 10k
-        // clock cycles to minimize tast scheduler overhead.
+        // clock cycles to minimize task scheduler overhead.
         // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
         // of m_MinRange.
         // Also known as grain size in literature.
@@ -201,6 +210,18 @@ namespace enki
         ProfilerCallbackFunc waitForTaskCompleteSuspendStop;  // thread unsuspended
     };
 
+    // Custom allocator, set in TaskSchedulerConfig. Also see ENKI_CUSTOM_ALLOC_FILE_AND_LINE for file_ and line_
+    typedef void* (*AllocFunc)( size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
+    typedef void  (*FreeFunc)(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
+    ENKITS_API void* DefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ );
+    ENKITS_API void  DefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ );
+    struct CustomAllocator
+    {
+        AllocFunc alloc    = DefaultAllocFunc;
+        FreeFunc  free     = DefaultFreeFunc;
+        void*     userData = nullptr;
+    };
+
     // TaskSchedulerConfig - configuration struct for advanced Initialize
     struct TaskSchedulerConfig
     {
@@ -214,6 +235,8 @@ namespace enki
         uint32_t          numExternalTaskThreads = 0;
 
         ProfilerCallbacks profilerCallbacks = {};
+
+        CustomAllocator   customAllocator;
     };
 
     class TaskScheduler
@@ -324,12 +347,19 @@ namespace enki
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
 
+        template< typename T > T*   NewArray( size_t num_, const char* file_, int line_  );
+        template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );
+        template<class T, class... Args> T* New( const char* file_, int line_,  Args&&... args_ );
+        template< typename T > void Delete( T* p_, const char* file_, int line_ );
+        semaphoreid_t* SemaphoreNew();
+        void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
+
         TaskPipe*              m_pPipesPerThread[ TASK_PRIORITY_NUM ];
         PinnedTaskList*        m_pPinnedTaskListPerThread[ TASK_PRIORITY_NUM ];
 
         uint32_t               m_NumThreads;
         ThreadDataStore*       m_pThreadDataStore;
-        std::thread**          m_pThreads;
+        std::thread*           m_pThreads;
         std::atomic<int32_t>   m_bRunning;
         std::atomic<int32_t>   m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>   m_NumThreadsWaitingForNewTasks;
@@ -344,6 +374,9 @@ namespace enki
 
         TaskScheduler( const TaskScheduler& nocopy_ );
         TaskScheduler& operator=( const TaskScheduler& nocopy_ );
+
+    protected:
+        void SetCustomAllocator( CustomAllocator customAllocator_ ); // for C interface
     };
 
     inline uint32_t GetNumHardwareThreads()

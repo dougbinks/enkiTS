@@ -169,6 +169,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
 
 ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userData_, const char* file_, int line_ )
 {
+     (void)size_; (void)userData_; (void)file_; (void)line_;
 #ifdef _WIN32
     _aligned_free( ptr_ );
 #else

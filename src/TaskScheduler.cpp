@@ -892,7 +892,11 @@ namespace enki
     
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
+#ifdef _XBOX_ONE
         semaphoreid.sem = CreateSemaphoreExW( NULL, 0, MAXLONG, NULL, 0, SEMAPHORE_ALL_ACCESS );
+#else
+        semaphoreid.sem = CreateSemaphore( NULL, 0, MAXLONG, NULL );
+#endif
     }
 
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )

@@ -875,7 +875,9 @@ void TaskScheduler::Initialize()
 // Semaphore implementation
 #ifdef _WIN32
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #define NOMINMAX
 #include <Windows.h>
 
@@ -888,7 +890,7 @@ namespace enki
     
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
-        semaphoreid.sem = CreateSemaphore(NULL, 0, MAXLONG, NULL );
+        semaphoreid.sem = CreateSemaphoreExW( NULL, 0, MAXLONG, NULL, 0, SEMAPHORE_ALL_ACCESS );
     }
 
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )

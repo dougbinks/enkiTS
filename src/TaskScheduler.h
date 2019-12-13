@@ -97,7 +97,7 @@ namespace enki
     class ICompletable
     {
     public:
-        ICompletable() : m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0) {}
+        ICompletable() : m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0), m_WaitingForTaskCount(0) {}
         bool                   GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }

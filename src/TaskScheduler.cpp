@@ -304,8 +304,7 @@ void TaskScheduler::StartThreads()
         // There could be more threads than hardware threads if external threads are
         // being intended for blocking functionality such as io etc.
         // We only need to partition for a maximum of the available processor parallelism.
-        uint32_t numThreadsToPartitionFor = m_NumThreads;
-        numThreadsToPartitionFor = std::min( m_NumThreads, GetNumHardwareThreads() );
+        uint32_t numThreadsToPartitionFor = std::min( m_NumThreads, GetNumHardwareThreads() );
         m_NumPartitions = numThreadsToPartitionFor * (numThreadsToPartitionFor - 1);
         m_NumInitialPartitions = numThreadsToPartitionFor - 1;
         if( m_NumInitialPartitions > gc_MaxNumInitialPartitions )
@@ -842,6 +841,9 @@ TaskScheduler::TaskScheduler()
         , m_NumThreadsWaitingForNewTasks(0)
         , m_NumThreadsWaitingForTaskCompletion(0)
         , m_NumPartitions(0)
+        , m_pNewTaskSemaphore(NULL)
+        , m_pTaskCompleteSemaphore(NULL)
+        , m_NumInitialPartitions(0)
         , m_bHaveThreads(false)
         , m_NumExternalTaskThreadsRegistered(0)
 {

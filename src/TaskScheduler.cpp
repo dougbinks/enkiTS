@@ -456,14 +456,17 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
     // to prevent a task being added after a check, then the thread waiting.
     // This will occasionally result in threads being mistakenly awoken,
     // but they will then go back to sleep.
+    m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
 
-    bool bHaveTasks = HaveTasks( threadNum_ );
-    if( !bHaveTasks )
+    if( HaveTasks( threadNum_ ) )
+    {
+        m_NumThreadsWaitingForNewTasks.fetch_sub( 1, std::memory_order_release );
+    }
+    else
     {
         SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStart, threadNum_ );
         ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
         m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_NEW_TASKS, std::memory_order_relaxed ); // rely on fetch_add acquire for order
-        m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
         SemaphoreWait( *m_pNewTaskSemaphore );
         m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
         SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStop, threadNum_ );
@@ -502,9 +505,9 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
 void TaskScheduler::WakeThreadsForNewTasks()
 {
     int32_t waiting = m_NumThreadsWaitingForNewTasks.load( std::memory_order_relaxed );
-    while( waiting && !m_NumThreadsWaitingForNewTasks.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
+    while( waiting > 0 && !m_NumThreadsWaitingForNewTasks.compare_exchange_weak(waiting, 0, std::memory_order_release, std::memory_order_relaxed ) ) {}
 
-    if( waiting )
+    if( waiting > 0 )
     {
         SemaphoreSignal( *m_pNewTaskSemaphore, waiting );
     }

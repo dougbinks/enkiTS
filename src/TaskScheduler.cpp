@@ -504,6 +504,14 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
 
 void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ )
 {
+    // We don't want to suspend this thread if there are task threads
+    // with pinned tasks suspended, as the completable could be a pinned task
+    // or it could be waiting on one.
+    if( WakeSuspendedThreadsWithPinnedTasks() )
+    {
+        return;
+    }
+
     m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
     pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acquire );
 

@@ -452,7 +452,7 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
 {
     for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
     {
-        ThreadState state = m_pThreadDataStore[ thread ].threadState;
+        ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
             
         if( state == THREAD_STATE_WAIT_NEW_TASKS || state == THREAD_STATE_WAIT_TASK_COMPLETION )
         {
@@ -486,6 +486,8 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
     // This will occasionally result in threads being mistakenly awoken,
     // but they will then go back to sleep.
     m_NumThreadsWaitingForNewTasks.fetch_add( 1, std::memory_order_acquire );
+    ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
+    m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_NEW_TASKS, std::memory_order_seq_cst );
 
     if( HaveTasks( threadNum_ ) )
     {
@@ -494,12 +496,11 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
     else
     {
         SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStart, threadNum_ );
-        ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
-        m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_NEW_TASKS, std::memory_order_relaxed ); // rely on fetch_add acquire for order
         SemaphoreWait( *m_pNewTaskSemaphore );
-        m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
         SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStop, threadNum_ );
     }
+
+    m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
 }
 
 void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ )
@@ -514,6 +515,8 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
 
     m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
     pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acquire );
+    ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
+    m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_TASK_COMPLETION, std::memory_order_seq_cst );
 
     if( pCompletable_->GetIsComplete() )
     {
@@ -522,8 +525,6 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     else
     {
         SafeCallback( m_Config.profilerCallbacks.waitForTaskCompleteSuspendStart, threadNum_ );
-        ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
-        m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_WAIT_TASK_COMPLETION, std::memory_order_relaxed );
         std::atomic_thread_fence(std::memory_order_acquire);
 
         SemaphoreWait( *m_pTaskCompleteSemaphore );
@@ -532,10 +533,10 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
             // This thread which may not the one which was supposed to be awoken
             WakeThreadsForTaskCompletion();
         }
-        m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
         SafeCallback( m_Config.profilerCallbacks.waitForTaskCompleteSuspendStop, threadNum_ );
     }
 
+    m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
     pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_release );
 }
 

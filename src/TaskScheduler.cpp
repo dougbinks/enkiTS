@@ -232,7 +232,6 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
             if( spinCount > gc_SpinCount )
             {
                 pTS->WaitForNewTasks( threadNum );
-                spinCount = 0;
             }
             else
             {

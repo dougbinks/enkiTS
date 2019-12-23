@@ -29,7 +29,22 @@ std::atomic<int32_t> g_WaitCount(0);
 
 struct SlowTask : enki::ITaskSet
 {
-    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ ) override
+    {
+        // fake slow task with timer
+        Timer timer;
+        timer.Start();
+        while( timer.GetTimeMS() < waitTime )
+        {
+        }
+    }
+
+    double waitTime;
+};
+
+struct SlowPinnedTask : enki::IPinnedTask
+{
+    void Execute() override
     {
         // fake slow task with timer
         Timer timer;
@@ -44,7 +59,7 @@ struct SlowTask : enki::ITaskSet
 
 struct WaitingTask : enki::ITaskSet
 {
-    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         int numWaitTasks = maxWaitasks - depth;
         for( int t = 0; t < numWaitTasks; ++t )
@@ -59,10 +74,18 @@ struct WaitingTask : enki::ITaskSet
             task.waitTime = 0.00001 * double( rand() % 100 );
             g_TS.AddTaskSetToPipe( &task );
         }
+
         for( SlowTask& task : tasks )
         {
             ++g_WaitCount;
             g_TS.WaitforTask( &task );
+
+            // we add a random wait for pinned task here.
+            uint32_t randThread = (uint32_t)rand() % g_TS.GetNumTaskThreads();
+            pinnedTask.threadNum = randThread;
+            pinnedTask.waitTime = 0.00001 * double( rand() % 10 );
+            g_TS.AddPinnedTask( &pinnedTask );
+            g_TS.WaitforTask( &pinnedTask );
         }
 
         for( int t = 0; t < numWaitTasks; ++t )
@@ -82,6 +105,7 @@ struct WaitingTask : enki::ITaskSet
         }
     }
     SlowTask    tasks[4];
+    SlowPinnedTask pinnedTask;
     int32_t     depth = 0;
     static constexpr int maxWaitasks = 4;
     WaitingTask* pWaitingTasks[maxWaitasks] = {};

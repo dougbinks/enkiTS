@@ -335,6 +335,7 @@ namespace enki
 
     private:
         static void TaskingThreadFunction( const ThreadArgs& args_ );
+        bool        WakeSuspendedThreadsWithPinnedTasks();
         bool        HaveTasks( uint32_t threadNum_ );
         void        WaitForNewTasks( uint32_t threadNum_ );
         void        WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ );

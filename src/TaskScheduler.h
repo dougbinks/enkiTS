@@ -335,7 +335,6 @@ namespace enki
 
     private:
         static void TaskingThreadFunction( const ThreadArgs& args_ );
-        bool        WakeSuspendedThreadsWithPinnedTasks();
         bool        HaveTasks( uint32_t threadNum_ );
         void        WaitForNewTasks( uint32_t threadNum_ );
         void        WaitForTaskCompletion( const ICompletable* pCompletable_, uint32_t threadNum_ );
@@ -347,6 +346,7 @@ namespace enki
         void        SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
+        bool        WakeSuspendedThreadsWithPinnedTasks();
 
         template< typename T > T*   NewArray( size_t num_, const char* file_, int line_  );
         template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );

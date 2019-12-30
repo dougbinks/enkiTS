@@ -448,28 +448,6 @@ bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
     return false;
 }
 
-bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
-{
-    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
-    {
-        ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
-            
-        if( state == THREAD_STATE_WAIT_NEW_TASKS || state == THREAD_STATE_WAIT_TASK_COMPLETION )
-        {
-            // thread is suspended, check if it has pinned tasks
-            for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
-            {
-                if( !m_pPinnedTaskListPerThread[ priority ][ thread ].IsListEmpty() )
-                {
-                    WakeThreadsForNewTasks();
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
 void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
 {
     // We don't want to suspend this thread if there are task threads
@@ -565,6 +543,28 @@ void TaskScheduler::WakeThreadsForTaskCompletion()
     {
         SemaphoreSignal( *m_pTaskCompleteSemaphore, waiting );
     }
+}
+
+bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
+{
+    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+    {
+        ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
+            
+        if( state == THREAD_STATE_WAIT_NEW_TASKS || state == THREAD_STATE_WAIT_TASK_COMPLETION )
+        {
+            // thread is suspended, check if it has pinned tasks
+            for( int priority = 0; priority < TASK_PRIORITY_NUM; ++priority )
+            {
+                if( !m_pPinnedTaskListPerThread[ priority ][ thread ].IsListEmpty() )
+                {
+                    WakeThreadsForNewTasks();
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )

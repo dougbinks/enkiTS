@@ -547,8 +547,12 @@ void TaskScheduler::WakeThreadsForTaskCompletion()
 
 bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
 {
-    for( uint32_t thread = 0; thread < m_NumThreads; ++thread )
+    uint32_t threadNum = gtl_threadNum;
+    for( uint32_t t = 1; t < m_NumThreads; ++t )
     {
+        // distribute thread checks more evenly by starting at our thread number rather than 0.
+        uint32_t thread = ( gtl_threadNum + t ) % m_NumThreads;
+
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
             
         if( state == THREAD_STATE_WAIT_NEW_TASKS || state == THREAD_STATE_WAIT_TASK_COMPLETION )

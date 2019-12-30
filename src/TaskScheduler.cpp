@@ -550,6 +550,13 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
     uint32_t threadNum = gtl_threadNum;
     for( uint32_t t = 1; t < m_NumThreads; ++t )
     {
+        if( 0 == m_NumThreadsWaitingForNewTasks.load( std::memory_order_relaxed ) && 
+            0 == m_NumThreadsWaitingForTaskCompletion.load( std::memory_order_relaxed ) )
+        {
+            // no threads waiting, return
+            return false;
+        }
+
         // distribute thread checks more evenly by starting at our thread number rather than 0.
         uint32_t thread = ( gtl_threadNum + t ) % m_NumThreads;
 

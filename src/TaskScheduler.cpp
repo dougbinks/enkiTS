@@ -708,18 +708,17 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
                     spinCount = 0; // reset spin as ran a task
                     break;
                 }
-                if( spinCount > gc_SpinCount )
-                {
-                    WaitForTaskCompletion( pCompletable_, threadNum );
-                    spinCount = 0;
-                }
-                else
-                {
-                    uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
-                    SpinWait( spinBackoffCount );
-                }
             }
-
+            if( spinCount > gc_SpinCount )
+            {
+                WaitForTaskCompletion( pCompletable_, threadNum );
+                spinCount = 0;
+            }
+            else
+            {
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+                SpinWait( spinBackoffCount );
+            }
         }
         SafeCallback( m_Config.profilerCallbacks.waitForTaskCompleteStop, threadNum );
     }

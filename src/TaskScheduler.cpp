@@ -758,6 +758,7 @@ void TaskScheduler::WaitforAll()
     while( bHaveTasks || numOtherThreadsRunning )
     {
         bHaveTasks = TryRunTask( threadNum, hintPipeToCheck_io );
+        ++spinCount;
         if( bHaveTasks )
         {
             spinCount = 0; // reset spin as ran a task
@@ -774,10 +775,15 @@ void TaskScheduler::WaitforAll()
                 {
                     dummyWaitTask.threadNum = ( dummyWaitTask.threadNum + 1 ) % m_NumThreads;
                 }
-            } while( countThreadsToCheck && m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState != THREAD_STATE_RUNNING );
+                ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
+                if( state == THREAD_STATE_RUNNING || state == THREAD_STATE_WAIT_TASK_COMPLETION )
+                {
+                    break;
+                }
+            } while( countThreadsToCheck );
             assert( dummyWaitTask.threadNum != threadNum );
             AddPinnedTask( &dummyWaitTask );
-            WaitForTaskCompletion( &dummyWaitTask, threadNum );
+            WaitforTask( &dummyWaitTask );
             spinCount = 0;
         }
         else

@@ -968,38 +968,45 @@ namespace enki
 }
 #elif defined(__MACH__)
 
+
 // OS X does not have POSIX semaphores
-// see https://developer.apple.com/library/content/documentation/Darwin/Conceptual/KernelProgramming/synchronization/synchronization.html
-#include <mach/mach.h>
+// Mach semaphores can now only be created by the kernel
+// Named sempahores work, but would require unique name construction to ensure
+// they are isolated to this process.
+// Dispatch semaphores appear to be the way other developers use OSX Semaphores, e.g. Boost
+// However the API could change
+// OSX below 10.6 does not support dispatch, but I do not have an earlier OSX version
+// to test alternatives
+#include <dispatch/dispatch.h>
 
 namespace enki
 {
     
     struct semaphoreid_t
     {
-        semaphore_t   sem;
+        dispatch_semaphore_t   sem;
     };
     
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
-        semaphore_create( mach_task_self(), &semaphoreid.sem, SYNC_POLICY_FIFO, 0 );
+        semaphoreid.sem = dispatch_semaphore_create(0);
     }
     
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
     {
-        semaphore_destroy( mach_task_self(), semaphoreid.sem );
+        dispatch_release( semaphoreid.sem );
     }
     
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
-        semaphore_wait( semaphoreid.sem );
+        dispatch_semaphore_wait( semaphoreid.sem, DISPATCH_TIME_FOREVER );
     }
     
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
         {
-            semaphore_signal( semaphoreid.sem );
+            dispatch_semaphore_signal( semaphoreid.sem );
         }
     }
 }

@@ -28,6 +28,7 @@ script:
     - cd build
     - cmake ..
     - cmake --build .
-    - if $TRAVIS_OS_NAME = windows; then;
-        cd Debug; fi;
+    - if [ "$TRAVIS_OS_NAME" = 'windows' ]; then
+        cd Debug;
+      fi
     - ./TestAll

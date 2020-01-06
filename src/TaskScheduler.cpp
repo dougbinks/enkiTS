@@ -907,9 +907,9 @@ TaskScheduler::~TaskScheduler()
 void TaskScheduler::Initialize( uint32_t numThreadsTotal_ )
 {
     assert( numThreadsTotal_ >= 1 );
+    StopThreads( true ); // Stops threads, waiting for them.
     m_Config.numTaskThreadsToCreate = numThreadsTotal_ - 1;
     m_Config.numExternalTaskThreads = 0;
-    StopThreads( true ); // Stops threads, waiting for them.
     StartThreads();}
 
 ENKITS_API void enki::TaskScheduler::Initialize( TaskSchedulerConfig config_ )

@@ -6,9 +6,12 @@ matrix:
   include:
    - os: linux
      arch: amd64
+     name: "Linux x64"
    - os: linux
+     name: "Linux ARM64"
      arch: arm64
    - os: osx
+     name: "OSX x64"
      arch: amd64
 
 addons:
@@ -16,17 +19,9 @@ addons:
         packages:
             - cmake
 
-stages:
-    - compile
-    - test
-
-jobs:
-    include:
-     - stage: compile
-     - script:
-        - mkdir build
-        - cd build
-        - cmake ..
-        - cmake --build .
-     - stage: test
-       script: ./TestAll
+script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - cmake --build .
+    - ./TestAll

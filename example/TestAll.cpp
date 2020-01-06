@@ -114,7 +114,7 @@ int main(int argc, const char * argv[])
     ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
     g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
     g_TS.WaitforTask( &parallelReductionSumTaskSet );
-    if( parallelReductionSumTaskSet.m_FinalSum == sumSerial )
+    if( parallelReductionSumTaskSet.m_FinalSum != sumSerial )
     {
         fprintf( stderr,"parallelReductionSumTaskSet.m_FinalSum: %" PRIu64 " != sumSerial: %" PRIu64 "\n", parallelReductionSumTaskSet.m_FinalSum, sumSerial );
         return -1;

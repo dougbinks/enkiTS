@@ -96,6 +96,22 @@ struct ParallelReductionSumTaskSet : ITaskSet
 };
 
 
+// Example thread function
+// May want to use threads for blocking IO, during which enkiTS task threads can do work
+void threadFunction( uint32_t setSize_, bool* pbRegistered_, uint64_t* pSumParallel_ )
+{
+    *pbRegistered_ = g_TS.RegisterExternalTaskThread();
+    if( *pbRegistered_ )
+    {
+        ParallelReductionSumTaskSet task( setSize_ );
+        g_TS.AddTaskSetToPipe( &task );
+        g_TS.WaitforTask( &task);
+        g_TS.DeRegisterExternalTaskThread();
+        *pSumParallel_ = task.m_FinalSum;
+    }
+}
+
+
 int main(int argc, const char * argv[])
 {
     uint32_t setSize = 20 * 1024 * 1024;
@@ -109,7 +125,7 @@ int main(int argc, const char * argv[])
     sumSerial = serialTask.m_pPartialSums[0].count;
 
 
-    // now measure parallel
+    // now test parallel
     g_TS.Initialize();
     ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
     g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
@@ -120,6 +136,26 @@ int main(int argc, const char * argv[])
         return -1;
     }
 
-    fprintf( stdout, "All tests succeeded" );
+    // now test parallel with external threads
+    enki::TaskSchedulerConfig config;
+    config.numExternalTaskThreads = 1;
+    bool bRegistered = false;
+    uint64_t sumParallel = 0;
+    g_TS.Initialize( config );
+
+    std::thread threads( threadFunction, setSize, &bRegistered, &sumParallel );
+    threads.join();
+    if( !bRegistered )
+    {
+        fprintf( stderr,"External thread did not register\n" );
+        return -2;
+    }
+    if( sumParallel != sumSerial )
+    {
+        fprintf( stderr,"External thread sum: %" PRIu64 " != sumSerial: %" PRIu64 "\n", sumParallel, sumSerial );
+        return -3;
+    }
+
+    fprintf( stdout, "All tests succeeded\n" );
     return 0;
 }

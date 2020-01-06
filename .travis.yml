@@ -16,13 +16,17 @@ addons:
         packages:
             - cmake
 
-script:
-    - mkdir build
-    - cd build
-    - cmake ..
-    - cmake --build .
+stages:
+    - compile
+    - test
 
 jobs:
     include:
+     - stage: compile
+     - script:
+        - mkdir build
+        - cd build
+        - cmake ..
+        - cmake --build .
      - stage: test
-	   script: ./TestAll
+       script: ./TestAll

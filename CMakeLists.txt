@@ -101,6 +101,9 @@ if( ENKITS_BUILD_EXAMPLES )
     add_executable( CustomAllocator example/CustomAllocator.cpp )
     target_link_libraries(CustomAllocator enkiTS )
 
+    add_executable( TestAll example/TestAll.cpp )
+    target_link_libraries(TestAll enkiTS )
+
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )
     target_link_libraries(ParallelSum_c enkiTS )

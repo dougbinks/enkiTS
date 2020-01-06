@@ -21,3 +21,8 @@ script:
     - cd build
     - cmake ..
     - cmake --build .
+
+jobs:
+    include:
+     - stage: test
+	   script: ./TestAll

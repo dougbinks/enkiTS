@@ -914,8 +914,8 @@ void TaskScheduler::Initialize( uint32_t numThreadsTotal_ )
 
 ENKITS_API void enki::TaskScheduler::Initialize( TaskSchedulerConfig config_ )
 {
-    m_Config = config_;
     StopThreads( true ); // Stops threads, waiting for them.
+    m_Config = config_;
     StartThreads();
 }
 

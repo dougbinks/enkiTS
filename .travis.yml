@@ -5,14 +5,18 @@ dist: trusty
 matrix:
   include:
    - os: linux
+     dist: xenial
      arch: amd64
      name: "Linux x64"
    - os: linux
+     dist: xenial
      name: "Linux ARM64"
      arch: arm64
    - os: osx
      name: "OSX x64"
      arch: amd64
+   - os: windows
+     name: "Windows"
 
 addons:
     apt:

@@ -111,6 +111,18 @@ void threadFunction( uint32_t setSize_, bool* pbRegistered_, uint64_t* pSumParal
     }
 }
 
+struct PinnedTask : IPinnedTask
+{
+    PinnedTask()
+        : IPinnedTask( enki::GetNumHardwareThreads() - 1 ) // set pinned thread to 0
+    {}
+    virtual void Execute()
+    {
+        threadRunOn = g_TS.GetThreadNum();
+    }
+    uint32_t threadRunOn = 0;
+};
+
 
 int main(int argc, const char * argv[])
 {
@@ -154,6 +166,16 @@ int main(int argc, const char * argv[])
     {
         fprintf( stderr,"External thread sum: %" PRIu64 " != sumSerial: %" PRIu64 "\n", sumParallel, sumSerial );
         return -3;
+    }
+
+    g_TS.Initialize();
+    PinnedTask pinnedTask;
+    g_TS.AddPinnedTask( &pinnedTask );
+    g_TS.WaitforTask( &pinnedTask );
+    if( pinnedTask.threadRunOn != pinnedTask.threadNum )
+    {
+        fprintf( stderr,"Pinned task ran on thread %u rather than thread %u\n", pinnedTask.threadRunOn, pinnedTask.threadNum );
+        return -4;
     }
 
     fprintf( stdout, "All tests succeeded\n" );

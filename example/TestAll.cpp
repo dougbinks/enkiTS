@@ -39,8 +39,9 @@ uint32_t      g_numTestsSucceeded = 0;
 
 void RunTestFunction(  const char* pTestFuncName_, std::function<bool ()> TestFunc )
 {
-    bool bSuccess = TestFunc();
     ++g_numTestsRun;
+    fprintf(stdout, "\nRunning: Test %2u: %s...\n", g_numTestsRun, pTestFuncName_ );
+    bool bSuccess = TestFunc();
     if( bSuccess )
     {
         fprintf(stdout, "SUCCESS: Test %2u: %s.\n", g_numTestsRun, pTestFuncName_ );
@@ -112,9 +113,6 @@ struct ParallelReductionSumTaskSet : ITaskSet
     }
 };
 
-
-// Example thread function
-// May want to use threads for blocking IO, during which enkiTS task threads can do work
 void threadFunction( uint32_t setSize_, bool* pbRegistered_, uint64_t* pSumParallel_ )
 {
     *pbRegistered_ = g_TS.RegisterExternalTaskThread();
@@ -141,6 +139,12 @@ struct PinnedTask : IPinnedTask
 };
 
 
+struct TestPriorities : enki::ITaskSet
+{
+    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
+    {
+    }
+};
 
 int main(int argc, const char * argv[])
 {
@@ -213,6 +217,33 @@ int main(int argc, const char * argv[])
             return pinnedTask.threadRunOn == pinnedTask.threadNum;
         } );
 
+    RunTestFunction(
+        "Priorities",
+        [&]()->bool
+        {
+            // check priorities run in order by forcing single threaded execution
+            enki::TaskSchedulerConfig config = baseConfig;
+            config.numTaskThreadsToCreate = 0;
+            g_TS.Initialize( config );
+            TestPriorities priorityTaskLow;
+            priorityTaskLow.m_Priority = enki::TASK_PRIORITY_LOW;
+            TestPriorities priorityTaskHigh;
+            priorityTaskHigh.m_Priority = enki::TASK_PRIORITY_HIGH;
+            g_TS.AddTaskSetToPipe( &priorityTaskLow );
+            g_TS.AddTaskSetToPipe( &priorityTaskHigh );
+            g_TS.WaitforTask( &priorityTaskHigh, priorityTaskHigh.m_Priority );
+
+            // WaitforTask should not have been run any task below high priority,
+            // even though low priority task was added first
+            if( priorityTaskLow.GetIsComplete() )
+            {
+                return false;
+            }
+
+            g_TS.WaitforTask( &priorityTaskLow );
+
+            return true;
+        } );
 
     fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
     if( g_numTestsRun == g_numTestsSucceeded )

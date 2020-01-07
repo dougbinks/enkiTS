@@ -34,6 +34,23 @@ using namespace enki;
 
 
 TaskScheduler g_TS;
+uint32_t      g_numTestsRun       = 0;
+uint32_t      g_numTestsSucceeded = 0;
+
+void RunTestFunction(  const char* pTestFuncName_, std::function<bool ()> TestFunc )
+{
+    bool bSuccess = TestFunc();
+    ++g_numTestsRun;
+    if( bSuccess )
+    {
+        fprintf(stdout, "SUCCESS: Test %2u: %s.\n", g_numTestsRun, pTestFuncName_ );
+        ++g_numTestsSucceeded;
+    }
+    else
+    {
+        fprintf(stderr, "FAILURE: Test %2u: %s.\n", g_numTestsRun, pTestFuncName_ );
+    }
+}
 
 struct ParallelSumTaskSet : ITaskSet
 {
@@ -124,60 +141,80 @@ struct PinnedTask : IPinnedTask
 };
 
 
+
 int main(int argc, const char * argv[])
 {
+    fprintf( stdout,"\n---Running Tests----\n" );
+
     uint32_t setSize = 20 * 1024 * 1024;
     uint64_t sumSerial;
 
-    // evaluate serial
+    // evaluate serial for test comparison with parallel runs
     ParallelSumTaskSet serialTask( setSize );
     serialTask.Init( 1 );
     TaskSetPartition range = { 0, setSize };
     serialTask.ExecuteRange( range, 0 );
     sumSerial = serialTask.m_pPartialSums[0].count;
 
+    RunTestFunction(
+        "Parallel Reduction Sum",
+        [&]()->bool
+        {
+            g_TS.Initialize();
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
+            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+            g_TS.WaitforTask( &parallelReductionSumTaskSet );
+            fprintf( stdout,"\tParallelReductionSum: %" PRIu64 ", sumSerial: %" PRIu64 "\n", parallelReductionSumTaskSet.m_FinalSum, sumSerial );
+            return parallelReductionSumTaskSet.m_FinalSum == sumSerial;
+        } );
 
-    // now test parallel
-    g_TS.Initialize();
-    ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
-    g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
-    g_TS.WaitforTask( &parallelReductionSumTaskSet );
-    if( parallelReductionSumTaskSet.m_FinalSum != sumSerial )
+    RunTestFunction(
+        "External Thread",
+        [&]()->bool
+        {
+            enki::TaskSchedulerConfig config;
+            config.numExternalTaskThreads = 1;
+            bool bRegistered = false;
+            uint64_t sumParallel = 0;
+            g_TS.Initialize( config );
+
+            std::thread threads( threadFunction, setSize, &bRegistered, &sumParallel );
+            threads.join();
+            fprintf( stdout,"\tExternal thread sum: %" PRIu64 ", sumSerial: %" PRIu64 "\n", sumParallel, sumSerial );
+            if( !bRegistered )
+            {
+                fprintf( stderr,"\tExternal thread did not register\n" );
+                return false;
+            }
+            if( sumParallel != sumSerial )
+            {
+                return false;
+            }
+            return true;
+        } );
+
+    RunTestFunction(
+        "Pinned Task",
+        [&]()->bool
+        {
+            g_TS.Initialize();
+            PinnedTask pinnedTask;
+            g_TS.AddPinnedTask( &pinnedTask );
+            g_TS.WaitforTask( &pinnedTask );
+            fprintf( stdout,"\tPinned task ran on thread %u, requested thread %u\n", pinnedTask.threadRunOn, pinnedTask.threadNum );
+            return pinnedTask.threadRunOn == pinnedTask.threadNum;
+        } );
+
+
+    fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
+    if( g_numTestsRun == g_numTestsSucceeded )
     {
-        fprintf( stderr,"parallelReductionSumTaskSet.m_FinalSum: %" PRIu64 " != sumSerial: %" PRIu64 "\n", parallelReductionSumTaskSet.m_FinalSum, sumSerial );
-        return -1;
+        fprintf( stdout, "All tests SUCCEEDED\n" );
     }
-
-    // now test parallel with external threads
-    enki::TaskSchedulerConfig config;
-    config.numExternalTaskThreads = 1;
-    bool bRegistered = false;
-    uint64_t sumParallel = 0;
-    g_TS.Initialize( config );
-
-    std::thread threads( threadFunction, setSize, &bRegistered, &sumParallel );
-    threads.join();
-    if( !bRegistered )
+    else
     {
-        fprintf( stderr,"External thread did not register\n" );
-        return -2;
+        fprintf( stderr, "%u tests FAILED\n", g_numTestsRun - g_numTestsSucceeded );
+        return 1;
     }
-    if( sumParallel != sumSerial )
-    {
-        fprintf( stderr,"External thread sum: %" PRIu64 " != sumSerial: %" PRIu64 "\n", sumParallel, sumSerial );
-        return -3;
-    }
-
-    g_TS.Initialize();
-    PinnedTask pinnedTask;
-    g_TS.AddPinnedTask( &pinnedTask );
-    g_TS.WaitforTask( &pinnedTask );
-    if( pinnedTask.threadRunOn != pinnedTask.threadNum )
-    {
-        fprintf( stderr,"Pinned task ran on thread %u rather than thread %u\n", pinnedTask.threadRunOn, pinnedTask.threadNum );
-        return -4;
-    }
-
-    fprintf( stdout, "All tests succeeded\n" );
     return 0;
 }

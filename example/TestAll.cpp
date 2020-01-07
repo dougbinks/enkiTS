@@ -146,6 +146,14 @@ int main(int argc, const char * argv[])
 {
     fprintf( stdout,"\n---Running Tests----\n" );
 
+    enki::TaskSchedulerConfig baseConfig;
+    fprintf( stdout,"System has %u hardware threads reported\n", baseConfig.numTaskThreadsToCreate + 1 );
+    if( 0 == baseConfig.numTaskThreadsToCreate )
+    {
+        baseConfig.numTaskThreadsToCreate = 1;
+        fprintf( stdout,"As only one hardware thread forcing enkiTS to use 2 threads\n");
+    }
+
     uint32_t setSize = 20 * 1024 * 1024;
     uint64_t sumSerial;
 
@@ -160,7 +168,7 @@ int main(int argc, const char * argv[])
         "Parallel Reduction Sum",
         [&]()->bool
         {
-            g_TS.Initialize();
+            g_TS.Initialize( baseConfig );
             ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
             g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
@@ -172,7 +180,7 @@ int main(int argc, const char * argv[])
         "External Thread",
         [&]()->bool
         {
-            enki::TaskSchedulerConfig config;
+            enki::TaskSchedulerConfig config = baseConfig;
             config.numExternalTaskThreads = 1;
             bool bRegistered = false;
             uint64_t sumParallel = 0;
@@ -197,7 +205,7 @@ int main(int argc, const char * argv[])
         "Pinned Task",
         [&]()->bool
         {
-            g_TS.Initialize();
+            g_TS.Initialize( baseConfig );
             PinnedTask pinnedTask;
             g_TS.AddPinnedTask( &pinnedTask );
             g_TS.WaitforTask( &pinnedTask );

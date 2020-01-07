@@ -146,6 +146,27 @@ struct TestPriorities : enki::ITaskSet
     }
 };
 
+
+struct CustomAllocData
+{
+    const char* domainName;
+    uint64_t totalAllocations;
+};
+
+void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
+{
+    CustomAllocData* data = (CustomAllocData*)userData_;
+    data->totalAllocations += size_;
+    return DefaultAllocFunc( align_, size_, userData_, file_, line_ );
+};
+
+void  CustomFreeFunc(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
+{
+    CustomAllocData* data = (CustomAllocData*)userData_;
+    data->totalAllocations -= size_;
+    DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
+};
+
 int main(int argc, const char * argv[])
 {
     fprintf( stdout,"\n---Running Tests----\n" );
@@ -244,6 +265,36 @@ int main(int argc, const char * argv[])
 
             return true;
         } );
+
+    RunTestFunction(
+        "Custom Allocator",
+        [&]()->bool
+        {
+            enki::TaskSchedulerConfig config = baseConfig;
+            config.customAllocator.alloc = CustomAllocFunc;
+            config.customAllocator.free  = CustomFreeFunc;
+            CustomAllocData customAllocdata{ "enkITS", 0 };
+            config.customAllocator.userData = &customAllocdata;
+
+            g_TS.Initialize( config );
+            uint64_t allocsAfterInit = customAllocdata.totalAllocations;
+            fprintf( stdout,"\tenkiTS allocated bytes after init: %" PRIu64 "\n", customAllocdata.totalAllocations );
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
+            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+            g_TS.WaitforTask( &parallelReductionSumTaskSet );
+            fprintf( stdout,"\tenkiTS allocated bytes after running tasks: %" PRIu64 "\n", customAllocdata.totalAllocations );
+            if( customAllocdata.totalAllocations != allocsAfterInit )
+            {
+                fprintf( stderr,"\tERROR: enkiTS allocated bytes during scheduling\n" );
+                return false;
+            }
+            g_TS.WaitforAllAndShutdown();
+            fprintf( stdout,"\tenkiTS allocated bytes after shutdown: %" PRIu64 "\n", customAllocdata.totalAllocations );
+            return customAllocdata.totalAllocations == 0;
+        } );
+
+
+
 
     fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
     if( g_numTestsRun == g_numTestsSucceeded )

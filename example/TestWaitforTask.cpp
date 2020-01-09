@@ -93,8 +93,6 @@ struct WaitingTask : enki::ITaskSet
             ++g_WaitCount;
             g_TS.WaitforTask( pWaitingTasks[t] );
         }
-        printf( "\tIteration %d: WaitingTask depth %d complete: thread: %d\n\t\tWaits: %d blocking waits: %d\n",
-            g_Iteration, depth, threadnum_, g_WaitCount.load(), g_WaitForTaskCompletion.load() );
     }
 
     virtual ~WaitingTask()
@@ -123,6 +121,8 @@ int main(int argc, const char * argv[])
     g_TS.Initialize( config );
     for( g_Iteration = 0; g_Iteration < 1000; ++g_Iteration )
     {
+        printf( "\tIteration %d: Waits: %d blocking waits: %d\n",
+            g_Iteration, g_WaitCount.load(), g_WaitForTaskCompletion.load() );
         WaitingTask taskRoot;
         g_TS.AddTaskSetToPipe( &taskRoot );
         g_TS.WaitforAll();

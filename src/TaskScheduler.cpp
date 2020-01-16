@@ -177,7 +177,7 @@ ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userD
 #endif
 };
 
-ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
+bool TaskScheduler::RegisterExternalTaskThread()
 {
     bool bRegistered = false;
     while( !bRegistered && m_NumExternalTaskThreadsRegistered < (int32_t)m_Config.numExternalTaskThreads  )
@@ -199,7 +199,7 @@ ENKITS_API bool enki::TaskScheduler::RegisterExternalTaskThread()
     return bRegistered;
 }
 
-ENKITS_API void enki::TaskScheduler::DeRegisterExternalTaskThread()
+void TaskScheduler::DeRegisterExternalTaskThread()
 {
     assert( gtl_threadNum );
     --m_NumExternalTaskThreadsRegistered;
@@ -207,7 +207,7 @@ ENKITS_API void enki::TaskScheduler::DeRegisterExternalTaskThread()
     gtl_threadNum = 0;
 }
 
-ENKITS_API uint32_t enki::TaskScheduler::GetNumRegisteredExternalTaskThreads()
+uint32_t TaskScheduler::GetNumRegisteredExternalTaskThreads()
 {
     return m_NumExternalTaskThreadsRegistered;
 }
@@ -295,7 +295,7 @@ void TaskScheduler::StartThreads()
     // to runtime change it
     if( 1 == m_NumThreads )
     {
-        m_NumPartitions = 1;
+        m_NumPartitions        = 1;
         m_NumInitialPartitions = 1;
     }
     else
@@ -607,7 +607,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
     WakeThreadsForNewTasks();
 }
 
-ENKITS_API TaskSchedulerConfig enki::TaskScheduler::GetConfig() const
+TaskSchedulerConfig TaskScheduler::GetConfig() const
 {
     return m_Config;
 }
@@ -912,7 +912,7 @@ void TaskScheduler::Initialize( uint32_t numThreadsTotal_ )
     m_Config.numExternalTaskThreads = 0;
     StartThreads();}
 
-ENKITS_API void enki::TaskScheduler::Initialize( TaskSchedulerConfig config_ )
+void TaskScheduler::Initialize( TaskSchedulerConfig config_ )
 {
     StopThreads( true ); // Stops threads, waiting for them.
     m_Config = config_;

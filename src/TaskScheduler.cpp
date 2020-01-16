@@ -78,6 +78,8 @@ namespace enki
 
     enum ThreadState : int32_t
     {
+        THREAD_STATE_NONE,                  // shouldn't get this value
+        THREAD_STATE_NOT_LAUNCHED,          // for debug purposes - indicates enki task thread not yet launched
         THREAD_STATE_RUNNING,
         THREAD_STATE_WAIT_TASK_COMPLETION,
         THREAD_STATE_EXTERNAL_REGISTERED,
@@ -94,7 +96,7 @@ namespace enki
 
     struct alignas(enki::gc_CacheLineSize) ThreadDataStore 
     {
-        std::atomic<ThreadState> threadState;
+        std::atomic<ThreadState> threadState = { THREAD_STATE_NONE };
         char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) ];
     };
     static_assert( sizeof( ThreadDataStore ) >= enki::gc_CacheLineSize, "ThreadDataStore may exhibit false sharing" );
@@ -202,9 +204,14 @@ bool TaskScheduler::RegisterExternalTaskThread()
 void TaskScheduler::DeRegisterExternalTaskThread()
 {
     assert( gtl_threadNum );
-    --m_NumExternalTaskThreadsRegistered;
-    m_pThreadDataStore[gtl_threadNum].threadState.store( THREAD_STATE_EXTERNAL_UNREGISTERED, std::memory_order_release );
-    gtl_threadNum = 0;
+    ThreadState threadState = m_pThreadDataStore[gtl_threadNum].threadState.load( std::memory_order_acquire );
+    assert( threadState == THREAD_STATE_EXTERNAL_REGISTERED );
+    if( threadState == THREAD_STATE_EXTERNAL_REGISTERED )
+    {
+        --m_NumExternalTaskThreadsRegistered;
+        m_pThreadDataStore[gtl_threadNum].threadState.store( THREAD_STATE_EXTERNAL_UNREGISTERED, std::memory_order_release );
+        gtl_threadNum = 0;
+    }
 }
 
 uint32_t TaskScheduler::GetNumRegisteredExternalTaskThreads()
@@ -219,6 +226,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     TaskScheduler*  pTS = args_.pTaskScheduler;
     gtl_threadNum       = threadNum;
 
+    pTS->m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_RUNNING, std::memory_order_release );
     SafeCallback( pTS->m_Config.profilerCallbacks.threadStart, threadNum );
 
     uint32_t spinCount = 0;
@@ -246,8 +254,8 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     }
 
     pTS->m_NumInternalTaskThreadsRunning.fetch_sub( 1, std::memory_order_release );
-    SafeCallback( pTS->m_Config.profilerCallbacks.threadStop, threadNum );
     pTS->m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_STOPPED, std::memory_order_release );
+    SafeCallback( pTS->m_Config.profilerCallbacks.threadStop, threadNum );
     return;
 
 }
@@ -282,13 +290,14 @@ void TaskScheduler::StartThreads()
     }
     for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
     {
-        m_pThreadDataStore[thread].threadState   = THREAD_STATE_RUNNING;
+        m_pThreadDataStore[thread].threadState   = THREAD_STATE_NOT_LAUNCHED;
+    }
+    // only launch threads once all thread states are set
+    for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
+    {
         m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;
     }
-
-    // Thread 0 is intialize thread and registered
-    m_pThreadDataStore[0].threadState    = THREAD_STATE_EXTERNAL_REGISTERED;
 
     // ensure we have sufficient tasks to equally fill either all threads including main
     // or just the threads we've launched, this is outside the firstinit as we want to be able
@@ -555,6 +564,8 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
 
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
             
+        assert( state != THREAD_STATE_NONE );
+
         if( state == THREAD_STATE_WAIT_NEW_TASKS || state == THREAD_STATE_WAIT_TASK_COMPLETION )
         {
             // thread is suspended, check if it has pinned tasks

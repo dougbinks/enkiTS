@@ -89,8 +89,10 @@ struct enkiTaskSchedulerConfig
     uint32_t              numTaskThreadsToCreate;
 
     // numExternalTaskThreads - Advanced use. Number of external threads which need to use TaskScheduler API.
-    // See enkiRegisterExternalTaskThread() for usage.
-    // Defaults to 0, the thread used to initialize the TaskScheduler. 
+    // See TaskScheduler::RegisterExternalTaskThread() for usage.
+    // Defaults to 0. The thread used to initialize the TaskScheduler can also use the TaskScheduler API.
+    // Thus there are (numTaskThreadsToCreate + numExternalTaskThreads + 1) able to use the API, with this
+    // defaulting to the number of harware threads available to the system.
     uint32_t              numExternalTaskThreads;
 
     struct enkiProfilerCallbacks profilerCallbacks;

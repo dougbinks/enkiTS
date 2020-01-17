@@ -777,23 +777,31 @@ void TaskScheduler::WaitforAll()
         {
             // find a running thread and add a dummy wait task
             int32_t countThreadsToCheck = m_NumThreads - 1;
+            bool bHaveThreadToWaitOn = false;
             do
             {
                 --countThreadsToCheck;
                 dummyWaitTask.threadNum = ( dummyWaitTask.threadNum + 1 ) % m_NumThreads;
-                if( dummyWaitTask.threadNum == threadNum )
+
+                // We can only add a pinned task to wait on if we find an enki Task Thread which isn't this thread.
+                // Otherwise we have to busy wait.
+                if( dummyWaitTask.threadNum != threadNum && dummyWaitTask.threadNum > m_Config.numExternalTaskThreads )
                 {
-                    dummyWaitTask.threadNum = ( dummyWaitTask.threadNum + 1 ) % m_NumThreads;
-                }
-                ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
-                if( state == THREAD_STATE_RUNNING || state == THREAD_STATE_WAIT_TASK_COMPLETION )
-                {
-                    break;
+                    ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
+                    if( state == THREAD_STATE_RUNNING || state == THREAD_STATE_WAIT_TASK_COMPLETION )
+                    {
+                        bHaveThreadToWaitOn = true;
+                        break;
+                    }
                 }
             } while( countThreadsToCheck );
-            assert( dummyWaitTask.threadNum != threadNum );
-            AddPinnedTask( &dummyWaitTask );
-            WaitforTask( &dummyWaitTask );
+
+            if( bHaveThreadToWaitOn )
+            {
+                assert( dummyWaitTask.threadNum != threadNum );
+                AddPinnedTask( &dummyWaitTask );
+                WaitforTask( &dummyWaitTask );
+            }
             spinCount = 0;
         }
         else

@@ -819,6 +819,10 @@ void TaskScheduler::WaitforAll()
             {
                 switch( m_pThreadDataStore[thread].threadState.load( std::memory_order_acquire ) )
                 {
+                case THREAD_STATE_NONE:
+                    assert(false);
+                    break;
+                case THREAD_STATE_NOT_LAUNCHED:
                 case THREAD_STATE_RUNNING:
                 case THREAD_STATE_WAIT_TASK_COMPLETION:
                     ++numOtherThreadsRunning;

@@ -982,8 +982,8 @@ namespace enki
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         DWORD retval = WaitForSingleObject( semaphoreid.sem, INFINITE );
-
         assert( retval != WAIT_FAILED );
+        (void)retval; // only needed for assert
     }
 
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )

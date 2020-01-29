@@ -205,6 +205,7 @@ void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSe
 
 int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
+    (void)pETS_;
     assert( pTaskSet_ );
     return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
 }

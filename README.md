@@ -40,7 +40,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. `mkdir build`
 1. `cd build`
 1. `cmake ..`
-1. either run `make` or open `enkiTS.sln`
+1. either run `make all` or for Visual Studio open `enkiTS.sln`
 
 ## Project Features
 

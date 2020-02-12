@@ -114,14 +114,12 @@ int main(int argc, const char * argv[])
     double* avTimeTakenMS = new double[ DATA_POINTS ];
     double* avSerialTimeTakenMS = new double[ DATA_POINTS ];
 
+        
+    g_TS.Initialize();
     for( uint32_t dataPoint = 0; dataPoint < DATA_POINTS; ++dataPoint )
     {
-        
-        g_TS.Initialize();
         double avTimeMS = 0.0;
-
         uint32_t setSize = GetSetSizeForDataPoint( dataPoint );
-
 
         double avSerialTimeMS = 0.0f;
         uint64_t sumSerial;

@@ -27,7 +27,7 @@ struct ExampleTask : enki::ITaskSet
 {
     ExampleTask( uint32_t size_ ) { m_SetSize = size_; }
 
-    virtual void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         if( m_Priority == enki::TASK_PRIORITY_LOW )
         {

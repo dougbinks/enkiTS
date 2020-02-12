@@ -27,7 +27,7 @@ TaskScheduler g_TS;
 
 struct ParallelTaskSet : ITaskSet
 {
-    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         printf(" This could run on any thread, currently thread %d\n", threadnum_);
     }

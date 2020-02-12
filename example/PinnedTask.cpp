@@ -30,7 +30,7 @@ struct PinnedTaskHelloWorld : IPinnedTask
     PinnedTaskHelloWorld()
         : IPinnedTask(0) // set pinned thread to 0
     {}
-    virtual void Execute()
+    void Execute() override
     { 
         printf("This will run on the main thread\n");
     }
@@ -39,7 +39,7 @@ struct PinnedTaskHelloWorld : IPinnedTask
 struct ParallelTaskSet : ITaskSet
 {
     PinnedTaskHelloWorld pinnedTask;
-    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         g_TS.AddPinnedTask( &pinnedTask );
 

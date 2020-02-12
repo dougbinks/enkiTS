@@ -48,7 +48,7 @@ struct ConsumeTask : ITaskSet
     static Count*   pCount;
     static uint32_t numCount;
 
-    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         ++pCount[threadnum_].count;
     }
@@ -74,7 +74,7 @@ struct CreateTasks : ITaskSet
     {
         m_SetSize = numTasks;
     }
-    virtual void    ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         for( uint32_t i=range_.start; i <range_.end; ++i )
         {

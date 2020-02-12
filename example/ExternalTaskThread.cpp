@@ -31,7 +31,7 @@ struct ParallelTaskSet : ITaskSet
 {
     ParallelTaskSet() { m_SetSize = 100; }
 
-    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
         printf(" Run %d: This could run on any thread, currently thread %d\n", g_Run.load(), threadnum_);
 

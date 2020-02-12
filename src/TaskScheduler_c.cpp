@@ -56,7 +56,7 @@ struct enkiTaskSet : ITaskSet
 {
     enkiTaskSet( TaskScheduler* pETS_, enkiTaskExecuteRange taskFun_ ) : pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
-    virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override
     {
         taskFun( range_.start, range_.end, threadnum_, pArgs );
     }
@@ -71,7 +71,7 @@ struct enkiPinnedTask : IPinnedTask
     enkiPinnedTask( TaskScheduler* pETS_, enkiPinnedTaskExecute taskFun_, uint32_t threadNum_ )
         : IPinnedTask( threadNum_ ), pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
 
-    virtual void Execute()
+    void Execute() override
     {
         taskFun( pArgs );
     }

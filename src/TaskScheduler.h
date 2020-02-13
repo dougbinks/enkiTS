@@ -92,23 +92,41 @@ namespace enki
         TASK_PRIORITY_NUM
     };
 
+    class ICompletable;
+    class Dependency
+    {
+    public:
+        Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+    private:
+        friend class                   TaskScheduler;
+        const ICompletable* pDependencyTask   = NULL;
+        ICompletable* pContinuationTask       = NULL;
+        Dependency*   pNext                   = NULL;
+    };
+
     // ICompletable is a base class used to check for completion.
     // Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
     class ICompletable
     {
     public:
-        ICompletable() : m_Priority(TASK_PRIORITY_HIGH), m_RunningCount(0), m_WaitingForTaskCount(0) {}
         bool                   GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
 
+        // AddTaskToScheduler primarily for Dependencies to be able launch a continutation
+        // without knowing type.
+        virtual void           AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) = 0;
+
         virtual                ~ICompletable() {}
 
-        TaskPriority            m_Priority;
+        TaskPriority                   m_Priority            = TASK_PRIORITY_HIGH;
     private:
         friend class                   TaskScheduler;
-        std::atomic<int32_t>           m_RunningCount;
-        mutable std::atomic<int32_t>   m_WaitingForTaskCount;
+        friend class                   Dependency;
+        std::atomic<int32_t>           m_RunningCount        = 0;
+        std::atomic<int32_t>           m_DependencyCount     = 0;
+        mutable std::atomic<int32_t>   m_WaitingForTaskCount = 0;
+        mutable Dependency*            m_pDependents         = NULL;
     };
 
     // Subclass ITaskSet to create tasks.
@@ -133,6 +151,9 @@ namespace enki
             , m_MinRange( minRange_ )
             , m_RangeToRun(minRange_)
         {}
+
+        void          AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) override final;
+
 
         // Execute range should be overloaded to process tasks. It will be called with a
         // range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
@@ -168,11 +189,10 @@ namespace enki
         IPinnedTask()                      : threadNum(0), pNext(NULL) {}  // default is to run a task on main thread
         IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_), pNext(NULL) {}  // default is to run a task on main thread
 
-
+        void          AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) override final;
         // IPinnedTask needs to be non abstract for intrusive list functionality.
         // Should never be called as should be overridden.
         virtual void Execute() { assert(false); }
-
 
         uint32_t                  threadNum; // thread to run this pinned task on
         std::atomic<IPinnedTask*> pNext;        // Do not use. For intrusive list only.
@@ -343,6 +363,7 @@ namespace enki
         void        RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
         bool        TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
         bool        TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
+        void        TaskComplete( ICompletable* pTask_, bool bWakeThreads_ );
         void        StartThreads();
         void        StopThreads( bool bWait_ );
         void        SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );

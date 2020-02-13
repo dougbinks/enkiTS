@@ -48,7 +48,8 @@ namespace enki
     static const uint32_t gc_SpinCount               = 10;
     static const uint32_t gc_SpinBackOffMulitplier   = 100;
     static const uint32_t gc_MaxNumInitialPartitions = 8;
-    static const uint32_t gc_CacheLineSize           = 64; // awaiting std::hardware_constructive_interference_size
+    static const uint32_t gc_CacheLineSize           = 64;
+    // awaiting std::hardware_constructive_interference_size
 };
 
 // thread_local not well supported yet by C++11 compilers.
@@ -415,10 +416,9 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             SplitAndAddTask( threadNum_, subTask, subTask.pTask->m_RangeToRun );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum_ );
             int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
-            if( 1 == prevCount  &&
-                taskToRun.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
+            if( 1 == prevCount )
             {
-                WakeThreadsForTaskCompletion();
+                TaskComplete( taskToRun.pTask, true );
             }
         }
         else
@@ -426,16 +426,35 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             // the task has already been divided up by AddTaskSetToPipe, so just run it
             subTask.pTask->ExecuteRange( subTask.partition, threadNum_ );
             int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
-            if( 1 == prevCount && 
-                subTask.pTask->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
+            if( 1 == prevCount )
             {
-                WakeThreadsForTaskCompletion();
+                TaskComplete( subTask.pTask, true );
             }
         }
     }
 
     return bHaveTask;
 
+}
+
+void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_ )
+{
+    assert( pTask_->GetIsComplete() );
+    Dependency* pDependent = pTask_->m_pDependents;
+    while( pDependent )
+    {
+        pDependent->pContinuationTask->m_RunningCount.store( 0, std::memory_order_relaxed );
+        int prevDeps = pDependent->pContinuationTask->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
+        if( 1 == prevDeps )
+        {
+            pDependent->pContinuationTask->AddTaskToScheduler( this );
+        }
+        pDependent = pDependent->pNext;
+    }
+    if( bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
+    {
+        WakeThreadsForTaskCompletion();
+    }
 }
 
 bool TaskScheduler::HaveTasks(  uint32_t threadNum_ )
@@ -612,7 +631,11 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             ++numRun;
         }
     }
-    subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
+    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
+    if( numRun + 1 == prevCount )
+    {
+        TaskComplete( subTask_.pTask, false );
+    }
 
     // WakeThreadsForNewTasks also calls WakeThreadsForTaskCompletion() so do not need to do so above
     WakeThreadsForNewTasks();
@@ -631,6 +654,16 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
     ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_RUNNING, std::memory_order_relaxed );
     pTaskSet_->m_RunningCount.store( 0, std::memory_order_relaxed );
+
+    // go through any dependencies and set thier running count so they show as not complete
+    // and increment depedency count
+    Dependency* pDependent = pTaskSet_->m_pDependents;
+    while( pDependent )
+    {
+        pDependent->pContinuationTask->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
+        pDependent->pContinuationTask->m_RunningCount.store( 1, std::memory_order_relaxed );
+        pDependent = pDependent->pNext;
+    }
     std::atomic_thread_fence(std::memory_order_acquire);
 
 
@@ -683,6 +716,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         {
             pPinnedTaskSet->Execute();
             pPinnedTaskSet->m_RunningCount = 0;
+            TaskComplete( pPinnedTaskSet, false );
             if( pPinnedTaskSet->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
             {
                 WakeThreadsForTaskCompletion();
@@ -1078,7 +1112,6 @@ namespace enki
 }
 #endif
 
-
 semaphoreid_t* TaskScheduler::SemaphoreNew()
 {
     semaphoreid_t* pSemaphore = New<semaphoreid_t>( ENKI_FILE_AND_LINE );
@@ -1095,4 +1128,24 @@ void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
 void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
 {
     m_Config.customAllocator = customAllocator_;
+}
+
+void ITaskSet::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+{
+    pTaskScheduler_->AddTaskSetToPipe( this );
+}
+
+void IPinnedTask::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+{
+    pTaskScheduler_->AddPinnedTask( this );
+}
+
+Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ ) 
+    : pDependencyTask( pDependencyTask_ )
+    , pContinuationTask( pContinuationTask_ )
+    , pNext( pDependencyTask->m_pDependents )
+{
+    assert( pDependencyTask->GetIsComplete() );
+    assert( pContinuationTask->GetIsComplete() );
+    pDependencyTask->m_pDependents = this;
 }

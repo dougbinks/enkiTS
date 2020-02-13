@@ -50,13 +50,13 @@ struct TaskB : ITaskSet
     }
 };
 
-struct TaskC : ITaskSet
+struct TaskC : IPinnedTask
 {
     Dependency          m_Dependencies[4];
 
-    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
+    void Execute() override
     {
-        printf("C on thread %u\n", threadnum);
+        printf("C Pinned task on thread %u, should be %u\n", g_TS.GetThreadNum(), threadNum );
     }
 };
 
@@ -95,7 +95,7 @@ int main(int argc, const char * argv[])
         task.m_Dependency.SetDependency(&taskA,&task);
     }
 
-    TaskC taskC;
+    TaskC taskC; // Task C is a pinned task, defaults to running on thread 0 (this thread)
     int i = 0;
     for( auto& task : taskBs )
     {

@@ -129,9 +129,9 @@ namespace enki
     private:
         friend class                   TaskScheduler;
         friend class                   Dependency;
-        std::atomic<int32_t>           m_RunningCount        = 0;
-        std::atomic<int32_t>           m_DependencyCount     = 0;
-        mutable std::atomic<int32_t>   m_WaitingForTaskCount = 0;
+        std::atomic<int32_t>           m_RunningCount        = {0};
+        std::atomic<int32_t>           m_DependencyCount     = {0};
+        mutable std::atomic<int32_t>   m_WaitingForTaskCount = {0};
         mutable Dependency*            m_pDependents         = NULL;
     };
 

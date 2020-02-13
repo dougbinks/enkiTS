@@ -443,10 +443,11 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_ )
     Dependency* pDependent = pTask_->m_pDependents;
     while( pDependent )
     {
-        pDependent->pContinuationTask->m_RunningCount.store( 0, std::memory_order_relaxed );
+        pDependent->bInitialized = false;
         int prevDeps = pDependent->pContinuationTask->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
         if( 1 == prevDeps )
         {
+            pDependent->pContinuationTask->m_RunningCount.store( 0, std::memory_order_relaxed );
             pDependent->pContinuationTask->AddTaskToScheduler( this );
         }
         pDependent = pDependent->pNext;
@@ -654,16 +655,7 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
     ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_RUNNING, std::memory_order_relaxed );
     pTaskSet_->m_RunningCount.store( 0, std::memory_order_relaxed );
-
-    // go through any dependencies and set thier running count so they show as not complete
-    // and increment depedency count
-    Dependency* pDependent = pTaskSet_->m_pDependents;
-    while( pDependent )
-    {
-        pDependent->pContinuationTask->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
-        pDependent->pContinuationTask->m_RunningCount.store( 1, std::memory_order_relaxed );
-        pDependent = pDependent->pNext;
-    }
+    InitDependencies( pTaskSet_ );
     std::atomic_thread_fence(std::memory_order_acquire);
 
 
@@ -687,11 +679,32 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
     assert( pTask_->m_RunningCount == 0 );
-
+    InitDependencies( pTask_ );
     pTask_->m_RunningCount = 1;
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeThreadsForNewTasks();
 }
+
+void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
+{
+    // go through any dependencies and set thier running count so they show as not complete
+    // and increment depedency count
+    Dependency* pDependent = pCompletable_->m_pDependents;
+    while( pDependent )
+    {
+        if( pDependent->bInitialized )
+        {
+            // at this point all should be initialized
+            return;
+        }
+        InitDependencies( pDependent->pContinuationTask );
+        pDependent->bInitialized = true;
+        pDependent->pContinuationTask->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
+        pDependent->pContinuationTask->m_RunningCount.store( 1, std::memory_order_relaxed );
+        pDependent = pDependent->pNext;
+    }
+}
+
 
 void TaskScheduler::RunPinnedTasks()
 {
@@ -1148,4 +1161,48 @@ Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pCon
     assert( pDependencyTask->GetIsComplete() );
     assert( pContinuationTask->GetIsComplete() );
     pDependencyTask->m_pDependents = this;
+}
+
+Dependency::~Dependency()
+{
+    ClearDependency();
+}
+
+void Dependency::SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ )
+{
+    ClearDependency();
+    assert( pDependencyTask_->GetIsComplete() );
+    assert( pContinuationTask_->GetIsComplete() );
+    pDependencyTask = pDependencyTask_;
+    pContinuationTask = pContinuationTask_;
+    pNext = pDependencyTask->m_pDependents;
+    pDependencyTask->m_pDependents = this;
+}
+
+void Dependency::ClearDependency()
+{
+    if( pDependencyTask )
+    {
+        assert( pContinuationTask );
+        assert( pDependencyTask->GetIsComplete() );
+        assert( pContinuationTask->GetIsComplete() );
+        Dependency* pDependent = pDependencyTask->m_pDependents;
+        if( this == pDependent )
+        {
+            pDependencyTask->m_pDependents = pDependent->pNext;
+        }
+        else
+        {
+            while( pDependent )
+            {
+                Dependency* pPrev = pDependent;
+                pDependent = pDependent->pNext;
+                if( this == pDependent )
+                {
+                    pPrev->pNext = pDependent->pNext;
+                    break;
+                }
+            }
+        }
+    }
 }

@@ -96,12 +96,18 @@ namespace enki
     class Dependency
     {
     public:
+        Dependency() = default; Dependency( Dependency& ) = delete;	Dependency( Dependency&& ) = delete;	
         Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ~Dependency();
+
+        void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        void ClearDependency();
     private:
         friend class                   TaskScheduler;
         const ICompletable* pDependencyTask   = NULL;
         ICompletable* pContinuationTask       = NULL;
         Dependency*   pNext                   = NULL;
+        bool          bInitialized            = false;
     };
 
     // ICompletable is a base class used to check for completion.
@@ -370,6 +376,7 @@ namespace enki
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
         bool        WakeSuspendedThreadsWithPinnedTasks();
+        void        InitDependencies( ICompletable* pCompletable_  );
 
         template< typename T > T*   NewArray( size_t num_, const char* file_, int line_  );
         template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );

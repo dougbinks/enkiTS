@@ -77,22 +77,19 @@ struct ParallelSumTaskSet : ITaskSet
 
 struct ParallelReductionSumTaskSet : ITaskSet
 {
-    ParallelSumTaskSet m_ParallelSumTaskSet;
-    uint64_t m_FinalSum;
+    ParallelSumTaskSet* m_pParallelSum;
+    Dependency          m_Dependency;
+    uint64_t            m_FinalSum;
 
-    ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0)
+    ParallelReductionSumTaskSet( ParallelSumTaskSet* pParallelSum_ ) : m_pParallelSum( pParallelSum_ ), m_Dependency( pParallelSum_, this ), m_FinalSum(0)
     {
-            m_ParallelSumTaskSet.Init( g_TS.GetNumTaskThreads() );
     }
 
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
-        g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
-        g_TS.WaitforTask( &m_ParallelSumTaskSet );
-
-        for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
+        for( uint32_t i = 0; i < m_pParallelSum->m_NumPartialSums; ++i )
         {
-            m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i].count;
+            m_FinalSum += m_pParallelSum->m_pPartialSums[i].count;
         }
     }
 };
@@ -143,12 +140,14 @@ int main(int argc, const char * argv[])
 
 
             // Now measure parallel
-            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
+            ParallelSumTaskSet          parallelSumTask( setSize );
+            parallelSumTask.Init( g_TS.GetNumTaskThreads() );
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
 
             Timer tParallel;
             tParallel.Start();
 
-            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+            g_TS.AddTaskSetToPipe( &parallelSumTask );
 
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
 

@@ -1143,16 +1143,6 @@ void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
     m_Config.customAllocator = customAllocator_;
 }
 
-void ITaskSet::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
-{
-    pTaskScheduler_->AddTaskSetToPipe( this );
-}
-
-void IPinnedTask::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
-{
-    pTaskScheduler_->AddPinnedTask( this );
-}
-
 Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ ) 
     : pDependencyTask( pDependencyTask_ )
     , pContinuationTask( pContinuationTask_ )

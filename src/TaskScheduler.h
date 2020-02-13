@@ -97,11 +97,11 @@ namespace enki
     {
     public:
         Dependency() = default; Dependency( Dependency& ) = delete;	Dependency( Dependency&& ) = delete;	
-        Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
-        ~Dependency();
+        ENKITS_API Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ENKITS_API ~Dependency();
 
-        void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
-        void ClearDependency();
+        ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ENKITS_API void ClearDependency();
     private:
         friend class                   TaskScheduler;
         const ICompletable* pDependencyTask   = NULL;
@@ -413,5 +413,15 @@ namespace enki
     inline uint32_t GetNumHardwareThreads()
     {
         return std::thread::hardware_concurrency();
+    }
+
+    inline void ITaskSet::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+    {
+        pTaskScheduler_->AddTaskSetToPipe( this );
+    }
+
+    inline void IPinnedTask::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+    {
+        pTaskScheduler_->AddPinnedTask( this );
     }
 }

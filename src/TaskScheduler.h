@@ -107,7 +107,6 @@ namespace enki
         const ICompletable* pDependencyTask   = NULL;
         ICompletable* pContinuationTask       = NULL;
         Dependency*   pNext                   = NULL;
-        bool          bInitialized            = false;
     };
 
     // ICompletable is a base class used to check for completion.

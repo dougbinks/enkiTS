@@ -443,7 +443,6 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
     Dependency* pDependent = pTask_->m_pDependents;
     while( pDependent )
     {
-        pDependent->bInitialized = false;
         int prevDeps = pDependent->pContinuationTask->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
         if( 1 == prevDeps )
         {
@@ -678,8 +677,8 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
 void TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
 {
     assert( pTaskSet_->m_RunningCount == 0 );
-    pTaskSet_->m_RunningCount.store( 1, std::memory_order_relaxed );
     InitDependencies( pTaskSet_ );
+    pTaskSet_->m_RunningCount.store( 1, std::memory_order_relaxed );
     AddTaskSetToPipeInt( pTaskSet_, gtl_threadNum );
 }
 
@@ -693,8 +692,8 @@ void  TaskScheduler::AddPinnedTaskInt( IPinnedTask* pTask_ )
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
     assert( pTask_->m_RunningCount == 0 );
-    pTask_->m_RunningCount = 1;
     InitDependencies( pTask_ );
+    pTask_->m_RunningCount = 1;
     AddPinnedTaskInt( pTask_ );
 }
 
@@ -702,16 +701,15 @@ void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
 {
     // go through any dependencies and set thier running count so they show as not complete
     // and increment depedency count
+    if( pCompletable_->m_RunningCount.load( std::memory_order_relaxed ) )
+    {
+        // already initialized
+        return;
+    }
     Dependency* pDependent = pCompletable_->m_pDependents;
     while( pDependent )
     {
-        if( pDependent->bInitialized )
-        {
-            // at this point all should be initialized
-            return;
-        }
         InitDependencies( pDependent->pContinuationTask );
-        pDependent->bInitialized = true;
         pDependent->pContinuationTask->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
         pDependent->pContinuationTask->m_RunningCount.store( 1, std::memory_order_relaxed );
         pDependent = pDependent->pNext;

@@ -420,7 +420,7 @@ namespace enki
     inline void ICompletable::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
         // mark complete
-        m_RunningCount.store( 0, std::memory_order_release );
+        m_RunningCount.store( 0, std::memory_order_seq_cst );
         pTaskScheduler_->TaskComplete( this, true, threadNum_ );
     }
 

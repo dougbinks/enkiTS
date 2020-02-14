@@ -119,16 +119,13 @@ namespace enki
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
 
-        // AddTaskToScheduler primarily for Dependencies to be able launch a continutation
-        // without knowing type.
-        virtual void           AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) = 0;
-
         virtual                ~ICompletable() {}
 
         TaskPriority                   m_Priority            = TASK_PRIORITY_HIGH;
     private:
         friend class                   TaskScheduler;
         friend class                   Dependency;
+        virtual void                   OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ );
         std::atomic<int32_t>           m_RunningCount        = {0};
         std::atomic<int32_t>           m_DependencyCount     = {0};
         mutable std::atomic<int32_t>   m_WaitingForTaskCount = {0};
@@ -158,7 +155,6 @@ namespace enki
             , m_RangeToRun(minRange_)
         {}
 
-        void          AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) override final;
 
 
         // Execute range should be overloaded to process tasks. It will be called with a
@@ -185,6 +181,7 @@ namespace enki
 
     private:
         friend class TaskScheduler;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
         uint32_t     m_RangeToRun;
     };
 
@@ -195,13 +192,14 @@ namespace enki
         IPinnedTask()                      : threadNum(0), pNext(NULL) {}  // default is to run a task on main thread
         IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_), pNext(NULL) {}  // default is to run a task on main thread
 
-        void          AddTaskToScheduler( TaskScheduler* pTaskScheduler_ ) override final;
         // IPinnedTask needs to be non abstract for intrusive list functionality.
         // Should never be called as should be overridden.
         virtual void Execute() { assert(false); }
 
         uint32_t                  threadNum; // thread to run this pinned task on
-        std::atomic<IPinnedTask*> pNext;        // Do not use. For intrusive list only.
+        std::atomic<IPinnedTask*> pNext;
+    private:
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
     };
 
     // A utility task set for creating tasks based on std::func.
@@ -362,6 +360,9 @@ namespace enki
         // -------------  End DEPRECATED Functions  -------------
 
     private:
+        friend class ICompletable;
+        friend class ITaskSet;
+        friend class IPinnedTask;
         static void TaskingThreadFunction( const ThreadArgs& args_ );
         bool        HaveTasks( uint32_t threadNum_ );
         void        WaitForNewTasks( uint32_t threadNum_ );
@@ -369,7 +370,6 @@ namespace enki
         void        RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ );
         bool        TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_io_ );
         bool        TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ );
-        void        TaskComplete( ICompletable* pTask_, bool bWakeThreads_ );
         void        StartThreads();
         void        StopThreads( bool bWait_ );
         void        SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
@@ -377,6 +377,9 @@ namespace enki
         void        WakeThreadsForTaskCompletion();
         bool        WakeSuspendedThreadsWithPinnedTasks();
         void        InitDependencies( ICompletable* pCompletable_  );
+        ENKITS_API void TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ );
+        ENKITS_API void AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum_ );
+        ENKITS_API void AddPinnedTaskInt( IPinnedTask* pTask_ );
 
         template< typename T > T*   NewArray( size_t num_, const char* file_, int line_  );
         template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );
@@ -415,13 +418,21 @@ namespace enki
         return std::thread::hardware_concurrency();
     }
 
-    inline void ITaskSet::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+    inline void ICompletable::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
-        pTaskScheduler_->AddTaskSetToPipe( this );
+        // mark complete
+        m_RunningCount.store( 0, std::memory_order_release );
+        pTaskScheduler_->TaskComplete( this, true, threadNum_ );
     }
 
-    inline void IPinnedTask::AddTaskToScheduler( TaskScheduler* pTaskScheduler_ )
+    inline void ITaskSet::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
-        pTaskScheduler_->AddPinnedTask( this );
+        pTaskScheduler_->AddTaskSetToPipeInt( this, threadNum_ );
+    }
+
+    inline void IPinnedTask::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
+    {
+        (void)threadNum_;
+        pTaskScheduler_->AddPinnedTaskInt( this );
     }
 }

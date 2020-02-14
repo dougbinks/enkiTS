@@ -418,7 +418,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
             if( 1 == prevCount )
             {
-                TaskComplete( taskToRun.pTask, true );
+                TaskComplete( taskToRun.pTask, true, threadNum_ );
             }
         }
         else
@@ -428,7 +428,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
             if( 1 == prevCount )
             {
-                TaskComplete( subTask.pTask, true );
+                TaskComplete( subTask.pTask, true, threadNum_ );
             }
         }
     }
@@ -437,7 +437,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
 
 }
 
-void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_ )
+void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ )
 {
     assert( pTask_->GetIsComplete() );
     Dependency* pDependent = pTask_->m_pDependents;
@@ -447,8 +447,7 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_ )
         int prevDeps = pDependent->pContinuationTask->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
         if( 1 == prevDeps )
         {
-            pDependent->pContinuationTask->m_RunningCount.store( 0, std::memory_order_relaxed );
-            pDependent->pContinuationTask->AddTaskToScheduler( this );
+            pDependent->pContinuationTask->OnDependenciesComplete( this, threadNum_ );
         }
         pDependent = pDependent->pNext;
     }
@@ -635,7 +634,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
     int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
     if( numRun + 1 == prevCount )
     {
-        TaskComplete( subTask_.pTask, false );
+        TaskComplete( subTask_.pTask, false, threadNum_ );
     }
 
     // WakeThreadsForNewTasks also calls WakeThreadsForTaskCompletion() so do not need to do so above
@@ -647,15 +646,11 @@ TaskSchedulerConfig TaskScheduler::GetConfig() const
     return m_Config;
 }
 
-void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
+void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum_ )
 {
-    assert( pTaskSet_->m_RunningCount == 0 );
-    uint32_t threadNum = gtl_threadNum;
-
-    ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
-    m_pThreadDataStore[threadNum].threadState.store( THREAD_STATE_RUNNING, std::memory_order_relaxed );
-    pTaskSet_->m_RunningCount.store( 0, std::memory_order_relaxed );
-    InitDependencies( pTaskSet_ );
+    assert( pTaskSet_->m_RunningCount == 1 );
+    ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
+    m_pThreadDataStore[threadNum_].threadState.store( THREAD_STATE_RUNNING, std::memory_order_relaxed );
     std::atomic_thread_fence(std::memory_order_acquire);
 
 
@@ -670,19 +665,37 @@ void    TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
     subTask.pTask = pTaskSet_;
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet_->m_SetSize;
-    SplitAndAddTask( threadNum, subTask, rangeToSplit );
+    SplitAndAddTask( threadNum_, subTask, rangeToSplit );
+    int prevCount = pTaskSet_->m_RunningCount.fetch_sub(1, std::memory_order_release );
+    if( 1 == prevCount )
+    {
+        TaskComplete( pTaskSet_, true, threadNum_ );
+    }
 
-    m_pThreadDataStore[threadNum].threadState.store( prevThreadState, std::memory_order_release );
+    m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
+}
 
+void TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
+{
+    assert( pTaskSet_->m_RunningCount == 0 );
+    pTaskSet_->m_RunningCount.store( 1, std::memory_order_relaxed );
+    InitDependencies( pTaskSet_ );
+    AddTaskSetToPipeInt( pTaskSet_, gtl_threadNum );
+}
+
+void  TaskScheduler::AddPinnedTaskInt( IPinnedTask* pTask_ )
+{
+    assert( pTask_->m_RunningCount == 1 );
+    m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
+    WakeThreadsForNewTasks();
 }
 
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
     assert( pTask_->m_RunningCount == 0 );
-    InitDependencies( pTask_ );
     pTask_->m_RunningCount = 1;
-    m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
-    WakeThreadsForNewTasks();
+    InitDependencies( pTask_ );
+    AddPinnedTaskInt( pTask_ );
 }
 
 void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
@@ -729,7 +742,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         {
             pPinnedTaskSet->Execute();
             pPinnedTaskSet->m_RunningCount = 0;
-            TaskComplete( pPinnedTaskSet, false );
+            TaskComplete( pPinnedTaskSet, false, threadNum_ );
             if( pPinnedTaskSet->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
             {
                 WakeThreadsForTaskCompletion();

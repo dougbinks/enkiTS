@@ -70,14 +70,11 @@ struct TaskD : ITaskSet
     }
 };
 
-struct TaskE : ITaskSet
+// If you need to wait on multiple dependencies, but don't need to do anything
+// you can derive from ICompletable and add depedencies
+struct TasksFinished : ICompletable
 {
     Dependency          m_Dependencies[10];
-
-    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
-    {
-        printf("E on thread %u\n", threadnum);
-    }
 };
 
 static const int RUNS       = 20;
@@ -108,12 +105,13 @@ int main(int argc, const char * argv[])
         task.m_Dependency.SetDependency(&taskC,&task);
     }
 
-    TaskE taskE;
+    TasksFinished tasksFinished;
     i = 0;
     for( auto& task : taskDs )
     {
-        taskE.m_Dependencies[i++].SetDependency( &task, &taskE );
+        tasksFinished.m_Dependencies[i++].SetDependency( &task, &tasksFinished );
     }
+
 
     // run graph many times
     for( int run = 0; run< RUNS; ++run )
@@ -122,7 +120,8 @@ int main(int argc, const char * argv[])
 
         g_TS.AddTaskSetToPipe( &taskA );
 
-        g_TS.WaitforTask( &taskE );
+        g_TS.WaitforTask( &tasksFinished );
+        printf("Tasks Finished\n");
     }
 
     return 0;

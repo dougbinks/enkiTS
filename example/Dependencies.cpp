@@ -32,6 +32,19 @@ using namespace enki;
 
 TaskScheduler g_TS;
 
+
+// We use a task to launch the first task in the task graph
+// as adding the tasks with many dependencies incurs an overhead,
+// which we might not want to occur on the main thread
+struct TaskLauncher : ITaskSet
+{
+    ITaskSet*           m_pTaskToLaunch = NULL;
+    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
+    {
+        g_TS.AddTaskSetToPipe( m_pTaskToLaunch );
+    }
+};
+
 struct TaskA : ITaskSet
 {
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
@@ -75,6 +88,7 @@ struct TaskD : ITaskSet
 struct TasksFinished : ICompletable
 {
     Dependency          m_Dependencies[10];
+    Dependency          m_DepencyOnLauncher; // could also store this in array above
 };
 
 static const int RUNS       = 20;
@@ -112,13 +126,19 @@ int main(int argc, const char * argv[])
         tasksFinished.m_Dependencies[i++].SetDependency( &task, &tasksFinished );
     }
 
+    TaskLauncher taskLauncher;
+    taskLauncher.m_pTaskToLaunch = &taskA; //start with task A
+
+    // we need to add a dependency on the launcher to tasksFinished otherwise
+    // tasksFinished might be labelled as complete before taskA launched
+    tasksFinished.m_DepencyOnLauncher.SetDependency( &taskLauncher, &tasksFinished );
 
     // run graph many times
     for( int run = 0; run< RUNS; ++run )
     {
         printf("Run %d / %d.....\n", run+1, RUNS);
 
-        g_TS.AddTaskSetToPipe( &taskA );
+        g_TS.AddTaskSetToPipe( &taskLauncher );
 
         g_TS.WaitforTask( &tasksFinished );
         printf("Tasks Finished\n");

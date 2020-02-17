@@ -103,7 +103,7 @@ namespace enki
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
 
-        virtual                ~ICompletable() {}
+        virtual                ~ICompletable();
 
         // Dependency helpers, see Dependencies.cpp
         template<typename D, typename T, int SIZE> void SetDependenciesArr( D& dependencyArray_ , const T(&taskArray_)[SIZE] );
@@ -225,6 +225,7 @@ namespace enki
         ENKITS_API void ClearDependency();
     private:
         friend class        TaskScheduler;
+        friend class        ICompletable;
         const ICompletable* pDependencyTask   = NULL;
         ICompletable*       pContinuationTask = NULL;
         Dependency*         pNext             = NULL;
@@ -444,6 +445,18 @@ namespace enki
     {
         (void)threadNum_;
         pTaskScheduler_->AddPinnedTaskInt( this );
+    }
+
+    inline ICompletable::~ICompletable()
+    {
+        Dependency* pDependency = m_pDependents;
+        while( pDependency )
+        {
+            Dependency* pNext = pDependency->pNext;
+            pDependency->pDependencyTask = NULL;
+            pDependency->pNext = NULL;
+            pDependency = pNext;
+        }
     }
 
     template<typename D, typename T, int SIZE>

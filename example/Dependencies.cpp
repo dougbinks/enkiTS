@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <vector>
 
 #ifndef _WIN32
     #include <string.h>
@@ -32,6 +31,8 @@ using namespace enki;
 
 TaskScheduler g_TS;
 
+
+#include <vector>
 
 // We use a task to launch the first task in the task graph
 // as adding the tasks with many dependencies incurs an overhead,
@@ -87,8 +88,8 @@ struct TaskD : ITaskSet
 // you can derive from ICompletable and add depedencies
 struct TasksFinished : ICompletable
 {
-    Dependency          m_Dependencies[10];
-    Dependency          m_DepencyOnLauncher; // could also store this in array above
+    std::vector<Dependency>  m_Dependencies;
+    Dependency               m_DepencyOnLauncher; // could also store this in array above
 };
 
 static const int RUNS       = 20;
@@ -107,11 +108,7 @@ int main(int argc, const char * argv[])
     }
 
     TaskC taskC; // Task C is a pinned task, defaults to running on thread 0 (this thread)
-    int i = 0;
-    for( auto& task : taskBs )
-    {
-        taskC.m_Dependencies[i++].SetDependency(&task,&taskC);
-    }
+    taskC.SetDependenciesArr( taskC.m_Dependencies, taskBs );
 
     TaskD taskDs[10];
     for( auto& task : taskDs )
@@ -120,11 +117,7 @@ int main(int argc, const char * argv[])
     }
 
     TasksFinished tasksFinished;
-    i = 0;
-    for( auto& task : taskDs )
-    {
-        tasksFinished.m_Dependencies[i++].SetDependency( &task, &tasksFinished );
-    }
+    tasksFinished.SetDependenciesVec( tasksFinished.m_Dependencies, taskDs );
 
     TaskLauncher taskLauncher;
     taskLauncher.m_pTaskToLaunch = &taskA; //start with task A

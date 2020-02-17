@@ -1164,6 +1164,30 @@ Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pCon
     pDependencyTask->m_pDependents = this;
 }
 
+Dependency::Dependency( Dependency&& rhs_ ) noexcept
+{
+    pDependencyTask   = rhs_.pDependencyTask;
+    pContinuationTask = rhs_.pContinuationTask;
+    pNext             = rhs_.pNext;
+    if( rhs_.pDependencyTask )
+    {
+        assert( rhs_.pContinuationTask );
+        assert( rhs_.pDependencyTask->GetIsComplete() );
+        assert( rhs_.pContinuationTask->GetIsComplete() );
+        Dependency** ppDependent = &(pDependencyTask->m_pDependents);
+        while( *ppDependent )
+        {
+            if( &rhs_ == *ppDependent )
+            {
+                *ppDependent = this;
+                break;
+            }
+            ppDependent = &((*ppDependent)->pNext);
+        }
+    }
+}
+
+
 Dependency::~Dependency()
 {
     ClearDependency();

@@ -66,6 +66,7 @@ namespace enki
     class  TaskScheduler;
     class  TaskPipe;
     class  PinnedTaskList;
+    class Dependency;
     struct ThreadArgs;
     struct ThreadDataStore;
     struct SubTaskSet;
@@ -92,25 +93,9 @@ namespace enki
         TASK_PRIORITY_NUM
     };
 
-    class ICompletable;
-    class Dependency
-    {
-    public:
-        Dependency() = default; Dependency( Dependency& ) = delete;	Dependency( Dependency&& ) = delete;	
-        ENKITS_API Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
-        ENKITS_API ~Dependency();
-
-        ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
-        ENKITS_API void ClearDependency();
-    private:
-        friend class                   TaskScheduler;
-        const ICompletable* pDependencyTask   = NULL;
-        ICompletable* pContinuationTask       = NULL;
-        Dependency*   pNext                   = NULL;
-    };
-
     // ICompletable is a base class used to check for completion.
-    // Do not use this class directly, instead derive from ITaskSet or IPinnedTask.
+    // Can be used with dependencies to wait for their completion.
+    // Derive from ITaskSet or IPinnedTask for running parallel tasks.
     class ICompletable
     {
     public:
@@ -119,6 +104,14 @@ namespace enki
         }
 
         virtual                ~ICompletable() {}
+
+        // Dependency helpers, see Dependencies.cpp
+        template<typename D, typename T, int SIZE> void SetDependenciesArr( D& dependencyArray_ , const T(&taskArray_)[SIZE] );
+        template<typename D, typename T>           void SetDependenciesArr( D& dependencyArray_, std::initializer_list<T*> taskpList_ );
+        template<typename D, typename T, int SIZE> void SetDependenciesArr( D(&dependencyArray_)[SIZE], const T(&taskArray_)[SIZE] );
+        template<typename D, typename T, int SIZE> void SetDependenciesArr( D(&dependencyArray_)[SIZE], std::initializer_list<T*> taskpList_ );
+        template<typename D, typename T, int SIZE> void SetDependenciesVec( D& dependencyVec_, const T(&taskArray_)[SIZE] );
+        template<typename D, typename T>           void SetDependenciesVec( D& dependencyVec_, std::initializer_list<T*> taskpList_ );
 
         TaskPriority                   m_Priority            = TASK_PRIORITY_HIGH;
     private:
@@ -217,6 +210,24 @@ namespace enki
         }
 
         TaskSetFunction m_Function;
+    };
+
+    class Dependency
+    {
+    public:
+        Dependency() = default; 
+        Dependency( const Dependency& ) = delete;
+        ENKITS_API Dependency( Dependency&& ) noexcept;	
+        ENKITS_API Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ENKITS_API ~Dependency();
+
+        ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ENKITS_API void ClearDependency();
+    private:
+        friend class        TaskScheduler;
+        const ICompletable* pDependencyTask   = NULL;
+        ICompletable*       pContinuationTask = NULL;
+        Dependency*         pNext             = NULL;
     };
 
     // TaskScheduler implements several callbacks intended for profilers
@@ -433,5 +444,57 @@ namespace enki
     {
         (void)threadNum_;
         pTaskScheduler_->AddPinnedTaskInt( this );
+    }
+
+    template<typename D, typename T, int SIZE>
+    void ICompletable::SetDependenciesArr( D& dependencyArray_ , const T(&taskArray_)[SIZE] ) {
+        static_assert( std::tuple_size<D>::value >= SIZE, "Size of dependency array too small" );
+        for( int i = 0; i < SIZE; ++i )
+        {
+            dependencyArray_[i].SetDependency( &taskArray_[i], this );
+        }
+    }
+    template<typename D, typename T>
+    void ICompletable::SetDependenciesArr( D& dependencyArray_, std::initializer_list<T*> taskpList_ ) {
+        assert( std::tuple_size<D>::value >= taskpList_.size() );
+        int i = 0;
+        for( auto pTask : taskpList_ )
+        {
+            dependencyArray_[i++].SetDependency( pTask, this );
+        }
+    }
+    template<typename D, typename T, int SIZE>
+    void ICompletable::SetDependenciesArr( D(&dependencyArray_)[SIZE], const T(&taskArray_)[SIZE] ) {
+        for( int i = 0; i < SIZE; ++i )
+        {
+            dependencyArray_[i].SetDependency( &taskArray_[i], this );
+        }
+    }
+    template<typename D, typename T, int SIZE>
+    void ICompletable::SetDependenciesArr( D(&dependencyArray_)[SIZE], std::initializer_list<T*> taskpList_ ) {
+        assert( SIZE >= taskpList_.size() );
+        int i = 0;
+        for( auto pTask : taskpList_ )
+        {
+            dependencyArray_[i++].SetDependency( pTask, this );
+        }
+    }
+    template<typename D, typename T, int SIZE>
+    void ICompletable::SetDependenciesVec( D& dependencyVec_, const T(&taskArray_)[SIZE] ) {
+        dependencyVec_.resize( SIZE );
+        for( int i = 0; i < SIZE; ++i )
+        {
+            dependencyVec_[i].SetDependency( &taskArray_[i], this );
+        }
+    }
+
+    template<typename D, typename T>
+    void ICompletable::SetDependenciesVec( D& dependencyVec_, std::initializer_list<T*> taskpList_ ) {
+        dependencyVec_.resize( taskpList_.size() );
+        int i = 0;
+        for( auto pTask : taskpList_ )
+        {
+            dependencyVec_[i++].SetDependency( pTask, this );
+        }
     }
 }

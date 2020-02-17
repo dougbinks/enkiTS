@@ -1230,4 +1230,7 @@ void Dependency::ClearDependency()
             }
         }
     }
+    pDependencyTask = NULL;
+    pDependencyTask =  NULL;
+    pNext = NULL;
 }

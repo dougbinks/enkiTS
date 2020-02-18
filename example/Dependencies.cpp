@@ -104,7 +104,7 @@ int main(int argc, const char * argv[])
     TaskB taskBs[4];
     for( auto& task : taskBs )
     {
-        task.m_Dependency.SetDependency(&taskA,&task);
+        task.SetDependency(task.m_Dependency,&taskA);
     }
 
     TaskC taskC; // Task C is a pinned task, defaults to running on thread 0 (this thread)
@@ -113,7 +113,7 @@ int main(int argc, const char * argv[])
     TaskD taskDs[10];
     for( auto& task : taskDs )
     {
-        task.m_Dependency.SetDependency(&taskC,&task);
+        task.SetDependency(task.m_Dependency,&taskC);
     }
 
     TasksFinished tasksFinished;
@@ -124,7 +124,7 @@ int main(int argc, const char * argv[])
 
     // we need to add a dependency on the launcher to tasksFinished otherwise
     // tasksFinished might be labelled as complete before taskA launched
-    tasksFinished.m_DepencyOnLauncher.SetDependency( &taskLauncher, &tasksFinished );
+    tasksFinished.SetDependency( tasksFinished.m_DepencyOnLauncher, &taskLauncher );
 
     // run graph many times
     for( int run = 0; run< RUNS; ++run )

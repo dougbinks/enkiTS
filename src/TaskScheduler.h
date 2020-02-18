@@ -106,6 +106,7 @@ namespace enki
         virtual                ~ICompletable();
 
         // Dependency helpers, see Dependencies.cpp
+        void SetDependency( Dependency& dependency_, const ICompletable* pDependencyTask_ );
         template<typename D, typename T, int SIZE> void SetDependenciesArr( D& dependencyArray_ , const T(&taskArray_)[SIZE] );
         template<typename D, typename T>           void SetDependenciesArr( D& dependencyArray_, std::initializer_list<T*> taskpList_ );
         template<typename D, typename T, int SIZE> void SetDependenciesArr( D(&dependencyArray_)[SIZE], const T(&taskArray_)[SIZE] );
@@ -454,6 +455,12 @@ namespace enki
             pDependency->pNext = NULL;
             pDependency = pNext;
         }
+    }
+
+    inline void ICompletable::SetDependency( Dependency& dependency_, const ICompletable* pDependencyTask_ )
+    {
+        assert( pDependencyTask_ != this );
+        dependency_.SetDependency( pDependencyTask_, this );
     }
 
     template<typename D, typename T, int SIZE>

@@ -443,10 +443,10 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
     Dependency* pDependent = pTask_->m_pDependents;
     while( pDependent )
     {
-        int prevDeps = pDependent->pContinuationTask->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
+        int prevDeps = pDependent->pTaskToRunOnCompletion->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
         if( 1 == prevDeps )
         {
-            pDependent->pContinuationTask->OnDependenciesComplete( this, threadNum_ );
+            pDependent->pTaskToRunOnCompletion->OnDependenciesComplete( this, threadNum_ );
         }
         pDependent = pDependent->pNext;
     }
@@ -709,9 +709,9 @@ void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
     Dependency* pDependent = pCompletable_->m_pDependents;
     while( pDependent )
     {
-        InitDependencies( pDependent->pContinuationTask );
-        pDependent->pContinuationTask->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
-        pDependent->pContinuationTask->m_RunningCount.store( 1, std::memory_order_relaxed );
+        InitDependencies( pDependent->pTaskToRunOnCompletion );
+        pDependent->pTaskToRunOnCompletion->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
+        pDependent->pTaskToRunOnCompletion->m_RunningCount.store( 1, std::memory_order_relaxed );
         pDependent = pDependent->pNext;
     }
 }
@@ -1154,26 +1154,26 @@ void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
     m_Config.customAllocator = customAllocator_;
 }
 
-Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ ) 
+Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ ) 
     : pDependencyTask( pDependencyTask_ )
-    , pContinuationTask( pContinuationTask_ )
+    , pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
     , pNext( pDependencyTask->m_pDependents )
 {
     assert( pDependencyTask->GetIsComplete() );
-    assert( pContinuationTask->GetIsComplete() );
+    assert( pTaskToRunOnCompletion->GetIsComplete() );
     pDependencyTask->m_pDependents = this;
 }
 
 Dependency::Dependency( Dependency&& rhs_ ) noexcept
 {
     pDependencyTask   = rhs_.pDependencyTask;
-    pContinuationTask = rhs_.pContinuationTask;
+    pTaskToRunOnCompletion = rhs_.pTaskToRunOnCompletion;
     pNext             = rhs_.pNext;
     if( rhs_.pDependencyTask )
     {
-        assert( rhs_.pContinuationTask );
+        assert( rhs_.pTaskToRunOnCompletion );
         assert( rhs_.pDependencyTask->GetIsComplete() );
-        assert( rhs_.pContinuationTask->GetIsComplete() );
+        assert( rhs_.pTaskToRunOnCompletion->GetIsComplete() );
         Dependency** ppDependent = &(pDependencyTask->m_pDependents);
         while( *ppDependent )
         {
@@ -1193,13 +1193,13 @@ Dependency::~Dependency()
     ClearDependency();
 }
 
-void Dependency::SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ )
+void Dependency::SetDependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ )
 {
     ClearDependency();
     assert( pDependencyTask_->GetIsComplete() );
-    assert( pContinuationTask_->GetIsComplete() );
+    assert( pTaskToRunOnCompletion_->GetIsComplete() );
     pDependencyTask = pDependencyTask_;
-    pContinuationTask = pContinuationTask_;
+    pTaskToRunOnCompletion = pTaskToRunOnCompletion_;
     pNext = pDependencyTask->m_pDependents;
     pDependencyTask->m_pDependents = this;
 }
@@ -1208,9 +1208,9 @@ void Dependency::ClearDependency()
 {
     if( pDependencyTask )
     {
-        assert( pContinuationTask );
+        assert( pTaskToRunOnCompletion );
         assert( pDependencyTask->GetIsComplete() );
-        assert( pContinuationTask->GetIsComplete() );
+        assert( pTaskToRunOnCompletion->GetIsComplete() );
         Dependency* pDependent = pDependencyTask->m_pDependents;
         if( this == pDependent )
         {

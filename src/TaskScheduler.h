@@ -215,20 +215,19 @@ namespace enki
     class Dependency
     {
     public:
-        Dependency() = default; 
-        Dependency( const Dependency& ) = delete;
-        ENKITS_API Dependency( Dependency&& ) noexcept;	
-        ENKITS_API Dependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
-        ENKITS_API ~Dependency();
+                        Dependency() = default; 
+                        Dependency( const Dependency& ) = delete;
+        ENKITS_API      Dependency( Dependency&& ) noexcept;	
+        ENKITS_API      Dependency(    const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ );
+        ENKITS_API      ~Dependency();
 
-        ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pContinuationTask_ );
+        ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ );
         ENKITS_API void ClearDependency();
     private:
-        friend class        TaskScheduler;
-        friend class        ICompletable;
-        const ICompletable* pDependencyTask   = NULL;
-        ICompletable*       pContinuationTask = NULL;
-        Dependency*         pNext             = NULL;
+        friend class TaskScheduler; friend class ICompletable;
+        ICompletable*       pTaskToRunOnCompletion = NULL;
+        const ICompletable* pDependencyTask        = NULL;
+        Dependency*         pNext                  = NULL;
     };
 
     // TaskScheduler implements several callbacks intended for profilers
@@ -371,9 +370,7 @@ namespace enki
         // -------------  End DEPRECATED Functions  -------------
 
     private:
-        friend class ICompletable;
-        friend class ITaskSet;
-        friend class IPinnedTask;
+        friend class ICompletable; friend class ITaskSet; friend class IPinnedTask;
         static void TaskingThreadFunction( const ThreadArgs& args_ );
         bool        HaveTasks( uint32_t threadNum_ );
         void        WaitForNewTasks( uint32_t threadNum_ );

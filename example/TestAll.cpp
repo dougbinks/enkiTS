@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <vector>
+#include <algorithm>
 
 #ifndef _WIN32
     #include <string.h>
@@ -93,22 +95,19 @@ struct ParallelSumTaskSet : ITaskSet
 
 struct ParallelReductionSumTaskSet : ITaskSet
 {
-    ParallelSumTaskSet m_ParallelSumTaskSet;
-    uint64_t m_FinalSum;
+    ParallelSumTaskSet* m_pParallelSum;
+    Dependency          m_Dependency;
+    uint64_t            m_FinalSum;
 
-    ParallelReductionSumTaskSet( uint32_t size_ ) : m_ParallelSumTaskSet( size_ ), m_FinalSum(0)
+    ParallelReductionSumTaskSet( ParallelSumTaskSet* pParallelSum_ ) : m_pParallelSum( pParallelSum_ ), m_Dependency( pParallelSum_, this ), m_FinalSum(0)
     {
-            m_ParallelSumTaskSet.Init( g_TS.GetNumTaskThreads() );
     }
 
-    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
+    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
-        g_TS.AddTaskSetToPipe( &m_ParallelSumTaskSet );
-        g_TS.WaitforTask( &m_ParallelSumTaskSet );
-
-        for( uint32_t i = 0; i < m_ParallelSumTaskSet.m_NumPartialSums; ++i )
+        for( uint32_t i = 0; i < m_pParallelSum->m_NumPartialSums; ++i )
         {
-            m_FinalSum += m_ParallelSumTaskSet.m_pPartialSums[i].count;
+            m_FinalSum += m_pParallelSum->m_pPartialSums[i].count;
         }
     }
 };
@@ -118,11 +117,15 @@ void threadFunction( uint32_t setSize_, bool* pbRegistered_, uint64_t* pSumParal
     *pbRegistered_ = g_TS.RegisterExternalTaskThread();
     if( *pbRegistered_ )
     {
-        ParallelReductionSumTaskSet task( setSize_ );
-        g_TS.AddTaskSetToPipe( &task );
-        g_TS.WaitforTask( &task);
+        ParallelSumTaskSet          parallelSumTask( setSize_ );
+        parallelSumTask.Init( g_TS.GetNumTaskThreads() );
+        ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
+
+        g_TS.AddTaskSetToPipe( &parallelSumTask );
+        g_TS.WaitforTask( &parallelReductionSumTaskSet );
+
         g_TS.DeRegisterExternalTaskThread();
-        *pSumParallel_ = task.m_FinalSum;
+        *pSumParallel_ = parallelReductionSumTaskSet.m_FinalSum;
     }
 }
 
@@ -139,13 +142,12 @@ struct PinnedTask : IPinnedTask
 };
 
 
-struct TestPriorities : enki::ITaskSet
+struct TestPriorities : ITaskSet
 {
-    void ExecuteRange( enki::TaskSetPartition range_, uint32_t threadnum_ ) override
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
     }
 };
-
 
 struct CustomAllocData
 {
@@ -165,6 +167,33 @@ void  CustomFreeFunc(  void* ptr_,    size_t size_, void* userData_, const char*
     CustomAllocData* data = (CustomAllocData*)userData_;
     data->totalAllocations -= size_;
     DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
+};
+
+std::atomic<int32_t> gs_DependencyCounter = {0};
+
+struct TestDependenciesTaskSet : ITaskSet
+{
+    int32_t                 m_Counter = 0;
+    std::vector<Dependency> m_Dependencies;
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
+    {
+        m_Counter = gs_DependencyCounter.fetch_add(1);
+    }
+};
+
+struct TestDependenciesPinnedTask : IPinnedTask
+{
+    int32_t                 m_Counter = 0;
+    std::vector<Dependency> m_Dependencies;
+    void Execute() override
+    {
+        m_Counter = gs_DependencyCounter.fetch_add(1);
+    }
+};
+
+struct TestDependenciesCompletable : ICompletable
+{
+    std::vector<Dependency> m_Dependencies;
 };
 
 int main(int argc, const char * argv[])
@@ -194,9 +223,13 @@ int main(int argc, const char * argv[])
         [&]()->bool
         {
             g_TS.Initialize( baseConfig );
-            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
-            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+            ParallelSumTaskSet          parallelSumTask( setSize );
+            parallelSumTask.Init( g_TS.GetNumTaskThreads() );
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
+
+            g_TS.AddTaskSetToPipe( &parallelSumTask );
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
+
             fprintf( stdout,"\tParallelReductionSum: %" PRIu64 ", sumSerial: %" PRIu64 "\n", parallelReductionSumTaskSet.m_FinalSum, sumSerial );
             return parallelReductionSumTaskSet.m_FinalSum == sumSerial;
         } );
@@ -279,9 +312,13 @@ int main(int argc, const char * argv[])
             g_TS.Initialize( config );
             uint64_t allocsAfterInit = customAllocdata.totalAllocations;
             fprintf( stdout,"\tenkiTS allocated bytes after init: %" PRIu64 "\n", customAllocdata.totalAllocations );
-            ParallelReductionSumTaskSet parallelReductionSumTaskSet( setSize );
-            g_TS.AddTaskSetToPipe( &parallelReductionSumTaskSet );
+
+            ParallelSumTaskSet          parallelSumTask( setSize );
+            parallelSumTask.Init( g_TS.GetNumTaskThreads() );
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
+            g_TS.AddTaskSetToPipe( &parallelSumTask );
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
+
             fprintf( stdout,"\tenkiTS allocated bytes after running tasks: %" PRIu64 "\n", customAllocdata.totalAllocations );
             if( customAllocdata.totalAllocations != allocsAfterInit )
             {
@@ -293,6 +330,82 @@ int main(int argc, const char * argv[])
             return customAllocdata.totalAllocations == 0;
         } );
 
+    RunTestFunction(
+        "Dependencies",
+        [&]()->bool
+        {
+            g_TS.Initialize( baseConfig );
+
+            TestDependenciesTaskSet taskSetA;
+
+            TestDependenciesTaskSet taskSetBs[8];
+            for( auto& task : taskSetBs )
+            {
+                task.SetDependenciesVec(task.m_Dependencies,{&taskSetA});
+            }
+
+            TestDependenciesPinnedTask pinnedTaskC;
+            pinnedTaskC.SetDependenciesVec(pinnedTaskC.m_Dependencies, taskSetBs);
+
+            TestDependenciesTaskSet taskSetDs[8];
+            for( auto& task : taskSetDs )
+            {
+                task.SetDependenciesVec(task.m_Dependencies,{&pinnedTaskC});
+            }
+            TestDependenciesTaskSet taskSetEs[4];
+            for( auto& task : taskSetEs )
+            {
+                task.SetDependenciesVec(task.m_Dependencies,taskSetDs);
+            }
+
+            TestDependenciesCompletable finalTask;
+            finalTask.SetDependenciesVec( finalTask.m_Dependencies,taskSetEs);
+
+            g_TS.AddTaskSetToPipe( &taskSetA );
+            g_TS.WaitforTask( &finalTask );
+
+            // check counters
+            int32_t lastCount = taskSetA.m_Counter;
+            int32_t countCheck = lastCount;
+            for( auto& task : taskSetBs )
+            {
+                if( task.m_Counter < countCheck )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );
+                    return false;
+                }
+                lastCount = std::max( lastCount, task.m_Counter );
+            }
+            countCheck = lastCount;
+            if( pinnedTaskC.m_Counter < countCheck )
+            {
+                fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", pinnedTaskC.m_Counter, lastCount, __LINE__ );
+                return false;
+                lastCount = std::max( lastCount, pinnedTaskC.m_Counter );
+            }
+            countCheck = lastCount;
+            for( auto& task : taskSetDs )
+            {
+                if( task.m_Counter < countCheck )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );
+                    return false;
+                }
+                lastCount = std::max( lastCount, task.m_Counter );
+            }
+            countCheck = lastCount;
+            for( auto& task : taskSetEs )
+            {
+                if( task.m_Counter < countCheck )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );
+                    return false;
+                }
+                lastCount = std::max( lastCount, task.m_Counter );
+            }
+            g_TS.WaitforAllAndShutdown();
+            return true;
+        } );
 
 
 

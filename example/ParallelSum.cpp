@@ -145,7 +145,6 @@ int main(int argc, const char * argv[])
             ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
 
             g_TS.AddTaskSetToPipe( &parallelSumTask );
-
             g_TS.WaitforTask( &parallelReductionSumTaskSet );
 
             tParallel.Stop();

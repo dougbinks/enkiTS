@@ -443,10 +443,15 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
     Dependency* pDependent = pTask_->m_pDependents;
     while( pDependent )
     {
-        int prevDeps = pDependent->pTaskToRunOnCompletion->m_DependencyCount.fetch_sub( 1, std::memory_order_release );
-        if( 1 == prevDeps )
+        int prevDeps = pDependent->pTaskToRunOnCompletion->m_DependenciesCompletedCount.fetch_add( 1, std::memory_order_release );
+        assert( prevDeps < pDependent->pTaskToRunOnCompletion->m_DependenciesCount );
+        if( pDependent->pTaskToRunOnCompletion->m_DependenciesCount == ( prevDeps + 1 ) )
         {
             pDependent->pTaskToRunOnCompletion->OnDependenciesComplete( this, threadNum_ );
+            // reset dependencies
+            pDependent->pTaskToRunOnCompletion->m_DependenciesCompletedCount.store(
+                0,
+                std::memory_order_release );
         }
         pDependent = pDependent->pNext;
     }
@@ -710,7 +715,6 @@ void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
     while( pDependent )
     {
         InitDependencies( pDependent->pTaskToRunOnCompletion );
-        pDependent->pTaskToRunOnCompletion->m_DependencyCount.fetch_add( 1, std::memory_order_relaxed );
         pDependent->pTaskToRunOnCompletion->m_RunningCount.store( 1, std::memory_order_relaxed );
         pDependent = pDependent->pNext;
     }
@@ -1162,6 +1166,7 @@ Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTas
     assert( pDependencyTask->GetIsComplete() );
     assert( pTaskToRunOnCompletion->GetIsComplete() );
     pDependencyTask->m_pDependents = this;
+    ++pTaskToRunOnCompletion->m_DependenciesCount;
 }
 
 Dependency::Dependency( Dependency&& rhs_ ) noexcept
@@ -1202,6 +1207,7 @@ void Dependency::SetDependency( const ICompletable* pDependencyTask_, ICompletab
     pTaskToRunOnCompletion = pTaskToRunOnCompletion_;
     pNext = pDependencyTask->m_pDependents;
     pDependencyTask->m_pDependents = this;
+    ++pTaskToRunOnCompletion->m_DependenciesCount;
 }
 
 void Dependency::ClearDependency()

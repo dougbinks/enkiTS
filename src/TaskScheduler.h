@@ -119,10 +119,11 @@ namespace enki
         friend class                   TaskScheduler;
         friend class                   Dependency;
         virtual void                   OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ );
-        std::atomic<int32_t>           m_RunningCount        = {0};
-        std::atomic<int32_t>           m_DependencyCount     = {0};
-        mutable std::atomic<int32_t>   m_WaitingForTaskCount = {0};
-        mutable Dependency*            m_pDependents         = NULL;
+        std::atomic<int32_t>           m_RunningCount               = {0};
+        std::atomic<int32_t>           m_DependenciesCompletedCount = {0};
+        int32_t                        m_DependenciesCount          = 0;
+        mutable std::atomic<int32_t>   m_WaitingForTaskCount        = {0};
+        mutable Dependency*            m_pDependents                = NULL;
     };
 
     // Subclass ITaskSet to create tasks.

@@ -83,9 +83,7 @@ struct enkiPinnedTask : IPinnedTask
     void* pArgs;
 };
 
-struct enkiDependency : Dependency
-{
-};
+struct enkiDependency : Dependency {}; // empty struct which we will use for dependencies
 
 enkiTaskScheduler* enkiNewTaskScheduler()
 {

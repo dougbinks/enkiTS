@@ -51,8 +51,9 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Can pin tasks to a given thread* - enkiTS can schedule a task which will only be run on the specified thread.
 1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
 1. *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
-1. **NEW** *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
- 
+1. *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
+1. **NEW**  *Dependencies* - can set dependendencies between tasks see [example/Dependency.cpp](example/Dependency.cpp) and [example/Dependency_c.c](example/Dependency_c.c).
+
 ## Usage
 
 C++ usage:
@@ -176,6 +177,42 @@ int main(int argc, const char * argv[]) {
     // wait for task set (running tasks if they exist)
     // since we've just added it and it has no range we'll likely run it.
     g_TS.WaitforTask( &task );
+    return 0;
+}
+```
+
+Dependency usage in C++:
+- full example in [example/Dependency.cpp](example/Dependency.cpp)
+- C example in [example/Dependency_c.c](example/Dependency_c.c)
+```C
+#include "TaskScheduler.h"
+
+enki::TaskScheduler g_TS;
+
+// define a task set, can ignore range if we only do one thing
+struct TaskA : enki::ITaskSet {
+    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+        // do something here, can issue tasks with g_TS
+    }
+};
+
+struct TaskB : enki::ITaskSet {
+    enki::Dependency m_Dependency;
+    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+        // do something here, can issue tasks with g_TS
+    }
+};
+
+int main(int argc, const char * argv[]) {
+    g_TS.Initialize();
+    
+    // set dependencies once (can set more than one if needed).
+    TaskA taskA;
+    TaskB taskB;
+    taskB.SetDependency( taskB.m_Dependency, &taskA );
+
+    g_TS.AddTaskSetToPipe( &taskA ); // add first task
+    g_TS.WaitforTask( &taskB );      // wait for last
     return 0;
 }
 ```

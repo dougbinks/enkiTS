@@ -42,6 +42,7 @@ struct TaskLauncher : ITaskSet
     ITaskSet*           m_pTaskToLaunch = NULL;
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
+        (void)range;
         g_TS.AddTaskSetToPipe( m_pTaskToLaunch );
     }
 };
@@ -50,6 +51,7 @@ struct TaskA : ITaskSet
 {
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
+        (void)range;
         printf("A on thread %u\n", threadnum);
     }
 };
@@ -60,6 +62,7 @@ struct TaskB : ITaskSet
 
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
+        (void)range;
         printf("B on thread %u\n", threadnum);
     }
 };
@@ -80,6 +83,7 @@ struct TaskD : ITaskSet
 
     void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
     {
+        (void)range;
         printf("D on thread %u\n", threadnum);
     }
 };

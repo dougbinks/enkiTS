@@ -83,7 +83,10 @@ struct enkiPinnedTask : IPinnedTask
 
 enkiTaskScheduler* enkiNewTaskScheduler()
 {
-    enkiTaskScheduler* pETS = new enkiTaskScheduler();
+    CustomAllocator defaultAllocator;
+    enkiTaskScheduler* pETS = (enkiTaskScheduler*)defaultAllocator.alloc(
+        alignof(enkiTaskScheduler), sizeof(enkiTaskScheduler), defaultAllocator.userData, ENKI_FILE_AND_LINE );
+    new(pETS) enkiTaskScheduler;
     return pETS;
 }
 

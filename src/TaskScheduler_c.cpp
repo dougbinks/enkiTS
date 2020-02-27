@@ -52,6 +52,8 @@ struct enkiTaskScheduler : TaskScheduler
     }
 };
 
+struct enkiCompletable : ICompletable {}; // empty struct which we will use for completables
+
 struct enkiTaskSet : ITaskSet
 {
     enkiTaskSet( TaskScheduler* pETS_, enkiTaskExecuteRange taskFun_ ) : pETS(pETS_), taskFun(taskFun_), pArgs(NULL) {}
@@ -79,6 +81,10 @@ struct enkiPinnedTask : IPinnedTask
     TaskScheduler* pETS;
     enkiPinnedTaskExecute taskFun;
     void* pArgs;
+};
+
+struct enkiDependency : Dependency
+{
 };
 
 enkiTaskScheduler* enkiNewTaskScheduler()
@@ -281,24 +287,83 @@ uint32_t enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
     return pETS_->GetNumTaskThreads();
 }
 
-ENKITS_API uint32_t enkiGetThreadNum( enkiTaskScheduler* pETS_ )
+uint32_t enkiGetThreadNum( enkiTaskScheduler* pETS_ )
 {
     return pETS_->GetThreadNum();
 }
 
-ENKITS_API int enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
+int enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
 {
     return (int)pETS_->RegisterExternalTaskThread();
 }
 
-ENKITS_API void enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
+void enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
 {
     return pETS_->DeRegisterExternalTaskThread();
 }
 
-ENKITS_API uint32_t enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_)
+uint32_t enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_)
 {
     return pETS_->GetNumRegisteredExternalTaskThreads();
+}
+
+enkiCompletable* enkiGetCompletableFromTaskSet( enkiTaskSet* pTaskSet_ )
+{
+    return reinterpret_cast<enkiCompletable*>( static_cast<ICompletable*>( pTaskSet_ ) );
+}
+
+enkiCompletable* enkiGetCompletableFromPinnedTask( enkiPinnedTask* pPinnedTask_ )
+{
+    return reinterpret_cast<enkiCompletable*>( static_cast<ICompletable*>( pPinnedTask_ ) );
+}
+
+enkiCompletable* enkiCreateCompletable( enkiTaskScheduler* pETS_ )
+{
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiCompletable* pTask = (enkiCompletable*)customAllocator.alloc(
+        alignof(enkiCompletable), sizeof(enkiCompletable), customAllocator.userData, ENKI_FILE_AND_LINE );
+    new(pTask) enkiCompletable();
+    return pTask;
+}
+
+void enkiDeleteCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pCompletable_ )
+{
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+
+    pCompletable_->~enkiCompletable();
+    customAllocator.free( pCompletable_, sizeof(enkiCompletable), customAllocator.userData, ENKI_FILE_AND_LINE );
+}
+
+void enkiWaitForCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pTask_ )
+{
+    return pETS_->WaitforTask( reinterpret_cast<ICompletable*>( pTask_ ) );
+}
+
+void enkiWaitForCompletablePriority( enkiTaskScheduler* pETS_, enkiCompletable* pTask_, int maxPriority_ )
+{
+    return pETS_->WaitforTask( reinterpret_cast<ICompletable*>( pTask_ ), TaskPriority( maxPriority_ ) );
+}
+
+enkiDependency* enkiCreateDependency( enkiTaskScheduler* pETS_ )
+{
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    enkiDependency* pDep = (enkiDependency*)customAllocator.alloc(
+        alignof(enkiDependency), sizeof(enkiDependency), customAllocator.userData, ENKI_FILE_AND_LINE );
+    new(pDep) enkiDependency();
+    return pDep;
+}
+
+void enkiDeleteDependency( enkiTaskScheduler* pETS_, enkiDependency* pDependency_ )
+{
+    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+
+    pDependency_->~enkiDependency();
+    customAllocator.free( pDependency_, sizeof(enkiDependency), customAllocator.userData, ENKI_FILE_AND_LINE );
+}
+
+void enkiSetDependency( enkiCompletable* pDependencyTask_, enkiCompletable* pTaskToRunOnCompletion_, enkiDependency* pDependency_ )
+{
+    pTaskToRunOnCompletion_->SetDependency( *pDependency_, pDependencyTask_ );
 }
 
 enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ )

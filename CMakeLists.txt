@@ -125,5 +125,8 @@ if( ENKITS_BUILD_C_INTERFACE )
     add_executable( CustomAllocator_c example/CustomAllocator_c.c )
     target_link_libraries(CustomAllocator_c enkiTS )
 
+    add_executable( Dependencies_c example/Dependencies_c.c )
+    target_link_libraries(Dependencies_c enkiTS )
 endif()    
+
 endif()

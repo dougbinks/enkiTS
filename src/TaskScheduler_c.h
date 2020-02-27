@@ -49,6 +49,8 @@ extern "C" {
 typedef struct enkiTaskScheduler enkiTaskScheduler;
 typedef struct enkiTaskSet       enkiTaskSet;
 typedef struct enkiPinnedTask    enkiPinnedTask;
+typedef struct enkiCompletable   enkiCompletable;
+typedef struct enkiDependency    enkiDependency;
 
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
 typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
@@ -226,7 +228,47 @@ ENKITS_API int                 enkiRegisterExternalTaskThread( enkiTaskScheduler
 ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_);
 
 // Get the number of registered external task threads.
-ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_);
+ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_ );
+
+// Get a pointer to an enkiCompletable from an enkiTaskSet.
+// Do not call enkiDeleteCompletable on the returned pointer.
+ENKITS_API enkiCompletable*    enkiGetCompletableFromTaskSet(    enkiTaskSet* pTaskSet_ );
+
+// Get a pointer to an enkiCompletable from an enkiPinnedTask.
+// Do not call enkiDeleteCompletable on the returned pointer.
+ENKITS_API enkiCompletable*    enkiGetCompletableFromPinnedTask( enkiPinnedTask* pPinnedTask_ );
+
+// Create an enkiCompletable
+// Can be used with dependencies to wait for their completion.
+// Delete with enkiDeleteCompletable
+ENKITS_API enkiCompletable*    enkiCreateCompletable( enkiTaskScheduler* pETS_ );
+
+// Delete an enkiCompletable created with enkiCreateCompletable
+ENKITS_API void                enkiDeleteCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pCompletable_ );
+
+// Wait for a given completable.
+// should only be called from thread which created the taskscheduler, or within a task
+// if called with 0 it will try to run tasks, and return if none available.
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
+ENKITS_API void                enkiWaitForCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pTask_ );
+
+// enkiWaitForCompletablePriority as enkiWaitForCompletable but only runs other tasks with priority <= maxPriority_
+// Only wait for child tasks of the current task otherwise a deadlock could occur.
+ENKITS_API void                enkiWaitForCompletablePriority( enkiTaskScheduler* pETS_, enkiCompletable* pTask_, int maxPriority_ );
+
+// Create an enkiDependency, used to set dependencies between tasks
+// Call enkiDeleteDependency to delete
+ENKITS_API enkiDependency*     enkiCreateDependency( enkiTaskScheduler* pETS_ );
+
+// Delerte an enkiDependency creatged with enkiCreateDependency
+ENKITS_API void                enkiDeleteDependency( enkiTaskScheduler* pETS_, enkiDependency* pDependency_ );
+
+// Set a dependency between pDependencyTask_ and pTaskToRunOnCompletion_
+// Such that when all depedencies of pTaskToRunOnCompletion_ are completed it will run
+ENKITS_API void                enkiSetDependency(
+                                    enkiCompletable* pDependencyTask_,
+                                    enkiCompletable* pTaskToRunOnCompletion_,
+                                    enkiDependency*  pDependency_ );
 
 // ------------- Start DEPRECATED Functions -------------
 // DEPRECATED - enkiGetProfilerCallbacks.  Use enkiTaskSchedulerConfig instead

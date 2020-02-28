@@ -266,9 +266,9 @@ ENKITS_API void                enkiDeleteDependency( enkiTaskScheduler* pETS_, e
 // Set a dependency between pDependencyTask_ and pTaskToRunOnCompletion_
 // Such that when all depedencies of pTaskToRunOnCompletion_ are completed it will run
 ENKITS_API void                enkiSetDependency(
+                                    enkiDependency*  pDependency_,
                                     enkiCompletable* pDependencyTask_,
-                                    enkiCompletable* pTaskToRunOnCompletion_,
-                                    enkiDependency*  pDependency_ );
+                                    enkiCompletable* pTaskToRunOnCompletion_ );
 
 // ------------- Start DEPRECATED Functions -------------
 // DEPRECATED - enkiGetProfilerCallbacks.  Use enkiTaskSchedulerConfig instead

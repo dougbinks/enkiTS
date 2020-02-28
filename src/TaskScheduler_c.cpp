@@ -362,7 +362,7 @@ void enkiDeleteDependency( enkiTaskScheduler* pETS_, enkiDependency* pDependency
     customAllocator.free( pDependency_, sizeof(enkiDependency), customAllocator.userData, ENKI_FILE_AND_LINE );
 }
 
-void enkiSetDependency( enkiCompletable* pDependencyTask_, enkiCompletable* pTaskToRunOnCompletion_, enkiDependency* pDependency_ )
+void enkiSetDependency( enkiDependency* pDependency_, enkiCompletable* pDependencyTask_, enkiCompletable* pTaskToRunOnCompletion_ )
 {
     pTaskToRunOnCompletion_->SetDependency( *pDependency_, pDependencyTask_ );
 }

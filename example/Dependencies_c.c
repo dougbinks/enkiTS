@@ -74,9 +74,9 @@ int main(int argc, const char * argv[])
         pTaskB[i]              = enkiCreateTaskSet( pETS, TaskSetBFunc );
         pTaskBDependencyToA[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
+            pTaskBDependencyToA[i],
             enkiGetCompletableFromTaskSet( pTaskA ),
-            enkiGetCompletableFromTaskSet( pTaskB[i] ),
-            pTaskBDependencyToA[i]
+            enkiGetCompletableFromTaskSet( pTaskB[i] )
             );
     }
     pPinnedTaskC = enkiCreatePinnedTask( pETS, PinnedTaskCFunc, 0 );
@@ -84,9 +84,9 @@ int main(int argc, const char * argv[])
     {
         pPinnedTaskCDependencyToBs[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
+            pPinnedTaskCDependencyToBs[i],
             enkiGetCompletableFromTaskSet( pTaskB[i] ),
-            enkiGetCompletableFromPinnedTask( pPinnedTaskC ),
-            pPinnedTaskCDependencyToBs[i]
+            enkiGetCompletableFromPinnedTask( pPinnedTaskC )
             );
     }
     for( int i=0; i<NUM_TASK_D; ++i )
@@ -94,9 +94,9 @@ int main(int argc, const char * argv[])
         pTaskD[i]              = enkiCreateTaskSet( pETS, TaskSetDFunc );
         pTaskDDependencyToC[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
+            pTaskDDependencyToC[i],
             enkiGetCompletableFromPinnedTask( pPinnedTaskC ),
-            enkiGetCompletableFromTaskSet( pTaskD[i] ),
-            pTaskDDependencyToC[i]
+            enkiGetCompletableFromTaskSet( pTaskD[i] )
             );
     }
     pCompletableFinished = enkiCreateCompletable( pETS );
@@ -104,9 +104,9 @@ int main(int argc, const char * argv[])
     {
         pDependencyToD[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
+            pDependencyToD[i],
             enkiGetCompletableFromTaskSet( pTaskD[i] ),
-            pCompletableFinished,
-            pDependencyToD[i]
+            pCompletableFinished
             );
     }
 

@@ -279,7 +279,7 @@ int main(int argc, const char * argv[]) {
    // create a task, can re-use this to get allocation occurring on startup
    pTask = enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
 
-   enkiAddTaskSetToPipe( g_pTS, pTask, NULL, 1); // NULL args, setsize of 1
+   enkiAddTaskSetToPipe( g_pTS, pTask); // defaults are NULL args, setsize of 1
 
    // wait for task set (running tasks if they exist)
    // since we've just added it and it has no range we'll likely run it.

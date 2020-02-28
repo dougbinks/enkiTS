@@ -24,29 +24,19 @@
 enkiTaskScheduler*    pETS;
 
 
-void TaskSetAFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
+void TaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
 {
-    (void)start_; (void)end_; (void)pArgs_;
-    printf("A on thread %u\n", threadnum_);
+    (void)start_; (void)end_;
+    char* str = (char*)pArgs_;
+    printf("%s on thread %u\n", str, threadnum_);
 }
 
-void TaskSetBFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
+void PinnedTaskFunc( void* pArgs_ )
 {
-    (void)start_; (void)end_; (void)pArgs_;
-    printf("B on thread %u\n", threadnum_);
+    char* str = (char*)pArgs_;
+    printf("%s Pinned task on thread 0, should be %u\n", str, enkiGetThreadNum( pETS ) );
 }
 
-void PinnedTaskCFunc( void* pArgs_ )
-{
-    (void)pArgs_;
-    printf("C Pinned task on thread 0, should be %u\n", enkiGetThreadNum( pETS ) );
-}
-
-void TaskSetDFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
-{
-    (void)start_; (void)end_; (void)pArgs_;
-    printf("D on thread %u\n", threadnum_);
-}
 
 #define NUM_TASK_B 4
 #define NUM_TASK_D 2
@@ -68,10 +58,12 @@ int main(int argc, const char * argv[])
     enkiInitTaskScheduler( pETS );
 
     // create tasks and set dependencies once, reuse many times
-    pTaskA            = enkiCreateTaskSet( pETS, TaskSetAFunc );
+    pTaskA            = enkiCreateTaskSet( pETS, TaskSetFunc );
+    enkiSetArgsTaskSet( pTaskA, "A" );
     for( int i=0; i<NUM_TASK_B; ++i )
     {
-        pTaskB[i]              = enkiCreateTaskSet( pETS, TaskSetBFunc );
+        pTaskB[i]              = enkiCreateTaskSet( pETS, TaskSetFunc );
+        enkiSetArgsTaskSet( pTaskB[i], "B" );
         pTaskBDependencyToA[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
             pTaskBDependencyToA[i],
@@ -79,7 +71,8 @@ int main(int argc, const char * argv[])
             enkiGetCompletableFromTaskSet( pTaskB[i] )
             );
     }
-    pPinnedTaskC = enkiCreatePinnedTask( pETS, PinnedTaskCFunc, 0 );
+    pPinnedTaskC = enkiCreatePinnedTask( pETS, PinnedTaskFunc, 0 );
+    enkiSetArgsPinnedTask( pPinnedTaskC, "C" );
     for( int i=0; i<NUM_TASK_B; ++i )
     {
         pPinnedTaskCDependencyToBs[i] = enkiCreateDependency( pETS );
@@ -91,7 +84,8 @@ int main(int argc, const char * argv[])
     }
     for( int i=0; i<NUM_TASK_D; ++i )
     {
-        pTaskD[i]              = enkiCreateTaskSet( pETS, TaskSetDFunc );
+        pTaskD[i]              = enkiCreateTaskSet( pETS, TaskSetFunc );
+        enkiSetArgsTaskSet( pTaskD[i], "D" );
         pTaskDDependencyToC[i] = enkiCreateDependency( pETS );
         enkiSetDependency(
             pTaskDDependencyToC[i],
@@ -116,7 +110,7 @@ int main(int argc, const char * argv[])
     for( run=0; run<10; ++run )
     {
         printf("Starting run %d\n", run);
-        enkiAddTaskSetToPipe( pETS, pTaskA, NULL, 1);
+        enkiAddTaskSet( pETS, pTaskA );
         enkiWaitForCompletable( pETS, pCompletableFinished );
         printf("FINISHED run %d\n", run);
     }

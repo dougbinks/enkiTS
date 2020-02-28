@@ -141,8 +141,22 @@ ENKITS_API void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
 // Set task priority ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ );
 
+// Set TaskSet args
+ENKITS_API void                enkiSetArgsTaskSet( enkiTaskSet* pTaskSet_, void* pArgs_ );
+
+// Set TaskSet set setSize
+ENKITS_API void                enkiSetSetSizeTaskSet( enkiTaskSet* pTaskSet_, uint32_t setSize_ );
+
+// Set TaskSet set min range
+ENKITS_API void                enkiSetMinRangeTaskSet( enkiTaskSet* pTaskSet_, uint32_t minRange_ );
+
+// Schedule the task, use parameters set with enkiSet*TaskSet
+ENKITS_API void                enkiAddTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+
 // Schedule the task
-ENKITS_API void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+// overwrites args previously set with enkiSetArgsTaskSet
+// overwrites setSize previously set with enkiSetSetSizeTaskSet
+ENKITS_API void                enkiAddTaskSetArgs( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
                                            void* pArgs_, uint32_t setSize_ );
 
 // Schedule the task with a minimum range.
@@ -151,7 +165,7 @@ ENKITS_API void                enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, e
 // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
 // of m_MinRange.
 // Also known as grain size in literature.
-ENKITS_API void                enkiAddTaskSetToPipeMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
+ENKITS_API void                enkiAddTaskSetMinRange( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_,
                                                   void* pArgs_, uint32_t setSize_, uint32_t minRange_ );
 
 
@@ -167,9 +181,17 @@ ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pPinnedTask
 // Set PinnedTask ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
 
+// Set PinnedTask args
+ENKITS_API void                enkiSetArgsPinnedTask( enkiPinnedTask* pTask_, void* pArgs_ );
+
 // Schedule a pinned task
 // Pinned tasks can be added from any thread
-ENKITS_API void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
+ENKITS_API void                enkiAddPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
+
+// Schedule a pinned task
+// Pinned tasks can be added from any thread
+// overwrites args previously set with enkiSetArgsPinnedTask
+ENKITS_API void                enkiAddPinnedTaskArgs( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_,
                                            void* pArgs_ );
 
 // This function will run any enkiPinnedTask* for current thread, but not run other

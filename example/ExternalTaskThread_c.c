@@ -92,7 +92,7 @@ THREADFUNC_DECL ThreadFunc( void* pArgs_ )
 
     pParallelTask = enkiCreateTaskSet( pETS, ParallelFunc );
 
-    enkiAddTaskSetToPipe( pETS, pParallelTask, NULL, 1);
+    enkiAddTaskSet( pETS, pParallelTask );
     enkiWaitForTaskSet( pETS, pParallelTask );
 
     enkiDeleteTaskSet( pParallelTask );

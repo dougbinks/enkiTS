@@ -22,8 +22,6 @@
 #include <string.h>
 
 enkiTaskScheduler*    pETS;
-enkiTaskSet*        pPSumTask;
-enkiTaskSet*        pPSumReductionTask;
 
 
 typedef struct ParallelSumTaskSetArgs
@@ -31,13 +29,6 @@ typedef struct ParallelSumTaskSetArgs
     uint64_t* pPartialSums;
     uint32_t  numPartialSums;
 } ParallelSumTaskSetArgs;
-
-void ParallelSumTaskSetArgsInit( ParallelSumTaskSetArgs* pArgs_ )
-{
-    pArgs_->numPartialSums = enkiGetNumTaskThreads( pETS );
-    pArgs_->pPartialSums = (uint64_t*)malloc( sizeof(uint64_t) * pArgs_->numPartialSums );
-    memset( pArgs_->pPartialSums, 0, sizeof(uint64_t) * pArgs_->numPartialSums );
-}
 
 void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
 {
@@ -54,60 +45,93 @@ void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_,
     args.pPartialSums[threadnum_] = sum;
 }
 
-void ParallelReductionSumTaskSet(  uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
+typedef struct ParallelReductionSumTaskSetArgs
 {
-    ParallelSumTaskSetArgs args;
-    uint64_t sum;
-    uint64_t inMax_outSum, i;
+    ParallelSumTaskSetArgs sumArgs;
+    uint32_t               numParrallelSums;
+    enkiTaskSet*           pPSumTask;
+    uint64_t               sum;
+} ParallelReductionSumTaskSetArgs;
 
-    inMax_outSum = *(uint64_t*)pArgs_;
+void ParallelReductionSumTaskSetFunc(  uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
+{
+    ParallelReductionSumTaskSetArgs* pArgs;
+    uint64_t sum, i;
 
-    ParallelSumTaskSetArgsInit( &args );
-
-    enkiAddTaskSetToPipe( pETS, pPSumTask, &args, (uint32_t)inMax_outSum);
-    enkiWaitForTaskSet( pETS, pPSumTask );
+    pArgs = (ParallelReductionSumTaskSetArgs*)pArgs_;
 
     sum = 0;
-    for( i = 0; i < args.numPartialSums; ++i )
+    for( i = 0; i < pArgs->sumArgs.numPartialSums; ++i )
     {
-        sum += args.pPartialSums[i];
+        sum += pArgs->sumArgs.pPartialSums[i];
     }
 
-    free( args.pPartialSums );
-
-
-    *(uint64_t*)pArgs_ = sum;
+    pArgs->sum = sum;
 }
 
-
+static const uint32_t REPEATS = 10;
 
 int main(int argc, const char * argv[])
 {
-    uint64_t inMax_outSum, i, serialSum, max;
+    uint32_t run;
+    uint64_t i, serialSum;
+    ParallelReductionSumTaskSetArgs parRedSumTaskSetArgs;
+    enkiTaskSet*                    pPSumTask;
+    enkiTaskSet*                    pPSumReductionTask;
+    enkiDependency*                 pDependencypPSumReductionOnpPSum;
 
     pETS = enkiNewTaskScheduler();
     enkiInitTaskScheduler( pETS );
 
-    pPSumTask            = enkiCreateTaskSet( pETS, ParallelSumTaskSetFunc );
-    pPSumReductionTask    = enkiCreateTaskSet( pETS, ParallelReductionSumTaskSet );
+    pPSumTask          = enkiCreateTaskSet( pETS, ParallelSumTaskSetFunc );
+    pPSumReductionTask = enkiCreateTaskSet( pETS, ParallelReductionSumTaskSetFunc );
+    pDependencypPSumReductionOnpPSum = enkiCreateDependency( pETS );
+    enkiSetDependency( pDependencypPSumReductionOnpPSum,
+                       enkiGetCompletableFromTaskSet( pPSumTask ),
+                       enkiGetCompletableFromTaskSet( pPSumReductionTask ) );
 
-    max = 10 * 1024 * 1024;
-    inMax_outSum = max;
-    enkiAddTaskSetToPipe( pETS, pPSumReductionTask, &inMax_outSum, 1);
-    enkiWaitForTaskSet( pETS, pPSumReductionTask );
+    parRedSumTaskSetArgs.pPSumTask = pPSumTask;
+    parRedSumTaskSetArgs.numParrallelSums = 10 * 1024 * 1024;
+    parRedSumTaskSetArgs.sumArgs.numPartialSums = enkiGetNumTaskThreads( pETS );
+    parRedSumTaskSetArgs.sumArgs.pPartialSums = (uint64_t*)malloc(
+            sizeof(uint64_t) * parRedSumTaskSetArgs.sumArgs.numPartialSums );
+    enkiSetArgsTaskSet( pPSumReductionTask, &parRedSumTaskSetArgs );
+    enkiSetArgsTaskSet( pPSumTask, &parRedSumTaskSetArgs.sumArgs );
+    enkiSetSetSizeTaskSet( pPSumTask, parRedSumTaskSetArgs.numParrallelSums );
 
-    printf("Parallel Example complete sum: \t %llu\n", (long long unsigned int)inMax_outSum );
-
-    serialSum = 0;
-    for( i = 0; i < max; ++i )
+    for( run = 0; run< REPEATS; ++run )
     {
-        serialSum += i + 1;
+        // reset partial sums
+        memset( parRedSumTaskSetArgs.sumArgs.pPartialSums, 0,
+            sizeof(uint64_t) * parRedSumTaskSetArgs.sumArgs.numPartialSums );
+
+        // add first task, parallel sum
+        enkiAddTaskSet( pETS, pPSumTask );
+
+        // wait for reduction which will run due to dependencies
+        enkiWaitForTaskSet( pETS, pPSumReductionTask );
+
+        printf("Parallel Example complete sum: \t %llu\n", (long long unsigned int)parRedSumTaskSetArgs.sum );
+
+        serialSum = 0;
+        for( i = 0; i < parRedSumTaskSetArgs.numParrallelSums; ++i )
+        {
+            serialSum += i + 1;
+        }
+
+        printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
+
+        if( serialSum != parRedSumTaskSetArgs.sum )
+        {
+            printf("ERROR: Serial sum does not match parallel sum\n");
+        }
     }
 
-    printf("Serial Example complete sum: \t %llu\n", (long long unsigned int)serialSum );
+    free( parRedSumTaskSetArgs.sumArgs.pPartialSums );
 
-    enkiDeleteTaskSet( pPSumTask );
+    enkiDeleteDependency( pETS, pDependencypPSumReductionOnpPSum );
     enkiDeleteTaskSet( pPSumReductionTask );
+    enkiDeleteTaskSet( pPSumTask );
 
     enkiDeleteTaskScheduler( pETS );
 }

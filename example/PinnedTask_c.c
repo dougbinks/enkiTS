@@ -34,7 +34,7 @@ void PinnedTaskFunc( void* pArgs_ )
 
 void ParallelTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
 {
-    enkiAddPinnedTask( pETS, pPinnedTask, NULL );
+    enkiAddPinnedTask( pETS, pPinnedTask );
     printf("This could run on any thread, currently thread %d\n", threadnum_);
     enkiWaitForPinnedTask( pETS, pPinnedTask );
 }
@@ -51,7 +51,7 @@ int main(int argc, const char * argv[])
 
     for( run = 0; run< REPEATS; ++run )
     {
-        enkiAddTaskSetToPipe( pETS, pParallelTask, NULL, 1);
+        enkiAddTaskSet( pETS, pParallelTask );
 
         enkiRunPinnedTasks( pETS );
     

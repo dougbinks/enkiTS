@@ -34,12 +34,12 @@ namespace
 #define ENKI_FILE_AND_LINE  gc_File, gc_Line
 #endif
 
-ENKITS_API void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
+void* enkiDefaultAllocFunc(  size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
 {
     return enki::DefaultAllocFunc( align_, size_, userData_, file_, line_ );
 }
 
-ENKITS_API void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
+void  enkiDefaultFreeFunc(   void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
 {
     return enki::DefaultFreeFunc( ptr_, size_, userData_, file_, line_ );
 }
@@ -65,7 +65,7 @@ struct enkiTaskSet : ITaskSet
 
     TaskScheduler* pETS;
     enkiTaskExecuteRange taskFun;
-    void* pArgs;
+    void* pArgs = NULL;
 };
 
 struct enkiPinnedTask : IPinnedTask
@@ -80,7 +80,7 @@ struct enkiPinnedTask : IPinnedTask
 
     TaskScheduler* pETS;
     enkiPinnedTaskExecute taskFun;
-    void* pArgs;
+    void* pArgs = NULL;
 };
 
 struct enkiDependency : Dependency {}; // empty struct which we will use for dependencies
@@ -94,7 +94,7 @@ enkiTaskScheduler* enkiNewTaskScheduler()
     return pETS;
 }
 
-ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
+enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct enkiCustomAllocator customAllocator_ )
 {
     enkiTaskScheduler* pETS = (enkiTaskScheduler*)customAllocator_.alloc(
         alignof(enkiTaskScheduler), sizeof(enkiTaskScheduler), customAllocator_.userData, ENKI_FILE_AND_LINE );
@@ -109,7 +109,7 @@ ENKITS_API enkiTaskScheduler* enkiNewTaskSchedulerWithCustomAllocator( struct en
     return pETS;
 }
 
-ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ )
+struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ )
 {
     TaskSchedulerConfig config = pETS_->GetConfig();
     enkiTaskSchedulerConfig configC;
@@ -139,7 +139,7 @@ void enkiInitTaskSchedulerNumThreads(  enkiTaskScheduler* pETS_, uint32_t numThr
     pETS_->Initialize( numThreads_ );
 }
 
-ENKITS_API void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ )
+void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ )
 {
     TaskSchedulerConfig config;
     config.numExternalTaskThreads                             = config_.numExternalTaskThreads;
@@ -189,7 +189,30 @@ void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
     pTaskSet_->m_Priority = TaskPriority( priority_ );
 }
 
-void enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
+void enkiSetArgsTaskSet( enkiTaskSet* pTaskSet_, void* pArgs_ )
+{
+    pTaskSet_->pArgs = pArgs_;
+}
+
+void enkiSetSetSizeTaskSet( enkiTaskSet* pTaskSet_, uint32_t setSize_ )
+{
+    pTaskSet_->m_SetSize = setSize_;
+}
+
+void enkiSetMinRangeTaskSet( enkiTaskSet* pTaskSet_, uint32_t minRange_ )
+{
+    pTaskSet_->m_MinRange = minRange_;
+}
+
+void enkiAddTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
+{
+    assert( pTaskSet_ );
+    assert( pTaskSet_->taskFun );
+
+    pETS_->AddTaskSetToPipe( pTaskSet_ );
+}
+
+void enkiAddTaskSetArgs( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
 {
     assert( pTaskSet_ );
     assert( pTaskSet_->taskFun );
@@ -199,7 +222,7 @@ void enkiAddTaskSetToPipe( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, voi
     pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
-void enkiAddTaskSetToPipeMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_, uint32_t minRange_)
+void enkiAddTaskSetMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_, uint32_t minRange_)
 {
     assert( pTaskSet_ );
     assert( pTaskSet_->taskFun );
@@ -240,7 +263,18 @@ void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
     pTask_->m_Priority = TaskPriority( priority_ );
 }
 
-void enkiAddPinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, void* pArgs_)
+void enkiSetArgsPinnedTask( enkiPinnedTask* pTask_, void* pArgs_ )
+{
+    pTask_->pArgs = pArgs_;
+}
+
+void enkiAddPinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_)
+{
+    assert( pTask_ );
+    pETS_->AddPinnedTask( pTask_ );
+}
+
+void enkiAddPinnedTaskArgs(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, void* pArgs_)
 {
     assert( pTask_ );
     pTask_->pArgs = pArgs_;

@@ -53,22 +53,23 @@ int main(int argc, const char * argv[])
 
     plowPriorityTask = enkiCreateTaskSet( pETS, LowPriorityTask );
     enkiSetPriorityTaskSet( plowPriorityTask, 1 ); // lower values higher priority
+    enkiSetSetSizeTaskSet( plowPriorityTask, 10 );
 
     pHighPriorityTask = enkiCreateTaskSet( pETS, HighPriorityTask );
     enkiSetPriorityTaskSet( pHighPriorityTask, 0 ); // lower values higher priority
 
-    enkiAddTaskSetToPipe( pETS, plowPriorityTask, NULL, 10 );
+    enkiAddTaskSet( pETS, plowPriorityTask );
     for( run = 0; run < 10; ++run )
     {
         // run high priority tasks
-        enkiAddTaskSetToPipe( pETS, pHighPriorityTask, NULL, 1 );
+        enkiAddTaskSet( pETS, pHighPriorityTask );
 
         // wait for task but only run tasks of the same priority or higher on this thread
         enkiWaitForTaskSetPriority( pETS, pHighPriorityTask, 0 );
     }
 
     // wait for low priority task, run any tasks on this thread whilst waiting
-    enkiWaitForTaskSet( pETS, pHighPriorityTask );
+    enkiWaitForTaskSet( pETS, plowPriorityTask );
 
     enkiDeleteTaskSet( plowPriorityTask );
     enkiDeleteTaskSet( pHighPriorityTask );

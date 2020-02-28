@@ -285,7 +285,7 @@ int main(int argc, const char * argv[]) {
    // since we've just added it and it has no range we'll likely run it.
    enkiWaitForTaskSet( g_pTS, pTask );
    
-   enkiDeleteTaskSet( pTask );
+   enkiDeleteTaskSet( g_pTS, pTask );
    
    enkiDeleteTaskScheduler( g_pTS );
    

@@ -71,8 +71,8 @@ int main(int argc, const char * argv[])
     // wait for low priority task, run any tasks on this thread whilst waiting
     enkiWaitForTaskSet( pETS, plowPriorityTask );
 
-    enkiDeleteTaskSet( plowPriorityTask );
-    enkiDeleteTaskSet( pHighPriorityTask );
+    enkiDeleteTaskSet( pETS, plowPriorityTask );
+    enkiDeleteTaskSet( pETS, pHighPriorityTask );
 
     enkiDeleteTaskScheduler( pETS );
 }

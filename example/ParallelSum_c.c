@@ -96,8 +96,11 @@ int main(int argc, const char * argv[])
     parRedSumTaskSetArgs.sumArgs.pPartialSums = (uint64_t*)malloc(
             sizeof(uint64_t) * parRedSumTaskSetArgs.sumArgs.numPartialSums );
     enkiSetArgsTaskSet( pPSumReductionTask, &parRedSumTaskSetArgs );
-    enkiSetArgsTaskSet( pPSumTask, &parRedSumTaskSetArgs.sumArgs );
-    enkiSetSetSizeTaskSet( pPSumTask, parRedSumTaskSetArgs.numParrallelSums );
+
+    struct enkiParamsTaskSet parSumTaskParams = enkiGetParamsTaskSet( pPSumTask );
+    parSumTaskParams.pArgs   = &parRedSumTaskSetArgs.sumArgs;
+    parSumTaskParams.setSize = parRedSumTaskSetArgs.numParrallelSums;
+    enkiSetParamsTaskSet( pPSumTask, parSumTaskParams );
 
     for( run = 0; run< REPEATS; ++run )
     {
@@ -130,8 +133,8 @@ int main(int argc, const char * argv[])
     free( parRedSumTaskSetArgs.sumArgs.pPartialSums );
 
     enkiDeleteDependency( pETS, pDependencypPSumReductionOnpPSum );
-    enkiDeleteTaskSet( pPSumReductionTask );
-    enkiDeleteTaskSet( pPSumTask );
+    enkiDeleteTaskSet( pETS, pPSumReductionTask );
+    enkiDeleteTaskSet( pETS, pPSumTask );
 
     enkiDeleteTaskScheduler( pETS );
 }

@@ -87,7 +87,7 @@ int main(int argc, const char * argv[])
     enkiAddTaskSet( pETS, pParallelTask );
     enkiWaitForTaskSet( pETS, pParallelTask );
 
-    enkiDeleteTaskSet( pParallelTask );
+    enkiDeleteTaskSet( pETS, pParallelTask );
 
     enkiDeleteTaskScheduler( pETS );
 }

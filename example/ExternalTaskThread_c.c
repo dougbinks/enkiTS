@@ -95,7 +95,7 @@ THREADFUNC_DECL ThreadFunc( void* pArgs_ )
     enkiAddTaskSet( pETS, pParallelTask );
     enkiWaitForTaskSet( pETS, pParallelTask );
 
-    enkiDeleteTaskSet( pParallelTask );
+    enkiDeleteTaskSet( pETS, pParallelTask );
 
     enkiDeRegisterExternalTaskThread( pETS );
     return 0;

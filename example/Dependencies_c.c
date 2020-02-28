@@ -127,19 +127,19 @@ int main(int argc, const char * argv[])
     for( int i=0; i<NUM_TASK_D; ++i )
     {
         enkiDeleteDependency( pETS, pTaskDDependencyToC[i] );
-        enkiDeleteTaskSet( pTaskD[i] );
+        enkiDeleteTaskSet( pETS, pTaskD[i] );
     }
     for( int i=0; i<NUM_TASK_B; ++i )
     {
         enkiDeleteDependency( pETS, pPinnedTaskCDependencyToBs[i] );
     }
-    enkiDeletePinnedTask( pPinnedTaskC );
+    enkiDeletePinnedTask( pETS, pPinnedTaskC );
     for( int i=0; i<NUM_TASK_B; ++i )
     {
         enkiDeleteDependency( pETS, pTaskBDependencyToA[i] );
-        enkiDeleteTaskSet( pTaskB[i] );
+        enkiDeleteTaskSet( pETS, pTaskB[i] );
     }
-    enkiDeleteTaskSet( pTaskA );
+    enkiDeleteTaskSet( pETS, pTaskA );
 
 
     enkiDeleteTaskScheduler( pETS );

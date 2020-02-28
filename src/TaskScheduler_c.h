@@ -81,6 +81,20 @@ struct enkiCustomAllocator
     void*         userData;
 };
 
+struct enkiParamsTaskSet
+{
+    void*    pArgs;
+    uint32_t setSize;
+    uint32_t minRange;
+    int      priority;
+};
+
+struct enkiParamsPinnedTask
+{
+    void*    pArgs;
+    int      priority;
+};
+
 // enkiTaskSchedulerConfig - configuration struct for advanced Initialize
 // Always use enkiGetTaskSchedulerConfig() to get defaults prior to altering and
 // initializing with enkiInitTaskSchedulerWithConfig().
@@ -128,7 +142,6 @@ ENKITS_API void                enkiInitTaskSchedulerNumThreads( enkiTaskSchedule
 // Initialize a task scheduler with config, see enkiTaskSchedulerConfig for details
 ENKITS_API void                enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ );
 
-
 // Delete a task scheduler
 ENKITS_API void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );
 
@@ -136,7 +149,13 @@ ENKITS_API void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_
 ENKITS_API enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
 
 // Delete a task set.
-ENKITS_API void                enkiDeleteTaskSet( enkiTaskSet* pTaskSet_ );
+ENKITS_API void                enkiDeleteTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
+
+// Get task parameters via enkiParamsTaskSet
+ENKITS_API struct enkiParamsTaskSet enkiGetParamsTaskSet( enkiTaskSet* pTaskSet_ );
+
+// Set task parameters via enkiParamsTaskSet
+ENKITS_API void                enkiSetParamsTaskSet( enkiTaskSet* pTaskSet_, struct enkiParamsTaskSet params_ );
 
 // Set task priority ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ );
@@ -176,7 +195,13 @@ ENKITS_API int                 enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, 
 ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
 // Delete a pinned task.
-ENKITS_API void                enkiDeletePinnedTask( enkiPinnedTask* pPinnedTask_ );
+ENKITS_API void                enkiDeletePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pPinnedTask_ );
+
+// Get task parameters via enkiParamsTaskSet
+ENKITS_API struct enkiParamsPinnedTask enkiGetParamsPinnedTask( enkiPinnedTask* pTask_ );
+
+// Set task parameters via enkiParamsTaskSet
+ENKITS_API void                enkiSetParamsPinnedTask( enkiPinnedTask* pTask_, struct enkiParamsPinnedTask params_ );
 
 // Set PinnedTask ( 0 to ENKITS_TASK_PRIORITIES_NUM-1, where 0 is highest)
 ENKITS_API void                enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ );
@@ -291,12 +316,6 @@ ENKITS_API void                enkiSetDependency(
                                     enkiDependency*  pDependency_,
                                     enkiCompletable* pDependencyTask_,
                                     enkiCompletable* pTaskToRunOnCompletion_ );
-
-// ------------- Start DEPRECATED Functions -------------
-// DEPRECATED - enkiGetProfilerCallbacks.  Use enkiTaskSchedulerConfig instead
-// Get the callback structure so it can be set 
-ENKITS_API struct enkiProfilerCallbacks*    enkiGetProfilerCallbacks( enkiTaskScheduler* pETS_ );
-// -------------  End DEPRECATED Functions  -------------
 
 
 #ifdef __cplusplus

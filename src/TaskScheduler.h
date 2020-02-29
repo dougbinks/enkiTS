@@ -115,6 +115,10 @@ namespace enki
 
         TaskPriority                   m_Priority            = TASK_PRIORITY_HIGH;
     protected:
+        // Deriving from an ICompletable and overriding OnDependenciesComplete is advanced use.
+        // If you do override OnDependenciesComplete() call:
+        // ICompletable::OnDependenciesComplete( pTaskScheduler_, threadNum_ );
+        // in your implementation.
         virtual void                   OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ );
     private:
         friend class                   TaskScheduler;

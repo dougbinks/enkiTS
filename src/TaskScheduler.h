@@ -115,10 +115,11 @@ namespace enki
         template<typename D, typename T>           void SetDependenciesVec( D& dependencyVec_, std::initializer_list<T*> taskpList_ );
 
         TaskPriority                   m_Priority            = TASK_PRIORITY_HIGH;
+    protected:
+        virtual void                   OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ );
     private:
         friend class                   TaskScheduler;
         friend class                   Dependency;
-        virtual void                   OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ );
         std::atomic<int32_t>           m_RunningCount               = {0};
         std::atomic<int32_t>           m_DependenciesCompletedCount = {0};
         int32_t                        m_DependenciesCount          = 0;
@@ -225,6 +226,8 @@ namespace enki
 
         ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ );
         ENKITS_API void ClearDependency();
+              ICompletable* GetTaskToRunOnCompletion() { return pTaskToRunOnCompletion; }
+        const ICompletable* GetDependencyTask() { return pDependencyTask; }
     private:
         friend class TaskScheduler; friend class ICompletable;
         ICompletable*       pTaskToRunOnCompletion = NULL;

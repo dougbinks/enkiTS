@@ -447,13 +447,19 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
         assert( prevDeps < pDependent->pTaskToRunOnCompletion->m_DependenciesCount );
         if( pDependent->pTaskToRunOnCompletion->m_DependenciesCount == ( prevDeps + 1 ) )
         {
-            pDependent->pTaskToRunOnCompletion->OnDependenciesComplete( this, threadNum_ );
+            // get temp copy of pDependent so OnDependenciesComplete can delete task if needed.
+            Dependency* pDependentCurr = pDependent;
+            pDependent = pDependent->pNext;
             // reset dependencies
-            pDependent->pTaskToRunOnCompletion->m_DependenciesCompletedCount.store(
+            pDependentCurr->pTaskToRunOnCompletion->m_DependenciesCompletedCount.store(
                 0,
                 std::memory_order_release );
+            pDependentCurr->pTaskToRunOnCompletion->OnDependenciesComplete( this, threadNum_ );
         }
-        pDependent = pDependent->pNext;
+        else
+        {
+            pDependent = pDependent->pNext;
+        }
     }
     if( bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire ) )
     {

@@ -66,14 +66,13 @@ namespace enki
     class  TaskScheduler;
     class  TaskPipe;
     class  PinnedTaskList;
-    class Dependency;
+    class  Dependency;
     struct ThreadArgs;
     struct ThreadDataStore;
     struct SubTaskSet;
     struct semaphoreid_t;
 
     uint32_t GetNumHardwareThreads();
-
 
     enum TaskPriority
     {
@@ -132,16 +131,9 @@ namespace enki
     class ITaskSet : public ICompletable
     {
     public:
-        ITaskSet()
-            : m_SetSize(1)
-            , m_MinRange(1)
-            , m_RangeToRun(1)
-        {}
-
+        ITaskSet() = default;
         ITaskSet( uint32_t setSize_ )
             : m_SetSize( setSize_ )
-            , m_MinRange(1)
-            , m_RangeToRun(1)
         {}
 
         ITaskSet( uint32_t setSize_, uint32_t minRange_ )
@@ -149,8 +141,6 @@ namespace enki
             , m_MinRange( minRange_ )
             , m_RangeToRun(minRange_)
         {}
-
-
 
         // Execute range should be overloaded to process tasks. It will be called with a
         // range_ where range.start >= 0; range.start < range.end; and range.end < m_SetSize;
@@ -161,7 +151,7 @@ namespace enki
         virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) = 0;
 
         // Set Size - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
-        uint32_t     m_SetSize;
+        uint32_t     m_SetSize  = 1;
 
         // Min Range - Minimum size of of TaskSetPartition range when splitting a task set into partitions.
         // Designed for reducing scheduling overhead by preventing set being
@@ -172,27 +162,27 @@ namespace enki
         // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
         // of m_MinRange.
         // Also known as grain size in literature.
-        uint32_t     m_MinRange;
+        uint32_t     m_MinRange  = 1;
 
     private:
         friend class TaskScheduler;
         void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
-        uint32_t     m_RangeToRun;
+        uint32_t     m_RangeToRun = 1;
     };
 
     // Subclass IPinnedTask to create tasks which can be run on a given thread only.
     class IPinnedTask : public ICompletable
     {
     public:
-        IPinnedTask()                      : threadNum(0), pNext(NULL) {}  // default is to run a task on main thread
-        IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_), pNext(NULL) {}  // default is to run a task on main thread
+        IPinnedTask() = default;
+        IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_) {}  // default is to run a task on main thread
 
         // IPinnedTask needs to be non abstract for intrusive list functionality.
         // Should never be called as should be overridden.
         virtual void Execute() { assert(false); }
 
-        uint32_t                  threadNum; // thread to run this pinned task on
-        std::atomic<IPinnedTask*> pNext;
+        uint32_t                  threadNum = 0; // thread to run this pinned task on
+        std::atomic<IPinnedTask*> pNext = {NULL};
     private:
         void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
     };

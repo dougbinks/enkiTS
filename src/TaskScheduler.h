@@ -98,11 +98,11 @@ namespace enki
     class ICompletable
     {
     public:
-        bool                   GetIsComplete() const {
+        bool    GetIsComplete() const {
             return 0 == m_RunningCount.load( std::memory_order_acquire );
         }
 
-        virtual                ~ICompletable();
+        virtual ~ICompletable();
 
         // Dependency helpers, see Dependencies.cpp
         void SetDependency( Dependency& dependency_, const ICompletable* pDependencyTask_ );
@@ -221,7 +221,7 @@ namespace enki
         ENKITS_API void SetDependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ );
         ENKITS_API void ClearDependency();
               ICompletable* GetTaskToRunOnCompletion() { return pTaskToRunOnCompletion; }
-        const ICompletable* GetDependencyTask() { return pDependencyTask; }
+        const ICompletable* GetDependencyTask()        { return pDependencyTask; }
     private:
         friend class TaskScheduler; friend class ICompletable;
         ICompletable*       pTaskToRunOnCompletion = NULL;

@@ -116,6 +116,7 @@ struct enkiTaskSchedulerConfig
     struct enkiCustomAllocator   customAllocator;
 };
 
+
 /* ----------------------------  Task Scheduler  ---------------------------- */
 // Create a new task scheduler
 ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
@@ -176,6 +177,7 @@ ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskSchedul
 // Get the number of registered external task threads.
 ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_ );
 
+
 /* ----------------------------     TaskSet     ---------------------------- */
 // Create a task set.
 ENKITS_API enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
@@ -231,6 +233,7 @@ ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enk
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForTaskSetPriority( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, int maxPriority_ );
 
+
 /* ----------------------------    PinnedTask   ---------------------------- */
 // Create a pinned task.
 ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
@@ -277,6 +280,7 @@ ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, 
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, int maxPriority_ );
 
+
 /* ----------------------------    Completable   ---------------------------- */
 // Get a pointer to an enkiCompletable from an enkiTaskSet.
 // Do not call enkiDeleteCompletable on the returned pointer.
@@ -304,7 +308,8 @@ ENKITS_API void                enkiWaitForCompletable( enkiTaskScheduler* pETS_,
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForCompletablePriority( enkiTaskScheduler* pETS_, enkiCompletable* pTask_, int maxPriority_ );
 
-/* ----------------------------    Depenency   ---------------------------- */
+
+/* ----------------------------    Dependencies   ---------------------------- */
 // Create an enkiDependency, used to set dependencies between tasks
 // Call enkiDeleteDependency to delete
 ENKITS_API enkiDependency*     enkiCreateDependency( enkiTaskScheduler* pETS_ );

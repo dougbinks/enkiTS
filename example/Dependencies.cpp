@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Doug Binks
+// Copyright (c) 2020 Doug Binks
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages

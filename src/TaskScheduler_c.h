@@ -46,14 +46,16 @@ extern "C" {
 #include <stdint.h>
 #include <stddef.h>
 
-typedef struct enkiTaskScheduler enkiTaskScheduler;
-typedef struct enkiTaskSet       enkiTaskSet;
-typedef struct enkiPinnedTask    enkiPinnedTask;
-typedef struct enkiCompletable   enkiCompletable;
-typedef struct enkiDependency    enkiDependency;
+typedef struct enkiTaskScheduler    enkiTaskScheduler;
+typedef struct enkiTaskSet          enkiTaskSet;
+typedef struct enkiPinnedTask       enkiPinnedTask;
+typedef struct enkiCompletable      enkiCompletable;
+typedef struct enkiDependency       enkiDependency;
+typedef struct enkiCompletionAction enkiCompletionAction;
 
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
 typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
+typedef void (* enkiCompletionFunction)( void* pArgs_, uint32_t threadNum_ );
 
 // TaskScheduler implements several callbacks intended for profilers
 typedef void (*enkiProfilerCallbackFunc)( uint32_t threadnum_ );
@@ -93,6 +95,12 @@ struct enkiParamsPinnedTask
 {
     void*    pArgs;
     int      priority;
+};
+
+struct enkiParamsCompletionAction
+{
+    void*                  pArgs;
+    const enkiCompletable* pDependency; // task which when complete triggers completion function
 };
 
 // enkiTaskSchedulerConfig - configuration struct for advanced Initialize
@@ -178,7 +186,7 @@ ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskSchedul
 ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_ );
 
 
-/* ----------------------------     TaskSet     ---------------------------- */
+/* ----------------------------     TaskSets    ---------------------------- */
 // Create a task set.
 ENKITS_API enkiTaskSet*        enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  );
 
@@ -234,7 +242,7 @@ ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enk
 ENKITS_API void                enkiWaitForTaskSetPriority( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, int maxPriority_ );
 
 
-/* ----------------------------    PinnedTask   ---------------------------- */
+/* ----------------------------   PinnedTasks   ---------------------------- */
 // Create a pinned task.
 ENKITS_API enkiPinnedTask*     enkiCreatePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_  );
 
@@ -281,7 +289,7 @@ ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, 
 ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, int maxPriority_ );
 
 
-/* ----------------------------    Completable   ---------------------------- */
+/* ----------------------------   Completables  ---------------------------- */
 // Get a pointer to an enkiCompletable from an enkiTaskSet.
 // Do not call enkiDeleteCompletable on the returned pointer.
 ENKITS_API enkiCompletable*    enkiGetCompletableFromTaskSet(    enkiTaskSet* pTaskSet_ );
@@ -289,6 +297,10 @@ ENKITS_API enkiCompletable*    enkiGetCompletableFromTaskSet(    enkiTaskSet* pT
 // Get a pointer to an enkiCompletable from an enkiPinnedTask.
 // Do not call enkiDeleteCompletable on the returned pointer.
 ENKITS_API enkiCompletable*    enkiGetCompletableFromPinnedTask( enkiPinnedTask* pPinnedTask_ );
+
+// Get a pointer to an enkiCompletable from an enkiPinnedTask.
+// Do not call enkiDeleteCompletable on the returned pointer.
+ENKITS_API enkiCompletable*    enkiGetCompletableFromCompletionAction( enkiCompletionAction* pCompletionAction_ );
 
 // Create an enkiCompletable
 // Can be used with dependencies to wait for their completion.
@@ -309,7 +321,7 @@ ENKITS_API void                enkiWaitForCompletable( enkiTaskScheduler* pETS_,
 ENKITS_API void                enkiWaitForCompletablePriority( enkiTaskScheduler* pETS_, enkiCompletable* pTask_, int maxPriority_ );
 
 
-/* ----------------------------    Dependencies   ---------------------------- */
+/* ----------------------------   Dependencies  ---------------------------- */
 // Create an enkiDependency, used to set dependencies between tasks
 // Call enkiDeleteDependency to delete
 ENKITS_API enkiDependency*     enkiCreateDependency( enkiTaskScheduler* pETS_ );
@@ -323,6 +335,20 @@ ENKITS_API void                enkiSetDependency(
                                     enkiDependency*  pDependency_,
                                     enkiCompletable* pDependencyTask_,
                                     enkiCompletable* pTaskToRunOnCompletion_ );
+
+/* -------------------------- Completion Actions --------------------------- */
+// Create a CompletionAction.
+ENKITS_API enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunc_  );
+
+// Delete a CompletionAction.
+ENKITS_API void                enkiDeleteCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionAction* pCompletionAction_ );
+
+// Get task parameters via enkiParamsTaskSet
+ENKITS_API struct enkiParamsCompletionAction enkiGetParamsCompletionAction( enkiCompletionAction* pCompletionAction_ );
+
+// Set task parameters via enkiParamsTaskSet
+ENKITS_API void                enkiSetParamsCompletionAction( enkiCompletionAction* pCompletionAction_, struct enkiParamsCompletionAction params_ );
+
 
 #ifdef __cplusplus
 }

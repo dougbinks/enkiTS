@@ -130,6 +130,9 @@ if( ENKITS_BUILD_C_INTERFACE )
 
     add_executable( Dependencies_c example/Dependencies_c.c )
     target_link_libraries(Dependencies_c enkiTS )
+
+    add_executable( CompletionAction_c example/CompletionAction_c.c )
+    target_link_libraries(CompletionAction_c enkiTS )
 endif()    
 
 endif()

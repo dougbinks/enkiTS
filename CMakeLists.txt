@@ -106,6 +106,9 @@ if( ENKITS_BUILD_EXAMPLES )
 
     add_executable( Dependencies example/Dependencies.cpp )
     target_link_libraries(Dependencies enkiTS )
+
+    add_executable( CompletionAction example/CompletionAction.cpp )
+    target_link_libraries(CompletionAction enkiTS )
 	
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )

@@ -326,7 +326,7 @@ Aras Pranckevičius' code for his series on [Daily Path Tracer experiments with 
 
 ## License (zlib)
 
-Copyright (c) 2013-2019 Doug Binks
+Copyright (c) 2013-2020 Doug Binks
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages

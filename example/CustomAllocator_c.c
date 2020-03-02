@@ -35,8 +35,7 @@ void ParallelFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pAr
 
 void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
 {
-    (void)align_; // for example ignoring alignment
-    totalAllocations += size_;
+    totalAllocations += size_; // note this isn't thread safe, should use atomics in real application
 
     // We don't need to use this macro as file_ and line_ will be valid and printable just not useful
     // But for this example it makes prettier output :) 
@@ -54,7 +53,7 @@ void* CustomAllocFunc( size_t align_, size_t size_, void* userData_, const char*
 
 void  CustomFreeFunc(  void* ptr_,    size_t size_, void* userData_, const char* file_, int line_ )
 {
-    totalAllocations -= size_;
+    totalAllocations -= size_; // note this isn't thread safe, should use atomics in real application
 
     // We don't need to use this macro as file_ and line_ will be valid and printable just not useful
     // But for this example it makes prettier output :) 

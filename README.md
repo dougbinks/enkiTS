@@ -52,7 +52,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
 1. *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
 1. *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
-1. **NEW** *Dependencies* - can set dependendencies between tasks see [example/Dependency.cpp](example/Dependency.cpp) and [example/Dependency_c.c](example/Dependency_c.c).
+1. **NEW** *Dependencies* - can set dependendencies between tasks see [example/Dependencies.cpp](example/Dependencies.cpp) and [example/Dependencies_c.c](example/Dependencies_c.c).
 1. **NEW** *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
 
 ## Usage

@@ -30,7 +30,7 @@ typedef struct ParallelSumTaskSetArgs
     uint32_t  numPartialSums;
 } ParallelSumTaskSetArgs;
 
-void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
+void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
 {
     ParallelSumTaskSetArgs args;
     uint64_t sum, i;
@@ -38,7 +38,7 @@ void ParallelSumTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_,
     args = *(ParallelSumTaskSetArgs*)pArgs_;
 
     sum = args.pPartialSums[threadnum_];
-    for( i = start_; i < end; ++i )
+    for( i = start_; i < end_; ++i )
     {
         sum += i + 1;
     }
@@ -53,7 +53,7 @@ typedef struct ParallelReductionSumTaskSetArgs
     uint64_t               sum;
 } ParallelReductionSumTaskSetArgs;
 
-void ParallelReductionSumTaskSetFunc(  uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ )
+void ParallelReductionSumTaskSetFunc(  uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
 {
     ParallelReductionSumTaskSetArgs* pArgs;
     uint64_t sum, i;

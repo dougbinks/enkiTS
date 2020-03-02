@@ -67,7 +67,7 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct ParallelTaskSet : enki::ITaskSet {
-    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+    void ExecuteRange(  enki::TaskSetPartition range_, uint32_t threadnum_ ) override {
         // do something here, can issue tasks with g_TS
     }
 };
@@ -94,7 +94,7 @@ enki::TaskScheduler g_TS;
 int main(int argc, const char * argv[]) {
    g_TS.Initialize();
 
-   enki::TaskSet task( 1, []( enki::TaskSetPartition range, uint32_t threadnum  ) {
+   enki::TaskSet task( 1, []( enki::TaskSetPartition range_, uint32_t threadnum_  ) {
          // do something here
       }  );
 
@@ -117,7 +117,7 @@ struct ExampleTask : enki::ITaskSet
 {
     ExampleTask( ) { m_SetSize = size_; }
 
-    virtual void ExecuteRange( enki::TaskSetPartition range, uint32_t threadnum ) {
+    void ExecuteRange(  enki::TaskSetPartition range_, uint32_t threadnum_ ) override {
         // See full example in Priorities.cpp
     }
 };
@@ -161,7 +161,7 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct PinnedTask : enki::IPinnedTask {
-    virtual void    Execute() {
+    void Execute() override {
       // do something here, can issue tasks with g_TS
     }
 };
@@ -192,14 +192,14 @@ enki::TaskScheduler g_TS;
 
 // define a task set, can ignore range if we only do one thing
 struct TaskA : enki::ITaskSet {
-    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+    void ExecuteRange(  enki::TaskSetPartition range_, uint32_t threadnum_ ) override {
         // do something here, can issue tasks with g_TS
     }
 };
 
 struct TaskB : enki::ITaskSet {
     enki::Dependency m_Dependency;
-    virtual void    ExecuteRange(  enki::TaskSetPartition range, uint32_t threadnum ) {
+    void ExecuteRange(  enki::TaskSetPartition range_, uint32_t threadnum_ ) override {
         // do something here, can issue tasks with g_TS
     }
 };
@@ -227,8 +227,7 @@ External thread usage in C++:
 enki::TaskScheduler g_TS;
 struct ParallelTaskSet : ITaskSet
 {
-    virtual void ExecuteRange( TaskSetPartition range, uint32_t threadnum )
-    {
+    void ExecuteRange(  enki::TaskSetPartition range_, uint32_t threadnum_ ) override {
         // Do something
     }
 };
@@ -268,7 +267,7 @@ C usage:
 
 enkiTaskScheduler*	g_pTS;
 
-void ParalleTaskSetFunc( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ ) {
+void ParalleTaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ ) {
    /* Do something here, can issue tasks with g_pTS */
 }
 

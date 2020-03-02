@@ -53,7 +53,7 @@ typedef struct enkiCompletable      enkiCompletable;
 typedef struct enkiDependency       enkiDependency;
 typedef struct enkiCompletionAction enkiCompletionAction;
 
-typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end, uint32_t threadnum_, void* pArgs_ );
+typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ );
 typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 typedef void (* enkiCompletionFunction)( void* pArgs_, uint32_t threadNum_ );
 

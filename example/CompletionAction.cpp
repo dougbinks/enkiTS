@@ -70,11 +70,11 @@ struct SelfDeletingTaskB : ITaskSet
         printf("~SelfDeletingTaskB() called on thread %u\n\n", g_TS.GetThreadNum() );
     }
 
-    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
-        (void)range;
+        (void)range_;
         ++gs_CountBsRun;
-        printf("SelfDeletingTaskB on thread %u\n", threadnum);
+        printf("SelfDeletingTaskB on thread %u\n", threadnum_);
     }
 
     CompletionActionDelete m_TaskDeleter;
@@ -97,11 +97,11 @@ struct SelfDeletingTaskA : ITaskSet
         printf("~SelfDeletingTaskA() called on thread %u\n\n", g_TS.GetThreadNum() );
     }
 
-    void ExecuteRange( TaskSetPartition range, uint32_t threadnum ) override
+    void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
-        (void)range;
+        (void)range_;
         ++gs_CountAsRun;
-        printf("SelfDeletingTaskA on thread %u\n", threadnum);
+        printf("SelfDeletingTaskA on thread %u\n", threadnum_);
     }
 
     CompletionActionDelete m_TaskDeleter;

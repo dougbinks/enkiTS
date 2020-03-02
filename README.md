@@ -183,8 +183,8 @@ int main(int argc, const char * argv[]) {
 ```
 
 Dependency usage in C++:
-- full example in [example/Dependency.cpp](example/Dependency.cpp)
-- C example in [example/Dependency_c.c](example/Dependency_c.c)
+- full example in [example/Dependencies.cpp](example/Dependencies.cpp)
+- C example in [example/Dependencies_c.c](example/Dependencies_c.c)
 ```C
 #include "TaskScheduler.h"
 

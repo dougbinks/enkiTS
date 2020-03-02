@@ -23,14 +23,22 @@
 
 enkiTaskScheduler*    pETS;
 
+struct CompletionArgs
+{
+    enkiTaskSet*          pTask;
+    enkiCompletionAction* pCompletionAction;
+};
+
 void CompletionFunction( void* pArgs_, uint32_t threadNum_ )
 {
-    enkiTaskSet* pTaskSet = pArgs_;
-    struct enkiParamsTaskSet params = enkiGetParamsTaskSet( pTaskSet );
+    struct CompletionArgs* pCompletionArgs = pArgs_;
+    struct enkiParamsTaskSet params = enkiGetParamsTaskSet( pCompletionArgs->pTask );
     uint32_t* pTaskNum = params.pArgs;
     printf("CompletionFunction for task %u running on thread %u\n", *pTaskNum, threadNum_ );
+    enkiDeleteCompletionAction( pETS, pCompletionArgs->pCompletionAction );
+    enkiDeleteTaskSet( pETS, pCompletionArgs->pTask );
     free( pTaskNum );
-    enkiDeleteTaskSet( pETS, pTaskSet );
+    free( pCompletionArgs );
 }
 
 void TaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ )
@@ -43,10 +51,9 @@ void TaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pAr
 int main(int argc, const char * argv[])
 {
     int run;
-    enkiTaskSet*          pTask; // pCompletionAction will delete pTask
-    enkiCompletionAction* pCompletionAction;
     struct enkiParamsCompletionAction paramsCompletionAction;
     uint32_t* pTaskNum;
+    struct CompletionArgs* pCompletionArgs;
 
     pETS = enkiNewTaskScheduler();
     enkiInitTaskScheduler( pETS );
@@ -54,17 +61,18 @@ int main(int argc, const char * argv[])
     // Here we demonstrate using the completion action to delete the tasks on the fly
     for( run=0; run<10; ++run )
     {
-        pTask             = enkiCreateTaskSet( pETS, TaskSetFunc );
+        pCompletionArgs = malloc(sizeof(struct CompletionArgs)); // we will free in CompletionFunction
+        pCompletionArgs->pTask             = enkiCreateTaskSet( pETS, TaskSetFunc );
         pTaskNum = malloc(sizeof(uint32_t)); // we will free in CompletionFunction
         *pTaskNum = run;
-        enkiSetArgsTaskSet( pTask, pTaskNum );
-        pCompletionAction = enkiCreateCompletionAction( pETS, CompletionFunction );
-        paramsCompletionAction = enkiGetParamsCompletionAction( pCompletionAction );
-        paramsCompletionAction.pArgs       = pTask; // we will use pArgs to delete pTask
-        paramsCompletionAction.pDependency = enkiGetCompletableFromTaskSet( pTask );
-        enkiSetParamsCompletionAction( pCompletionAction, paramsCompletionAction );
+        enkiSetArgsTaskSet( pCompletionArgs->pTask, pTaskNum );
+        pCompletionArgs->pCompletionAction = enkiCreateCompletionAction( pETS, CompletionFunction );
+        paramsCompletionAction = enkiGetParamsCompletionAction( pCompletionArgs->pCompletionAction );
+        paramsCompletionAction.pArgs       = pCompletionArgs;
+        paramsCompletionAction.pDependency = enkiGetCompletableFromTaskSet( pCompletionArgs->pTask );
+        enkiSetParamsCompletionAction( pCompletionArgs->pCompletionAction, paramsCompletionAction );
 
-        enkiAddTaskSet( pETS, pTask );
+        enkiAddTaskSet( pETS, pCompletionArgs->pTask );
     }
     enkiWaitForAll( pETS );
 

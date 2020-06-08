@@ -1219,7 +1219,9 @@ void Dependency::ClearDependency()
         assert( pTaskToRunOnCompletion );
         assert( pDependencyTask->GetIsComplete() );
         assert( pTaskToRunOnCompletion->GetIsComplete() );
+        assert( pTaskToRunOnCompletion->m_DependenciesCount > 0 );
         Dependency* pDependent = pDependencyTask->m_pDependents;
+        --pTaskToRunOnCompletion->m_DependenciesCount;
         if( this == pDependent )
         {
             pDependencyTask->m_pDependents = pDependent->pNext;

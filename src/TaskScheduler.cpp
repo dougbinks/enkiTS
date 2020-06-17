@@ -1120,6 +1120,7 @@ namespace enki
     {
         int err = sem_init( &semaphoreid.sem, 0, 0 );
         assert( err == 0 );
+        (void)err;
     }
     
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )

@@ -427,6 +427,7 @@ namespace enki
 
     inline void ICompletable::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
+        m_RunningCount.fetch_sub( 1, std::memory_order_release );
         pTaskScheduler_->TaskComplete( this, true, threadNum_ );
     }
 

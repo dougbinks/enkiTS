@@ -45,6 +45,7 @@ namespace
 namespace enki
 {
     static const int32_t  gc_TaskStartCount          = 2;
+    static const int32_t  gc_TaskAlmostCompleteCount = 1; // GetIsComplete() will return false, but execution is done and about to complete
     static const uint32_t gc_PipeSizeLog2            = 8;
     static const uint32_t gc_SpinCount               = 10;
     static const uint32_t gc_SpinBackOffMulitplier   = 100;
@@ -440,6 +441,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
 
 void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ )
 {
+    assert( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
     bool bCallWakeThreads = bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire );
 
     Dependency* pDependent = pTask_->m_pDependents;
@@ -541,7 +543,8 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum_].threadState.store( ENKI_THREAD_STATE_WAIT_TASK_COMPLETION, std::memory_order_seq_cst );
 
-    if( pCompletable_->GetIsComplete() || HaveTasks( threadNum_ ) )
+    // do not wait on semaphore if task in gc_TaskAlmostCompleteCount state.
+    if( gc_TaskAlmostCompleteCount >= pCompletable_->m_RunningCount.load( std::memory_order_acquire ) || HaveTasks( threadNum_ ) )
     {
         m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_release );
     }
@@ -756,6 +759,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         if( pPinnedTaskSet )
         {
             pPinnedTaskSet->Execute();
+            pPinnedTaskSet->m_RunningCount.fetch_sub(1,std::memory_order_release);
             TaskComplete( pPinnedTaskSet, true, threadNum_ );
         }
     } while( pPinnedTaskSet );

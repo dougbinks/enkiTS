@@ -441,6 +441,8 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
 
 void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ )
 {
+    // It must be impossible for a thread to enter the sleeping wait prior to the load of m_WaitingForTaskCount
+    // in this function, so we introduce an gc_TaskAlmostCompleteCount to prevent this.
     assert( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
     bool bCallWakeThreads = bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire );
 

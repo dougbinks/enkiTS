@@ -1170,7 +1170,7 @@ namespace enki
 
 semaphoreid_t* TaskScheduler::SemaphoreNew()
 {
-    semaphoreid_t* pSemaphore = New<semaphoreid_t>( ENKI_FILE_AND_LINE );
+    semaphoreid_t* pSemaphore = this->Alloc<semaphoreid_t>( ENKI_FILE_AND_LINE );
     SemaphoreCreate( *pSemaphore );
     return pSemaphore;
 }
@@ -1178,7 +1178,7 @@ semaphoreid_t* TaskScheduler::SemaphoreNew()
 void TaskScheduler::SemaphoreDelete( semaphoreid_t* pSemaphore_ )
 {
     SemaphoreClose( *pSemaphore_ );
-    Delete( pSemaphore_, ENKI_FILE_AND_LINE );
+    this->Free( pSemaphore_, ENKI_FILE_AND_LINE );
 }
 
 void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )

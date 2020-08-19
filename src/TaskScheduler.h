@@ -392,6 +392,8 @@ namespace enki
         template< typename T > void DeleteArray( T* p_, size_t num_, const char* file_, int line_ );
         template<class T, class... Args> T* New( const char* file_, int line_,  Args&&... args_ );
         template< typename T > void Delete( T* p_, const char* file_, int line_ );
+        template< typename T > T*   Alloc( const char* file_, int line_ );
+        template< typename T > void Free( T* p_, const char* file_, int line_ );
         semaphoreid_t* SemaphoreNew();
         void SemaphoreDelete( semaphoreid_t* pSemaphore_ );
 

@@ -968,7 +968,7 @@ void TaskScheduler::DeleteArray( T* p_, size_t num_, const char* file_, int line
 template<class T, class... Args>
 T* TaskScheduler::New( const char* file_, int line_, Args&&... args_ )
 {
-    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, file_, line_ );
+    T* pRet = this->Alloc<T>( file_, line_ );
     return new(pRet) T( std::forward<Args>(args_)... );
 }
 
@@ -976,6 +976,19 @@ template< typename T >
 void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
 {
     p_->~T(); 
+    this->Free(p+, file_, line_ );
+}
+
+template< typename T >
+T* TaskScheduler::Alloc( const char* file_, int line_  )
+{
+    T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), sizeof(T), m_Config.customAllocator.userData, file_, line_ );
+    return pRet;
+}
+
+template< typename T >
+void TaskScheduler::Free( T* p_, const char* file_, int line_  )
+{
     m_Config.customAllocator.free( p_, sizeof(T), m_Config.customAllocator.userData, file_, line_ );
 }
 

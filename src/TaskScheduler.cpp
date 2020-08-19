@@ -976,7 +976,7 @@ template< typename T >
 void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
 {
     p_->~T(); 
-    this->Free(p+, file_, line_ );
+    this->Free(p_, file_, line_ );
 }
 
 template< typename T >

@@ -166,8 +166,18 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
 #ifdef _WIN32
     pRet = (void*)_aligned_malloc( size_, align_ );
 #else
-    int retval = posix_memalign( &pRet, align_, size_ );
-    (void)retval;	//unused
+    pRet = nullptr;
+    if(    ( size_ == sizeof(uint32_t) && align_ == alignof(uint32_t) ) 
+        || ( size_ == sizeof(intptr_t) && align_ == alignof(intptr_t) ) )
+    {
+        // no need for alignment, use malloc
+        pRet = malloc( size_ );
+    }
+    else
+    {
+        int retval = posix_memalign( &pRet, align_, size_ );
+        (void)retval;	//unused
+    }
 #endif
     return pRet;
 };

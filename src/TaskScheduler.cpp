@@ -653,9 +653,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             }
             numAdded = 0;
             // alter range to run the appropriate fraction
-            if( taskToAdd.pTask->m_RangeToRun < rangeToSplit_ )
+            if( taskToAdd.pTask->m_RangeToRun < taskToAdd.partition.end - taskToAdd.partition.start )
             {
                 taskToAdd.partition.end = taskToAdd.partition.start + taskToAdd.pTask->m_RangeToRun;
+                assert( taskToAdd.partition.end <= taskToAdd.pTask->m_SetSize );
                 subTask_.partition.start = taskToAdd.partition.end;
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );

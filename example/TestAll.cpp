@@ -218,6 +218,54 @@ int main(int argc, const char * argv[])
     serialTask.ExecuteRange( range, 0 );
     sumSerial = serialTask.m_pPartialSums[0].count;
 
+
+
+    RunTestFunction(
+        "Test Lots of TaskSets",
+        [&]()->bool
+        {
+            g_TS.Initialize( baseConfig );
+
+            static constexpr uint32_t TASK_RANGE = 65*65;
+            static constexpr uint32_t TASK_COUNT = 50;
+
+
+            struct TaskSet : public enki::ITaskSet
+            {
+                TaskSet() : enki::ITaskSet(TASK_RANGE) {};
+                virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override
+                {
+                    if( range_.start >= TASK_RANGE && range_.end > TASK_RANGE )
+                    {
+                        countErrors.fetch_add(1);
+                    }
+                }
+
+                std::atomic<int32_t> countErrors{ 0 };
+            };
+
+            TaskSet tasks[TASK_COUNT];
+
+            for( uint32_t i = 0; i < TASK_COUNT; ++i )
+            {
+                g_TS.AddTaskSetToPipe( &tasks[i] );
+            }
+
+            g_TS.WaitforAll();
+
+            bool bSuccess = true;
+            for( uint32_t i = 0; i < TASK_COUNT; ++i )
+            {
+                if( tasks[i].countErrors.load( std::memory_order_relaxed ) > 0 )
+                {
+                    bSuccess = false;
+                    break;
+                }
+            }
+
+            return bSuccess;
+        }
+    );
     RunTestFunction(
         "Parallel Reduction Sum",
         [&]()->bool

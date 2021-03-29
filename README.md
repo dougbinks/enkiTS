@@ -311,7 +311,7 @@ The user thread versions are no longer being maintained as they are no longer in
 ### [Avoyd](https://www.avoyd.com)
 Avoyd is an abstract 6 degrees of freedom voxel game. enkiTS was developed for use in our [in-house engine powering Avoyd](https://www.enkisoftware.com/faq#engine). 
 
-![Avoyd screenshot](https://github.com/juliettef/Media/blob/master/Avoyd_2019-06-22_enkiTS_microprofile.jpg?raw=true)
+![Avoyd screenshot](https://github.com/juliettef/Media/blob/main/Avoyd_2019-06-22_enkiTS_microprofile.jpg?raw=true)
 
 ### [Imogen](https://github.com/CedricGuillemet/Imogen)
 GPU/CPU Texture Generator

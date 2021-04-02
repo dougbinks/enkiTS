@@ -2,6 +2,7 @@ Support development of enkiTS through [Github Sponsors](https://github.com/spons
 
 [<img src="https://img.shields.io/static/v1?logo=github&label=Github&message=Sponsor&color=#ea4aaa" width="200"/>](https://github.com/sponsors/dougbinks)    [<img src="https://c5.patreon.com/external/logo/become_a_patron_button@2x.png" alt="Become a Patron" width="150"/>](https://www.patreon.com/enkisoftware)
 
+![enkiTS Logo](https://github.com/dougbinks/images/blob/master/enkiTS_logo_no_padding.png?raw=true)
 # enkiTS
 | [Master branch](https://github.com/dougbinks/enkiTS/) | [Dev branch](https://github.com/dougbinks/enkiTS/tree/dev) |
 | --- | --- |

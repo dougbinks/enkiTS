@@ -23,7 +23,6 @@
 #include <condition_variable>
 #include <stdint.h>
 #include <functional>
-#include <assert.h>
 
 // ENKITS_TASK_PRIORITIES_NUM can be set from 1 to 5.
 // 1 corresponds to effectively no priorities.
@@ -52,7 +51,10 @@
 #endif
 #endif
 
-
+#ifndef ENKI_ASSERT
+#include <assert.h>
+#define ENKI_ASSERT(x) assert(x)
+#endif
 
 namespace enki
 {

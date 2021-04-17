@@ -19,11 +19,13 @@
 #pragma once
 
 #include <stdint.h>
-#include <assert.h>
-
 #include <atomic>
 #include <string.h>
 
+#ifndef ENKI_ASSERT
+#include <assert.h>
+#define ENKI_ASSERT(x) assert(x)
+#endif
 
 namespace enki
 {
@@ -90,7 +92,7 @@ namespace enki
         , m_ReadCount(0)
         , m_ReadIndex(0)
     {
-        assert( cSizeLog2 < 32 );
+        ENKI_ASSERT( cSizeLog2 < 32 );
         memset( (void*)m_Flags, 0, sizeof( m_Flags ) );
     }
 
@@ -241,7 +243,7 @@ namespace enki
         // Add - safe to perform from any thread
         void WriterWriteFront( T* pNode_ )
         {
-            assert( pNode_ );
+            ENKI_ASSERT( pNode_ );
             pNode_->pNext = NULL;
             T* pPrev = pHead.exchange( pNode_ );
             pPrev->pNext = pNode_;

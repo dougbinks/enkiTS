@@ -16,8 +16,6 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include <assert.h>
-
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
 
@@ -215,9 +213,9 @@ bool TaskScheduler::RegisterExternalTaskThread()
 
 void TaskScheduler::DeRegisterExternalTaskThread()
 {
-    assert( gtl_threadNum );
+    ENKI_ASSERT( gtl_threadNum );
     ThreadState threadState = m_pThreadDataStore[gtl_threadNum].threadState.load( std::memory_order_acquire );
-    assert( threadState == ENKI_THREAD_STATE_EXTERNAL_REGISTERED );
+    ENKI_ASSERT( threadState == ENKI_THREAD_STATE_EXTERNAL_REGISTERED );
     if( threadState == ENKI_THREAD_STATE_EXTERNAL_REGISTERED )
     {
         --m_NumExternalTaskThreadsRegistered;
@@ -351,7 +349,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
         // detach threads starting with thread 1 (as 0 is initialization thread).
         for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
         {
-            assert( m_pThreads[thread].joinable() );
+            ENKI_ASSERT( m_pThreads[thread].joinable() );
             m_pThreads[thread].join();
         }
 
@@ -452,7 +450,7 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
 {
     // It must be impossible for a thread to enter the sleeping wait prior to the load of m_WaitingForTaskCount
     // in this function, so we introduce an gc_TaskAlmostCompleteCount to prevent this.
-    assert( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
+    ENKI_ASSERT( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
     bool bCallWakeThreads = bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire );
 
     Dependency* pDependent = pTask_->m_pDependents;
@@ -468,7 +466,7 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
     while( pDependent )
     {
         int prevDeps = pDependent->pTaskToRunOnCompletion->m_DependenciesCompletedCount.fetch_add( 1, std::memory_order_release );
-        assert( prevDeps < pDependent->pTaskToRunOnCompletion->m_DependenciesCount );
+        ENKI_ASSERT( prevDeps < pDependent->pTaskToRunOnCompletion->m_DependenciesCount );
         if( pDependent->pTaskToRunOnCompletion->m_DependenciesCount == ( prevDeps + 1 ) )
         {
             // get temp copy of pDependent so OnDependenciesComplete can delete task if needed.
@@ -614,7 +612,7 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
 
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
             
-        assert( state != ENKI_THREAD_STATE_NONE );
+        ENKI_ASSERT( state != ENKI_THREAD_STATE_NONE );
 
         if( state == ENKI_THREAD_STATE_WAIT_NEW_TASKS || state == ENKI_THREAD_STATE_WAIT_TASK_COMPLETION )
         {
@@ -656,7 +654,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             if( taskToAdd.pTask->m_RangeToRun < taskToAdd.partition.end - taskToAdd.partition.start )
             {
                 taskToAdd.partition.end = taskToAdd.partition.start + taskToAdd.pTask->m_RangeToRun;
-                assert( taskToAdd.partition.end <= taskToAdd.pTask->m_SetSize );
+                ENKI_ASSERT( taskToAdd.partition.end <= taskToAdd.pTask->m_SetSize );
                 subTask_.partition.start = taskToAdd.partition.end;
             }
             taskToAdd.pTask->ExecuteRange( taskToAdd.partition, threadNum_ );
@@ -680,7 +678,7 @@ TaskSchedulerConfig TaskScheduler::GetConfig() const
 
 void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum_ )
 {
-    assert( pTaskSet_->m_RunningCount == gc_TaskStartCount );
+    ENKI_ASSERT( pTaskSet_->m_RunningCount == gc_TaskStartCount );
     ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum_].threadState.store( ENKI_THREAD_STATE_RUNNING, std::memory_order_relaxed );
     std::atomic_thread_fence(std::memory_order_acquire);
@@ -709,7 +707,7 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
 
 void TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
 {
-    assert( pTaskSet_->m_RunningCount == 0 );
+    ENKI_ASSERT( pTaskSet_->m_RunningCount == 0 );
     InitDependencies( pTaskSet_ );
     pTaskSet_->m_RunningCount.store( gc_TaskStartCount, std::memory_order_relaxed );
     AddTaskSetToPipeInt( pTaskSet_, gtl_threadNum );
@@ -717,14 +715,14 @@ void TaskScheduler::AddTaskSetToPipe( ITaskSet* pTaskSet_ )
 
 void  TaskScheduler::AddPinnedTaskInt( IPinnedTask* pTask_ )
 {
-    assert( pTask_->m_RunningCount == gc_TaskStartCount );
+    ENKI_ASSERT( pTask_->m_RunningCount == gc_TaskStartCount );
     m_pPinnedTaskListPerThread[ pTask_->m_Priority ][ pTask_->threadNum ].WriterWriteFront( pTask_ );
     WakeThreadsForNewTasks();
 }
 
 void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 {
-    assert( pTask_->m_RunningCount == 0 );
+    ENKI_ASSERT( pTask_->m_RunningCount == 0 );
     InitDependencies( pTask_ );
     pTask_->m_RunningCount = gc_TaskStartCount;
     AddPinnedTaskInt( pTask_ );
@@ -884,7 +882,7 @@ void TaskScheduler::WaitforAll()
 
             if( bHaveThreadToWaitOn )
             {
-                assert( dummyWaitTask.threadNum != threadNum );
+                ENKI_ASSERT( dummyWaitTask.threadNum != threadNum );
                 AddPinnedTask( &dummyWaitTask );
                 WaitforTask( &dummyWaitTask );
             }
@@ -906,7 +904,7 @@ void TaskScheduler::WaitforAll()
                 switch( m_pThreadDataStore[thread].threadState.load( std::memory_order_acquire ) )
                 {
                 case ENKI_THREAD_STATE_NONE:
-                    assert(false);
+                    ENKI_ASSERT(false);
                     break;
                 case ENKI_THREAD_STATE_NOT_LAUNCHED:
                 case ENKI_THREAD_STATE_RUNNING:
@@ -1028,7 +1026,7 @@ TaskScheduler::~TaskScheduler()
 
 void TaskScheduler::Initialize( uint32_t numThreadsTotal_ )
 {
-    assert( numThreadsTotal_ >= 1 );
+    ENKI_ASSERT( numThreadsTotal_ >= 1 );
     StopThreads( true ); // Stops threads, waiting for them.
     m_Config.numTaskThreadsToCreate = numThreadsTotal_ - 1;
     m_Config.numExternalTaskThreads = 0;
@@ -1081,8 +1079,8 @@ namespace enki
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         DWORD retval = WaitForSingleObject( semaphoreid.sem, INFINITE );
-        assert( retval != WAIT_FAILED );
-        (void)retval; // only needed for assert
+        ENKI_ASSERT( retval != WAIT_FAILED );
+        (void)retval; // only needed for ENKI_ASSERT
     }
 
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
@@ -1154,7 +1152,7 @@ namespace enki
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         int err = sem_init( &semaphoreid.sem, 0, 0 );
-        assert( err == 0 );
+        ENKI_ASSERT( err == 0 );
         (void)err;
     }
     
@@ -1201,8 +1199,8 @@ Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTas
     , pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
     , pNext( pDependencyTask->m_pDependents )
 {
-    assert( pDependencyTask->GetIsComplete() );
-    assert( pTaskToRunOnCompletion->GetIsComplete() );
+    ENKI_ASSERT( pDependencyTask->GetIsComplete() );
+    ENKI_ASSERT( pTaskToRunOnCompletion->GetIsComplete() );
     pDependencyTask->m_pDependents = this;
     ++pTaskToRunOnCompletion->m_DependenciesCount;
 }
@@ -1214,9 +1212,9 @@ Dependency::Dependency( Dependency&& rhs_ ) noexcept
     pNext             = rhs_.pNext;
     if( rhs_.pDependencyTask )
     {
-        assert( rhs_.pTaskToRunOnCompletion );
-        assert( rhs_.pDependencyTask->GetIsComplete() );
-        assert( rhs_.pTaskToRunOnCompletion->GetIsComplete() );
+        ENKI_ASSERT( rhs_.pTaskToRunOnCompletion );
+        ENKI_ASSERT( rhs_.pDependencyTask->GetIsComplete() );
+        ENKI_ASSERT( rhs_.pTaskToRunOnCompletion->GetIsComplete() );
         Dependency** ppDependent = &(pDependencyTask->m_pDependents);
         while( *ppDependent )
         {
@@ -1239,8 +1237,8 @@ Dependency::~Dependency()
 void Dependency::SetDependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ )
 {
     ClearDependency();
-    assert( pDependencyTask_->GetIsComplete() );
-    assert( pTaskToRunOnCompletion_->GetIsComplete() );
+    ENKI_ASSERT( pDependencyTask_->GetIsComplete() );
+    ENKI_ASSERT( pTaskToRunOnCompletion_->GetIsComplete() );
     pDependencyTask = pDependencyTask_;
     pTaskToRunOnCompletion = pTaskToRunOnCompletion_;
     pNext = pDependencyTask->m_pDependents;
@@ -1252,10 +1250,10 @@ void Dependency::ClearDependency()
 {
     if( pDependencyTask )
     {
-        assert( pTaskToRunOnCompletion );
-        assert( pDependencyTask->GetIsComplete() );
-        assert( pTaskToRunOnCompletion->GetIsComplete() );
-        assert( pTaskToRunOnCompletion->m_DependenciesCount > 0 );
+        ENKI_ASSERT( pTaskToRunOnCompletion );
+        ENKI_ASSERT( pDependencyTask->GetIsComplete() );
+        ENKI_ASSERT( pTaskToRunOnCompletion->GetIsComplete() );
+        ENKI_ASSERT( pTaskToRunOnCompletion->m_DependenciesCount > 0 );
         Dependency* pDependent = pDependencyTask->m_pDependents;
         --pTaskToRunOnCompletion->m_DependenciesCount;
         if( this == pDependent )

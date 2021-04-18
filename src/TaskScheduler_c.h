@@ -185,6 +185,15 @@ ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskSchedul
 // Get the number of registered external task threads.
 ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTaskScheduler* pETS_ );
 
+// Get the thread number of the first external task thread. This thread
+// is not guaranteed to be registered, but threads are registered in order
+// from GetNumFirstExternalTaskThread() up to ( GetNumFirstExternalTaskThread() + numExternalTaskThreads )
+// Note that if numExternalTaskThreads == 0 a for loop using this will be valid:
+// for( uint32_t externalThreadNum = GetNumFirstExternalTaskThread();
+//      externalThreadNum < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads
+//      ++externalThreadNum ) { // do something with externalThreadNum }
+ENKITS_API uint32_t            enkiGetNumFirstExternalTaskThread();
+
 
 /* ----------------------------     TaskSets    ---------------------------- */
 // Create a task set.

@@ -177,6 +177,11 @@ void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )
     customAllocator.free( pETS_, sizeof(enkiTaskScheduler), customAllocator.userData, ENKI_FILE_AND_LINE );
 }
 
+ENKITS_API uint32_t enkiGetNumFirstExternalTaskThread()
+{
+    return enkiTaskScheduler::GetNumFirstExternalTaskThread();
+}
+
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;

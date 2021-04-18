@@ -359,6 +359,14 @@ namespace enki
         // Get the number of registered external task threads.
         ENKITS_API uint32_t        GetNumRegisteredExternalTaskThreads();
 
+        // Get the thread number of the first external task thread. This thread
+        // is not guaranteed to be registered, but threads are registered in order
+        // from GetNumFirstExternalTaskThread() up to ( GetNumFirstExternalTaskThread() + numExternalTaskThreads )
+        // Note that if numExternalTaskThreads == 0 a for loop using this will be valid:
+        // for( uint32_t externalThreadNum = GetNumFirstExternalTaskThread();
+        //      externalThreadNum < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads
+        //      ++externalThreadNum ) { // do something with externalThreadNum }
+        inline static constexpr uint32_t  GetNumFirstExternalTaskThread() { return 1; }
 
         // ------------- Start DEPRECATED Functions -------------
         // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask

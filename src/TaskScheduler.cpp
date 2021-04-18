@@ -214,7 +214,7 @@ bool TaskScheduler::RegisterExternalTaskThread()
 bool TaskScheduler::RegisterExternalTaskThread( uint32_t threadNumToRegister_ )
 {
     ENKI_ASSERT( threadNumToRegister_ >= GetNumFirstExternalTaskThread() );
-    ENKI_ASSERT( threadNumToRegister_ < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads ) );
+    ENKI_ASSERT( threadNumToRegister_ < ( GetNumFirstExternalTaskThread() + m_Config.numExternalTaskThreads ) );
     ThreadState threadStateExpected = ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED;
     if( m_pThreadDataStore[threadNumToRegister_].threadState.compare_exchange_strong(
         threadStateExpected, ENKI_THREAD_STATE_EXTERNAL_REGISTERED ) )

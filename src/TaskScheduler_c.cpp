@@ -383,6 +383,11 @@ int enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
     return (int)pETS_->RegisterExternalTaskThread();
 }
 
+int enkiRegisterExternalTaskThreadNum( enkiTaskScheduler* pETS_, uint32_t threadNumToRegister_ )
+{
+    return (int)pETS_->RegisterExternalTaskThread( threadNumToRegister_ ) ;
+}
+
 void enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_)
 {
     return pETS_->DeRegisterExternalTaskThread();

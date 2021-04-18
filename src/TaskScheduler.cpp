@@ -197,7 +197,6 @@ bool TaskScheduler::RegisterExternalTaskThread()
     {
         for(uint32_t thread = GetNumFirstExternalTaskThread(); thread < GetNumFirstExternalTaskThread() + m_Config.numExternalTaskThreads; ++thread )
         {
-            // ignore our thread
             ThreadState threadStateExpected = ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED;
             if( m_pThreadDataStore[thread].threadState.compare_exchange_strong(
                 threadStateExpected, ENKI_THREAD_STATE_EXTERNAL_REGISTERED ) )
@@ -211,6 +210,22 @@ bool TaskScheduler::RegisterExternalTaskThread()
     }
     return bRegistered;
 }
+
+bool TaskScheduler::RegisterExternalTaskThread( uint32_t threadNumToRegister_ )
+{
+    ENKI_ASSERT( threadNumToRegister_ >= GetNumFirstExternalTaskThread() );
+    ENKI_ASSERT( threadNumToRegister_ < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads ) );
+    ThreadState threadStateExpected = ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED;
+    if( m_pThreadDataStore[threadNumToRegister_].threadState.compare_exchange_strong(
+        threadStateExpected, ENKI_THREAD_STATE_EXTERNAL_REGISTERED ) )
+    {
+        ++m_NumExternalTaskThreadsRegistered;
+        gtl_threadNum = threadNumToRegister_;
+        return true;
+    }
+    return false;
+}
+
 
 void TaskScheduler::DeRegisterExternalTaskThread()
 {

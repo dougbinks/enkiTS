@@ -353,6 +353,11 @@ namespace enki
         // at initialization time.
         ENKITS_API bool            RegisterExternalTaskThread();
 
+        // As RegisterExternalTaskThread() but explicitly requests a given thread number.
+        // threadNumToRegister_ must be  >= GetNumFirstExternalTaskThread()
+        // and < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads )
+        ENKITS_API bool            RegisterExternalTaskThread( uint32_t threadNumToRegister_ );
+
         // Call on a thread on which RegisterExternalTaskThread has been called to deregister that thread.
         ENKITS_API void            DeRegisterExternalTaskThread();
 

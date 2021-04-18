@@ -177,7 +177,12 @@ ENKITS_API uint32_t            enkiGetThreadNum( enkiTaskScheduler* pETS_ );
 // Returns true if successfull, false if not.
 // Can only have numExternalTaskThreads registered at any one time, which must be set
 // at initialization time.
-ENKITS_API int                 enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_);
+ENKITS_API int                 enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_ );
+
+// As enkiRegisterExternalTaskThread() but explicitly requests a given thread number.
+// threadNumToRegister_ must be  >= GetNumFirstExternalTaskThread()
+// and < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads )
+ENKITS_API int                 enkiRegisterExternalTaskThreadNum( enkiTaskScheduler* pETS_, uint32_t threadNumToRegister_ );
 
 // Call on a thread on which RegisterExternalTaskThread has been called to deregister that thread.
 ENKITS_API void                enkiDeRegisterExternalTaskThread( enkiTaskScheduler* pETS_);

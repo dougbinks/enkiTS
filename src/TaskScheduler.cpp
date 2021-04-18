@@ -82,9 +82,10 @@ namespace enki
         ENKI_THREAD_STATE_NONE,                  // shouldn't get this value
         ENKI_THREAD_STATE_NOT_LAUNCHED,          // for debug purposes - indicates enki task thread not yet launched
         ENKI_THREAD_STATE_RUNNING,
-        ENKI_THREAD_STATE_WAIT_TASK_COMPLETION,
+        ENKI_THREAD_STATE_PRIMARY_REGISTERED,    // primary thread is the one enkiTS was initialized on
         ENKI_THREAD_STATE_EXTERNAL_REGISTERED,
         ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED,
+        ENKI_THREAD_STATE_WAIT_TASK_COMPLETION,
         ENKI_THREAD_STATE_WAIT_NEW_TASKS,
         ENKI_THREAD_STATE_STOPPED,
     };
@@ -194,7 +195,7 @@ bool TaskScheduler::RegisterExternalTaskThread()
     bool bRegistered = false;
     while( !bRegistered && m_NumExternalTaskThreadsRegistered < (int32_t)m_Config.numExternalTaskThreads  )
     {
-        for(uint32_t thread = 1; thread <= m_Config.numExternalTaskThreads; ++thread )
+        for(uint32_t thread = GetNumFirstExternalTaskThread(); thread < GetNumFirstExternalTaskThread() + m_Config.numExternalTaskThreads; ++thread )
         {
             // ignore our thread
             ThreadState threadStateExpected = ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED;
@@ -228,7 +229,6 @@ uint32_t TaskScheduler::GetNumRegisteredExternalTaskThreads()
 {
     return m_NumExternalTaskThreadsRegistered;
 }
-
 
 void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 {
@@ -294,16 +294,20 @@ void TaskScheduler::StartThreads()
     m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_bRunning = 1;
 
-    for( uint32_t thread = 0; thread < m_Config.numExternalTaskThreads + 1; ++thread )
+    // current thread is primary enkiTS thread
+    m_pThreadDataStore[0].threadState = ENKI_THREAD_STATE_PRIMARY_REGISTERED;
+    gtl_threadNum = 0;
+
+    for( uint32_t thread = GetNumFirstExternalTaskThread(); thread < m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread(); ++thread )
     {
         m_pThreadDataStore[thread].threadState   = ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED;
     }
-    for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
+    for( uint32_t thread = m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread(); thread < m_NumThreads; ++thread )
     {
         m_pThreadDataStore[thread].threadState   = ENKI_THREAD_STATE_NOT_LAUNCHED;
     }
     // only launch threads once all thread states are set
-    for( uint32_t thread = m_Config.numExternalTaskThreads + 1; thread < m_NumThreads; ++thread )
+    for( uint32_t thread = m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread(); thread < m_NumThreads; ++thread )
     {
         m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
         ++m_NumInternalTaskThreadsRunning;
@@ -911,6 +915,7 @@ void TaskScheduler::WaitforAll()
                 case ENKI_THREAD_STATE_WAIT_TASK_COMPLETION:
                     ++numOtherThreadsRunning;
                     break;
+                case ENKI_THREAD_STATE_PRIMARY_REGISTERED:
                 case ENKI_THREAD_STATE_EXTERNAL_REGISTERED:
                 case ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED:
                 case ENKI_THREAD_STATE_WAIT_NEW_TASKS:

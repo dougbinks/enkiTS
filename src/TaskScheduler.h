@@ -185,7 +185,7 @@ namespace enki
 
         // IPinnedTask needs to be non abstract for intrusive list functionality.
         // Should never be called as should be overridden.
-        virtual void Execute() { assert(false); }
+        virtual void Execute() { ENKI_ASSERT(false); }
 
         uint32_t                  threadNum = 0; // thread to run this pinned task on
         std::atomic<IPinnedTask*> pNext = {NULL};
@@ -473,7 +473,7 @@ namespace enki
 
     inline void ICompletable::SetDependency( Dependency& dependency_, const ICompletable* pDependencyTask_ )
     {
-        assert( pDependencyTask_ != this );
+        ENKI_ASSERT( pDependencyTask_ != this );
         dependency_.SetDependency( pDependencyTask_, this );
     }
 
@@ -487,7 +487,7 @@ namespace enki
     }
     template<typename D, typename T>
     void ICompletable::SetDependenciesArr( D& dependencyArray_, std::initializer_list<T*> taskpList_ ) {
-        assert( std::tuple_size<D>::value >= taskpList_.size() );
+        ENKI_ASSERT( std::tuple_size<D>::value >= taskpList_.size() );
         int i = 0;
         for( auto pTask : taskpList_ )
         {
@@ -503,7 +503,7 @@ namespace enki
     }
     template<typename D, typename T, int SIZE>
     void ICompletable::SetDependenciesArr( D(&dependencyArray_)[SIZE], std::initializer_list<T*> taskpList_ ) {
-        assert( SIZE >= taskpList_.size() );
+        ENKI_ASSERT( SIZE >= taskpList_.size() );
         int i = 0;
         for( auto pTask : taskpList_ )
         {

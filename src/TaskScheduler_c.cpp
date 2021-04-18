@@ -19,8 +19,6 @@
 #include "TaskScheduler_c.h"
 #include "TaskScheduler.h"
 
-#include <assert.h>
-
 using namespace enki;
 
 #if defined(ENKI_CUSTOM_ALLOC_FILE_AND_LINE)
@@ -212,7 +210,7 @@ enkiParamsTaskSet enkiGetParamsTaskSet( enkiTaskSet* pTaskSet_ )
 
 void enkiSetParamsTaskSet( enkiTaskSet* pTaskSet_, enkiParamsTaskSet params_ )
 {
-    assert( params_.priority < ENKITS_TASK_PRIORITIES_NUM );
+    ENKI_ASSERT( params_.priority < ENKITS_TASK_PRIORITIES_NUM );
     pTaskSet_->pArgs      = params_.pArgs;
     pTaskSet_->m_SetSize  = params_.setSize;
     pTaskSet_->m_MinRange = params_.minRange;
@@ -221,7 +219,7 @@ void enkiSetParamsTaskSet( enkiTaskSet* pTaskSet_, enkiParamsTaskSet params_ )
 
 void enkiSetPriorityTaskSet( enkiTaskSet* pTaskSet_, int priority_ )
 {
-    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
+    ENKI_ASSERT( priority_ < ENKITS_TASK_PRIORITIES_NUM );
     pTaskSet_->m_Priority = TaskPriority( priority_ );
 }
 
@@ -242,16 +240,16 @@ void enkiSetMinRangeTaskSet( enkiTaskSet* pTaskSet_, uint32_t minRange_ )
 
 void enkiAddTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
-    assert( pTaskSet_ );
-    assert( pTaskSet_->taskFun );
+    ENKI_ASSERT( pTaskSet_ );
+    ENKI_ASSERT( pTaskSet_->taskFun );
 
     pETS_->AddTaskSetToPipe( pTaskSet_ );
 }
 
 void enkiAddTaskSetArgs( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_ )
 {
-    assert( pTaskSet_ );
-    assert( pTaskSet_->taskFun );
+    ENKI_ASSERT( pTaskSet_ );
+    ENKI_ASSERT( pTaskSet_->taskFun );
 
     pTaskSet_->m_SetSize = setSize_;
     pTaskSet_->pArgs = pArgs_;
@@ -260,8 +258,8 @@ void enkiAddTaskSetArgs( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void*
 
 void enkiAddTaskSetMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, void* pArgs_, uint32_t setSize_, uint32_t minRange_)
 {
-    assert( pTaskSet_ );
-    assert( pTaskSet_->taskFun );
+    ENKI_ASSERT( pTaskSet_ );
+    ENKI_ASSERT( pTaskSet_->taskFun );
 
     pTaskSet_->m_SetSize = setSize_;
     pTaskSet_->m_MinRange = minRange_;
@@ -272,7 +270,7 @@ void enkiAddTaskSetMinRange(enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_, vo
 int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
     (void)pETS_;
-    assert( pTaskSet_ );
+    ENKI_ASSERT( pTaskSet_ );
     return ( pTaskSet_->GetIsComplete() ) ? 1 : 0;
 }
 
@@ -303,14 +301,14 @@ enkiParamsPinnedTask enkiGetParamsPinnedTask( enkiPinnedTask* pTask_ )
 
 void enkiSetParamsPinnedTask( enkiPinnedTask* pTask_, enkiParamsPinnedTask params_ )
 {
-    assert( params_.priority < ENKITS_TASK_PRIORITIES_NUM );
+    ENKI_ASSERT( params_.priority < ENKITS_TASK_PRIORITIES_NUM );
     pTask_->pArgs      = params_.pArgs;
     pTask_->m_Priority = TaskPriority( params_.priority );
 }
 
 void enkiSetPriorityPinnedTask( enkiPinnedTask* pTask_, int priority_ )
 {
-    assert( priority_ < ENKITS_TASK_PRIORITIES_NUM );
+    ENKI_ASSERT( priority_ < ENKITS_TASK_PRIORITIES_NUM );
     pTask_->m_Priority = TaskPriority( priority_ );
 }
 
@@ -321,13 +319,13 @@ void enkiSetArgsPinnedTask( enkiPinnedTask* pTask_, void* pArgs_ )
 
 void enkiAddPinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_)
 {
-    assert( pTask_ );
+    ENKI_ASSERT( pTask_ );
     pETS_->AddPinnedTask( pTask_ );
 }
 
 void enkiAddPinnedTaskArgs(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, void* pArgs_)
 {
-    assert( pTask_ );
+    ENKI_ASSERT( pTask_ );
     pTask_->pArgs = pArgs_;
     pETS_->AddPinnedTask( pTask_ );
 }
@@ -339,7 +337,7 @@ void enkiRunPinnedTasks(enkiTaskScheduler* pETS_)
 
 int enkiIsPinnedTaskComplete(enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_)
 {
-    assert( pTask_ );
+    ENKI_ASSERT( pTask_ );
     return ( pTask_->GetIsComplete() ) ? 1 : 0;
 }
 

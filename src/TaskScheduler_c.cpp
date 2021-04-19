@@ -139,6 +139,11 @@ struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pE
     return configC;
 }
 
+int enkiGetIsRunning( enkiTaskScheduler* pETS_ )
+{
+    return (int)pETS_->GetIsRunning();
+}
+
 void enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
     pETS_->Initialize();
@@ -166,6 +171,11 @@ void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskS
     config.customAllocator.free                               = config_.customAllocator.free;
     config.customAllocator.userData                         = config_.customAllocator.userData;
    pETS_->Initialize( config );
+}
+
+void enkiWaitforAllAndShutdown( enkiTaskScheduler* pETS_ )
+{
+    pETS_->WaitforAllAndShutdown();
 }
 
 void enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ )

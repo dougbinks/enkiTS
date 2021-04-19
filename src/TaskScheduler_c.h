@@ -137,6 +137,11 @@ ENKITS_API enkiTaskScheduler*  enkiNewTaskSchedulerWithCustomAllocator( struct e
 // Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults
 ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ );
 
+
+// while( enkiGetIsRunning(pETS) ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
+// If enkiGetIsRunning() returns false should then exit. Not required for finite tasks
+ENKITS_API int                 enkiGetIsRunning( enkiTaskScheduler* pETS_ );
+
 // Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
 // Initialize can be called multiple times - it will wait for completion
@@ -150,6 +155,12 @@ ENKITS_API void                enkiInitTaskSchedulerNumThreads( enkiTaskSchedule
 
 // Initialize a task scheduler with config, see enkiTaskSchedulerConfig for details
 ENKITS_API void                enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskSchedulerConfig config_ );
+
+// Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
+// are in a situation where tasks aren't being continuously added.
+// pETS_ can then be reused.
+// This function can be safely called even if enkiInit* has not been called.
+ENKITS_API void                enkiWaitforAllAndShutdown( enkiTaskScheduler* pETS_ );
 
 // Delete a task scheduler
 ENKITS_API void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );

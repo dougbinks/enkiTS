@@ -302,6 +302,10 @@ namespace enki
         // Get config. Can be called before Initialize to get the defaults.
         ENKITS_API TaskSchedulerConfig GetConfig() const;
 
+        // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
+        // If GetIsRunning() returns false should then exit. Not required for finite tasks
+        inline     bool            GetIsRunning() const { return (bool)m_bRunning.load( std::memory_order_relaxed ); }
+
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
         // should only be called from main thread, or within a task

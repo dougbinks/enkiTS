@@ -19,13 +19,20 @@
 #include "TaskScheduler.h"
 
 #include <stdio.h>
-#include <thread>
 
 using namespace enki;
 
 TaskScheduler g_TS;
 static std::atomic<int32_t> g_Run;
 
+enum class IOThreadId
+{
+    FILE_IO,            // more than one file io thread may be useful if handling lots of small files
+    NETWORK_IO_0,
+    NETWORK_IO_1,
+    NETWORK_IO_2,
+    NUM,
+};
 
 struct ParallelTaskSet : ITaskSet
 {
@@ -33,10 +40,8 @@ struct ParallelTaskSet : ITaskSet
 
     void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
-        bool bIsExternalIOThread = threadnum_ >= enki::TaskScheduler::GetNumFirstExternalTaskThread() &&
-                                   threadnum_ <  enki::TaskScheduler::GetNumFirstExternalTaskThread()
-                                                 + g_TS.GetConfig().numExternalTaskThreads;
-        if( bIsExternalIOThread )
+        bool bIsIOThread = threadnum_ >= g_TS.GetNumTaskThreads() - (uint32_t)IOThreadId::NUM;
+        if( bIsIOThread )
         {
             assert( false ); //for this example this is an error - but external threads can run tasksets in general
             printf(" Run %d: ParallelTaskSet on thread %d which is an IO thread\n", g_Run.load(), threadnum_);
@@ -48,26 +53,16 @@ struct ParallelTaskSet : ITaskSet
     }
 };
 
-struct ThreadData
+struct RunPinnedTaskLoopTask : IPinnedTask
 {
-    uint32_t externalThreadNum = 0;
-    bool     stop              = false; // we do not need an atomic as this is set by a pinned task on the thread it is read from
-};
-
-struct StopTask : IPinnedTask
-{
-    StopTask( ThreadData* pThreadData_ )
-        : IPinnedTask( pThreadData_->externalThreadNum + enki::TaskScheduler::GetNumFirstExternalTaskThread() )
-        , pThreadData( pThreadData_ )
-    {
-    }
-
     void Execute() override
     {
-        pThreadData->stop = true;
+        while( g_TS.GetIsRunning() )
+        {
+            g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
+            g_TS.RunPinnedTasks();
+        }
     }
-
-    ThreadData* pThreadData;
 };
 
 struct PretendDoFileIO : IPinnedTask
@@ -90,63 +85,29 @@ struct PretendDoNetworkIO : IPinnedTask
     }
 };
 
-// Example external thread function which waits for pinned tasks
-// May want to use threads for blocking IO, during which enkiTS task threads can do work
-// An external thread can also use full enkiTS functionality, useful when you have threads
-// created by another API you want to use.
-// We could also create more enkiTS task threads than needed, and set some to run a pinned
-// task with a similar Execute() function to the below loop (without Register/DeRegister)
-void threadFunction( ThreadData* pThreadData_ )
-{
-    bool bRegistered = g_TS.RegisterExternalTaskThread( pThreadData_->externalThreadNum + enki::TaskScheduler::GetNumFirstExternalTaskThread() );
-    assert( bRegistered );
-    if( bRegistered )
-    {
-        while( !pThreadData_->stop )
-        {
-            g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
-            g_TS.RunPinnedTasks();
-        }
-
-        g_TS.DeRegisterExternalTaskThread();
-    }
-}
-
 static const int      REPEATS            = 5;
-
-enum class ExternalThreadId
-{
-    FILE_IO,            // more than one file io thread may be useful if handling lots of small files
-    NETWORK_IO_0,
-    NETWORK_IO_1,
-    NETWORK_IO_2,
-    EXTERNAL_THREAD_NUM,
-};
-
-static const uint32_t NUMEXTERNALTHREADS = (uint32_t)ExternalThreadId::EXTERNAL_THREAD_NUM;
-
 
 int main(int argc, const char * argv[])
 {
     enki::TaskSchedulerConfig config;
-    config.numExternalTaskThreads = NUMEXTERNALTHREADS;
+    config.numTaskThreadsToCreate += (uint32_t)IOThreadId::NUM;
 
-    std::thread threads[NUMEXTERNALTHREADS];
     g_TS.Initialize( config );
 
-    ThreadData threadData[NUMEXTERNALTHREADS];
+    // in this example we place our IO threads at the end
+    uint32_t theadNumIOStart = g_TS.GetNumTaskThreads() - (uint32_t)IOThreadId::NUM;
+    RunPinnedTaskLoopTask runPinnedTaskLoopTasks[ (uint32_t)IOThreadId::NUM ];
+
+    for( uint32_t ioThreadID = 0; ioThreadID < (uint32_t)IOThreadId::NUM; ++ioThreadID )
+    {
+        runPinnedTaskLoopTasks[ioThreadID].threadNum = ioThreadID + theadNumIOStart;
+        g_TS.AddPinnedTask( &runPinnedTaskLoopTasks[ioThreadID] );
+    }
 
 
     for( g_Run = 0; g_Run< REPEATS; ++g_Run )
     {
         printf("Run %d\n", g_Run.load() );
-
-        for( uint32_t iThread = 0; iThread < NUMEXTERNALTHREADS; ++iThread )
-        {
-            threadData[ iThread ].externalThreadNum = iThread;
-            threadData[ iThread ].stop = false;
-            threads[ iThread ] = std::thread( threadFunction, &threadData[ iThread ] );
-        }
 
         // set of a ParallelTaskSet
         // to demonstrate can perform work on enkiTS worker threads but WaitForNewPinnedTasks will
@@ -157,27 +118,29 @@ int main(int argc, const char * argv[])
 
         // Send pretend file IO task to external thread FILE_IO
         PretendDoFileIO pretendDoFileIO;
-        pretendDoFileIO.threadNum = (uint32_t)ExternalThreadId::FILE_IO + enki::TaskScheduler::GetNumFirstExternalTaskThread();
+        pretendDoFileIO.threadNum = (uint32_t)IOThreadId::FILE_IO + theadNumIOStart;
         g_TS.AddPinnedTask( &pretendDoFileIO );
 
         // Send pretend network IO tasks to external thread  NETWORK_IO_0 ... NUMEXTERNALTHREADS
-        PretendDoNetworkIO pretendDoNetworkIO[NUMEXTERNALTHREADS-(uint32_t)ExternalThreadId::NETWORK_IO_0];
-        for( uint32_t iThread = (uint32_t)ExternalThreadId::NETWORK_IO_0; iThread < NUMEXTERNALTHREADS; ++iThread )
+        PretendDoNetworkIO pretendDoNetworkIO[ (uint32_t)IOThreadId::NUM - (uint32_t)IOThreadId::NETWORK_IO_0 ];
+        for( uint32_t ioThreadID = (uint32_t)IOThreadId::NETWORK_IO_0; ioThreadID < (uint32_t)IOThreadId::NUM; ++ioThreadID )
         {
-            pretendDoNetworkIO[iThread-(uint32_t)ExternalThreadId::NETWORK_IO_0].threadNum = iThread + enki::TaskScheduler::GetNumFirstExternalTaskThread();
-            g_TS.AddPinnedTask( &pretendDoNetworkIO[iThread-(uint32_t)ExternalThreadId::NETWORK_IO_0] );
-        }
-
-        for( uint32_t iThread = 0; iThread < NUMEXTERNALTHREADS; ++iThread )
-        {
-            StopTask stopTask( &threadData[ iThread ] );
-            g_TS.AddPinnedTask( &stopTask );
-            threads[ iThread ].join();
-            assert( stopTask.GetIsComplete() );
+            pretendDoNetworkIO[ioThreadID-(uint32_t)IOThreadId::NETWORK_IO_0].threadNum = ioThreadID + theadNumIOStart;
+            g_TS.AddPinnedTask( &pretendDoNetworkIO[ ioThreadID - (uint32_t)IOThreadId::NETWORK_IO_0 ] );
         }
 
         g_TS.WaitforTaskSet( &parallelTaskSet );
+
+        // in this example  we need to wait for IO tasks to complete before running next loop
+        g_TS.WaitforTask( &pretendDoFileIO  );
+        for( uint32_t ioThreadID = (uint32_t)IOThreadId::NETWORK_IO_0; ioThreadID < (uint32_t)IOThreadId::NUM; ++ioThreadID )
+        {
+            g_TS.WaitforTask( &pretendDoNetworkIO[ ioThreadID - (uint32_t)IOThreadId::NETWORK_IO_0 ] );
+        }
     }
+
+    // ensure runPinnedTaskLoopTasks complete by explicitly calling shutdown
+    g_TS.WaitforAllAndShutdown();
 
     return 0;
 }

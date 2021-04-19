@@ -53,8 +53,9 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Can set task priorities* - Up to 5 task priorities can be configured via define ENKITS_TASK_PRIORITIES_NUM (defaults to 3). Higher priority tasks are run before lower priority ones.
 1. *Can register external threads to use with enkiTS* - Can configure enkiTS with numExternalTaskThreads which can be registered to use with the enkiTS API.
 1. *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
-1. **NEW** *Dependencies* - can set dependendencies between tasks see [example/Dependencies.cpp](example/Dependencies.cpp) and [example/Dependencies_c.c](example/Dependencies_c.c).
-1. **NEW** *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
+1. *Dependencies* - can set dependendencies between tasks see [example/Dependencies.cpp](example/Dependencies.cpp) and [example/Dependencies_c.c](example/Dependencies_c.c).
+1. *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
+1. **NEW** *Can wait for pinned tasks* - Can wait for pinned tasks, useful along with external threads to create IO threads which do no other work. See [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp) and [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c).
 
 ## Usage
 
@@ -79,7 +80,7 @@ int main(int argc, const char * argv[]) {
     g_TS.AddTaskSetToPipe( &task );
 
     // wait for task set (running tasks if they exist)
-    since we've just added it and it has no range we'll likely run it.
+    // since we've just added it and it has no range we'll likely run it.
     g_TS.WaitforTask( &task );
     return 0;
 }
@@ -262,35 +263,80 @@ int main(int argc, const char * argv[])
 }
 ```
 
-C usage:
-```C
-#include "TaskScheduler_c.h"
+WaitForPinnedTasks thread usage in C++ (useful for IO threads):
+- full example in [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp)
+- C example in [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c)
+```C++
+#include "TaskScheduler.h"
+#include <thread>
 
-enkiTaskScheduler*	g_pTS;
 
-void ParalleTaskSetFunc( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ ) {
-   /* Do something here, can issue tasks with g_pTS */
+enki::TaskScheduler g_TS;
+
+static bool g_Stop = false; // we do not need an atomic as this is set by a pinned task on the thread it is read from
+
+
+struct StopTask : enki::IPinnedTask
+{
+    void Execute() override
+    {
+        g_Stop = true;
+    }
+};
+
+struct PretendDoFileIO : enki::IPinnedTask
+{
+    void Execute() override
+    {
+        printf("PretendDoFileIO on thread %d\n", threadNum );
+        // sleep used as a 'pretend' blocking workload
+        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+    }
+};
+
+
+// Example external thread function which waits for pinned tasks
+// May want to use threads for blocking IO, during which enkiTS task threads can do work
+// An external thread can also use full enkiTS functionality, useful when you have threads
+// created by another API you want to use.
+void threadFunction()
+{
+    bool bRegistered = g_TS.RegisterExternalTaskThread( enki::TaskScheduler::GetNumFirstExternalTaskThread() );
+    assert( bRegistered );
+    if( bRegistered )
+    {
+        while( !g_Stop )
+        {
+            g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
+            g_TS.RunPinnedTasks();
+        }
+
+        g_TS.DeRegisterExternalTaskThread();
+    }
 }
 
-int main(int argc, const char * argv[]) {
-   enkiTaskSet* pTask;
-   g_pTS = enkiNewTaskScheduler();
-   enkiInitTaskScheduler( g_pTS );
+int main(int argc, const char * argv[])
+{
+    enki::TaskSchedulerConfig config;
+    config.numExternalTaskThreads = 1;
 
-   // create a task, can re-use this to get allocation occurring on startup
-   pTask = enkiCreateTaskSet( g_pTS, ParalleTaskSetFunc );
+    std::thread thread;
+    g_TS.Initialize( config );
 
-   enkiAddTaskSetToPipe( g_pTS, pTask); // defaults are NULL args, setsize of 1
+    thread = std::thread( threadFunction );
 
-   // wait for task set (running tasks if they exist)
-   // since we've just added it and it has no range we'll likely run it.
-   enkiWaitForTaskSet( g_pTS, pTask );
-   
-   enkiDeleteTaskSet( g_pTS, pTask );
-   
-   enkiDeleteTaskScheduler( g_pTS );
-   
-   return 0;
+    // Send pretend file IO task to external thread FILE_IO
+    PretendDoFileIO pretendDoFileIO;
+    pretendDoFileIO.threadNum = enki::TaskScheduler::GetNumFirstExternalTaskThread();
+    g_TS.AddPinnedTask( &pretendDoFileIO );
+
+    StopTask stopTask;
+    stopTask.threadNum = enki::TaskScheduler::GetNumFirstExternalTaskThread();
+    g_TS.AddPinnedTask( &stopTask );
+    thread.join();
+    assert( stopTask.GetIsComplete() );
+
+    return 0;
 }
 ```
 

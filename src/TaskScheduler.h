@@ -472,6 +472,7 @@ namespace enki
 
     inline ICompletable::~ICompletable()
     {
+        ENKI_ASSERT( GetIsComplete() ); // this task is still waiting to run
         Dependency* pDependency = m_pDependents;
         while( pDependency )
         {

@@ -94,6 +94,8 @@ struct PretendDoNetworkIO : IPinnedTask
 // May want to use threads for blocking IO, during which enkiTS task threads can do work
 // An external thread can also use full enkiTS functionality, useful when you have threads
 // created by another API you want to use.
+// We could also create more enkiTS task threads than needed, and set some to run a pinned
+// task with a similar Execute() function to the below loop (without Register/DeRegister)
 void threadFunction( ThreadData* pThreadData_ )
 {
     bool bRegistered = g_TS.RegisterExternalTaskThread( pThreadData_->externalThreadNum + enki::TaskScheduler::GetNumFirstExternalTaskThread() );

@@ -333,9 +333,10 @@ namespace enki
         ENKITS_API void            WaitforAllAndShutdown();
 
         // Waits for the current thread to receive a PinnedTask
-        // Should not normally be used by a standard task thread or the enkiTS primary thread
-        // Designed for use with ExternalTaskThreads
         // Will not run any tasks - use with RunPinnedTasks()
+        // Can be used with both ExternalTaskThreads or with an enkiTS tasking thread to create
+        // a thread which only runs pinned tasks. If enkiTS threads are used can create
+        // extra enkiTS task threads to handle non blocking computation via normal tasks.
         ENKITS_API void            WaitForNewPinnedTasks();
 
         // Returns the number of threads created for running tasks + number of external threads

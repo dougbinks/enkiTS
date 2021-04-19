@@ -90,6 +90,10 @@ static const int      REPEATS            = 5;
 int main(int argc, const char * argv[])
 {
     enki::TaskSchedulerConfig config;
+
+    // In this example we create more threads than the hardware can run,
+    // because the IO threads will spend most of their time idle or blocked
+    // and therefore not scheduled for CPU time by the OS
     config.numTaskThreadsToCreate += (uint32_t)IOThreadId::NUM;
 
     g_TS.Initialize( config );

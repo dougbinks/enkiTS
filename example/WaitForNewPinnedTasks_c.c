@@ -55,6 +55,10 @@ int main(int argc, const char * argv[])
 
     // get default config and request one external thread
     config = enkiGetTaskSchedulerConfig( pETS );
+
+    // In this example we create more threads than the hardware can run,
+    // because the IO thread will spend most of it's time idle or blocked
+    // and therefore not scheduled for CPU time by the OS
     config.numTaskThreadsToCreate += 1; // Create 1 extra thread for IO tasks (could create more if needed)
     enkiInitTaskSchedulerWithConfig( pETS, config );
 

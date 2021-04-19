@@ -294,6 +294,10 @@ struct PretendDoFileIO : enki::IPinnedTask
 int main(int argc, const char * argv[])
 {
     enki::TaskSchedulerConfig config;
+
+    // In this example we create more threads than the hardware can run,
+    // because the IO thread will spend most of it's time idle or blocked
+    // and therefore not scheduled for CPU time by the OS
     config.numTaskThreadsToCreate += 1;
 
     g_TS.Initialize( config );

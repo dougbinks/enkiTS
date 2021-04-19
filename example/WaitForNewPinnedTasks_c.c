@@ -31,13 +31,6 @@ void PinnedTaskPretendIOFunc( void* pArgs_ )
     printf("Run %d: Example PinnedTaskPretendIOFunc - this could perform network or file IO\n", dataVal );
 }
 
-int32_t g_Stop = 0; // we do not need an atomic as this is set by a pinned task on the thread it is read from
-
-void PinnedTaskStopFunc( void* pArgs_ )
-{
-    g_Stop = 1; // call stop
-}
-
 void PinnedTaskRunPinnedTaskLoop( void* pArgs_ )
 {
     uint32_t threadNumDesired = *(uint32_t*)pArgs_;
@@ -45,7 +38,7 @@ void PinnedTaskRunPinnedTaskLoop( void* pArgs_ )
     assert( threadNum == threadNumDesired );
     printf("PinnedTaskRunPinnedTaskLoop running on thread %d (should be thread %d)\n", threadNum, threadNumDesired );
 
-    while( 0 == g_Stop )
+    while( enkiGetIsRunning( pETS ) )
     {
         enkiWaitForNewPinnedTasks( pETS );
         enkiRunPinnedTasks( pETS );
@@ -57,7 +50,6 @@ int main(int argc, const char * argv[])
     struct enkiTaskSchedulerConfig config;
     enkiPinnedTask* pPinnedTaskRunPinnedTaskLoop;
     enkiPinnedTask* pPinnedTaskPretendIO;
-    enkiPinnedTask* pPinnedTaskStop;
 
     pETS = enkiNewTaskScheduler();
 
@@ -86,14 +78,11 @@ int main(int argc, const char * argv[])
     }
     enkiDeletePinnedTask( pETS, pPinnedTaskPretendIO );
 
-    // send stop to external thread
-    pPinnedTaskStop = enkiCreatePinnedTask( pETS, PinnedTaskStopFunc, threadNumIOTasks );
-    enkiAddPinnedTask( pETS, pPinnedTaskStop );
 
-    // wait for task loop to complete
-    enkiWaitForPinnedTask( pETS, pPinnedTaskRunPinnedTaskLoop );
+    // Shutdown enkiTS, which will cause pPinnedTaskRunPinnedTaskLoop to exit as enkiGetIsRunning will return false
+    enkiWaitforAllAndShutdown( pETS );
 
-    enkiDeletePinnedTask( pETS, pPinnedTaskStop );
+    // delete the tasks before the scheduler
     enkiDeletePinnedTask( pETS, pPinnedTaskRunPinnedTaskLoop );
 
     enkiDeleteTaskScheduler( pETS );

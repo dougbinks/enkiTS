@@ -371,9 +371,15 @@ void TaskScheduler::StopThreads( bool bWait_ )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
            WakeThreadsForNewTasks();
+
+           for( uint32_t threadId = 0; threadId < m_NumThreads; ++threadId )
+           {
+               // send wait for new pinned tasks signal to ensure any waiting are awoken
+               SemaphoreSignal( *m_pThreadDataStore[ threadId ].pWaitNewPinnedTaskSemaphore, 1 );
+           }
         }
 
-        // detach threads starting with thread 1 (as 0 is initialization thread).
+        // detach threads starting with thread GetNumFirstExternalTaskThread() (as 0 is initialization thread).
         for( uint32_t thread = m_Config.numExternalTaskThreads +  GetNumFirstExternalTaskThread(); thread < m_NumThreads; ++thread )
         {
             ENKI_ASSERT( m_pThreads[thread].joinable() );

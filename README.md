@@ -268,19 +268,18 @@ WaitForPinnedTasks thread usage in C++ (useful for IO threads):
 - C example in [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c)
 ```C++
 #include "TaskScheduler.h"
-#include <thread>
-
 
 enki::TaskScheduler g_TS;
 
-static bool g_Stop = false; // we do not need an atomic as this is set by a pinned task on the thread it is read from
-
-
-struct StopTask : enki::IPinnedTask
+struct RunPinnedTaskLoopTask : enki::IPinnedTask
 {
     void Execute() override
     {
-        g_Stop = true;
+        while( g_TS.GetIsRunning() )
+        {
+            g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
+            g_TS.RunPinnedTasks();
+        }
     }
 };
 
@@ -288,53 +287,29 @@ struct PretendDoFileIO : enki::IPinnedTask
 {
     void Execute() override
     {
-        printf("PretendDoFileIO on thread %d\n", threadNum );
-        // sleep used as a 'pretend' blocking workload
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        // Do file IO
     }
 };
-
-
-// Example external thread function which waits for pinned tasks
-// May want to use threads for blocking IO, during which enkiTS task threads can do work
-// An external thread can also use full enkiTS functionality, useful when you have threads
-// created by another API you want to use.
-void threadFunction()
-{
-    bool bRegistered = g_TS.RegisterExternalTaskThread( enki::TaskScheduler::GetNumFirstExternalTaskThread() );
-    assert( bRegistered );
-    if( bRegistered )
-    {
-        while( !g_Stop )
-        {
-            g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
-            g_TS.RunPinnedTasks();
-        }
-
-        g_TS.DeRegisterExternalTaskThread();
-    }
-}
 
 int main(int argc, const char * argv[])
 {
     enki::TaskSchedulerConfig config;
-    config.numExternalTaskThreads = 1;
+    config.numTaskThreadsToCreate += 1;
 
-    std::thread thread;
     g_TS.Initialize( config );
 
-    thread = std::thread( threadFunction );
+    // in this example we place our IO threads at the end
+    RunPinnedTaskLoopTask runPinnedTaskLoopTasks;
+    runPinnedTaskLoopTasks.threadNum = g_TS.GetNumTaskThreads() - 1;;
+    g_TS.AddPinnedTask( &runPinnedTaskLoopTasks );
 
     // Send pretend file IO task to external thread FILE_IO
     PretendDoFileIO pretendDoFileIO;
-    pretendDoFileIO.threadNum = enki::TaskScheduler::GetNumFirstExternalTaskThread();
+    pretendDoFileIO.threadNum = runPinnedTaskLoopTasks.threadNum;
     g_TS.AddPinnedTask( &pretendDoFileIO );
 
-    StopTask stopTask;
-    stopTask.threadNum = enki::TaskScheduler::GetNumFirstExternalTaskThread();
-    g_TS.AddPinnedTask( &stopTask );
-    thread.join();
-    assert( stopTask.GetIsComplete() );
+    // ensure runPinnedTaskLoopTasks complete by explicitly calling shutdown
+    g_TS.WaitforAllAndShutdown();
 
     return 0;
 }

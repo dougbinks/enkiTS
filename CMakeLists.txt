@@ -109,6 +109,9 @@ if( ENKITS_BUILD_EXAMPLES )
 
     add_executable( CompletionAction example/CompletionAction.cpp )
     target_link_libraries(CompletionAction enkiTS )
+
+    add_executable( WaitForNewPinnedTasks example/WaitForNewPinnedTasks.cpp )
+    target_link_libraries(WaitForNewPinnedTasks enkiTS )
 	
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )

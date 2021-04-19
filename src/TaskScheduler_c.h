@@ -302,6 +302,12 @@ ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, 
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForPinnedTaskPriority( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_, int maxPriority_ );
 
+// Waits for the current thread to receive a PinnedTask
+// Should not normally be used by a standard task thread or the enkiTS primary thread
+// Designed for use with ExternalTaskThreads
+// Will not run any tasks - use with enkiRunPinnedTasks( pETS )
+ENKITS_API void                enkiWaitForNewPinnedTasks( enkiTaskScheduler* pETS_ );
+
 
 /* ----------------------------   Completables  ---------------------------- */
 // Get a pointer to an enkiCompletable from an enkiTaskSet.

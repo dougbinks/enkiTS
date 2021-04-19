@@ -361,6 +361,12 @@ void enkiWaitForPinnedTaskPriority( enkiTaskScheduler * pETS_, enkiPinnedTask * 
     pETS_->WaitforTask( pTask_, TaskPriority( maxPriority_ ) );
 }
 
+void enkiWaitForNewPinnedTasks( enkiTaskScheduler* pETS_ )
+{
+    pETS_->WaitForNewPinnedTasks();
+}
+
+
 void enkiWaitForAll( enkiTaskScheduler* pETS_ )
 {
     pETS_->WaitforAll();

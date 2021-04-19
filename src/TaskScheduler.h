@@ -332,6 +332,12 @@ namespace enki
         // This function can be safely called even if TaskScheduler::Initialize() has not been called.
         ENKITS_API void            WaitforAllAndShutdown();
 
+        // Waits for the current thread to receive a PinnedTask
+        // Should not normally be used by a standard task thread or the enkiTS primary thread
+        // Designed for use with ExternalTaskThreads
+        // Will not run any tasks - use with RunPinnedTasks()
+        ENKITS_API void            WaitForNewPinnedTasks();
+
         // Returns the number of threads created for running tasks + number of external threads
         // plus 1 to account for the thread used to initialize the task scheduler.
         // Equivalent to config values: numTaskThreadsToCreate + numExternalTaskThreads + 1.

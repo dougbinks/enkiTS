@@ -1000,7 +1000,9 @@ void TaskScheduler::WaitForNewPinnedTasks()
 
     if( !bHavePinnedTasks )
     {
+        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStart, threadNum );
         SemaphoreWait( *m_pThreadDataStore[threadNum].pWaitNewPinnedTaskSemaphore );
+        SafeCallback( m_Config.profilerCallbacks.waitForNewTaskSuspendStop, threadNum );
     }
 
     m_pThreadDataStore[threadNum].threadState.store( prevThreadState, std::memory_order_release );

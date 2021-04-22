@@ -57,9 +57,9 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
 1. **NEW** *Can wait for pinned tasks* - Can wait for pinned tasks, useful for creating IO threads which do no other work. See [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp) and [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c).
 
-## Usage
+## Using enkiTS
 
-C++ usage:
+### C++ usage
 - full example in [example/ParallelSum.cpp](example/ParallelSum.cpp)
 - C example in [example/ParallelSum_c.c](example/ParallelSum_c.c)
 ```C
@@ -86,7 +86,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-C++ 11 lambda usage:
+### C++ 11 lambda usage
 - full example in [example/LambdaTask.cpp](example/LambdaTask.cpp)
 ```C
 #include "TaskScheduler.h"
@@ -106,7 +106,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-Task priorities usage in C++:
+### Task priorities usage in C++
 - full example in [example/Priorities.cpp](example/Priorities.cpp)
 - C example in [example/Priorities_c.c](example/Priorities_c.c)
 ```C
@@ -153,7 +153,7 @@ int main(int argc, const char * argv[])
 }
 ```
 
-Pinned Tasks usage in C++:
+### Pinned Tasks usage in C++
 - full example in [example/PinnedTask.cpp](example/PinnedTask.cpp)
 - C example in [example/PinnedTask_c.c](example/PinnedTask_c.c)
 ```C
@@ -184,7 +184,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-Dependency usage in C++:
+### Dependency usage in C++
 - full example in [example/Dependencies.cpp](example/Dependencies.cpp)
 - C example in [example/Dependencies_c.c](example/Dependencies_c.c)
 ```C
@@ -220,7 +220,7 @@ int main(int argc, const char * argv[]) {
 }
 ```
 
-External thread usage in C++:
+### External task thread usage in C++
 - full example in [example/ExternalTaskThread.cpp](example/ExternalTaskThread.cpp)
 - C example in [example/ExternalTaskThread_c.c](example/ExternalTaskThread_c.c)
 ```C
@@ -263,7 +263,7 @@ int main(int argc, const char * argv[])
 }
 ```
 
-WaitForPinnedTasks thread usage in C++ (useful for IO threads):
+### WaitForPinnedTasks thread usage in C++ (useful for IO threads)
 - full example in [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp)
 - C example in [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c)
 ```C++
@@ -304,7 +304,7 @@ int main(int argc, const char * argv[])
 
     // in this example we place our IO threads at the end
     RunPinnedTaskLoopTask runPinnedTaskLoopTasks;
-    runPinnedTaskLoopTasks.threadNum = g_TS.GetNumTaskThreads() - 1;;
+    runPinnedTaskLoopTasks.threadNum = g_TS.GetNumTaskThreads() - 1;
     g_TS.AddPinnedTask( &runPinnedTaskLoopTasks );
 
     // Send pretend file IO task to external thread FILE_IO
@@ -328,7 +328,7 @@ int main(int argc, const char * argv[])
 
 [The C++98 compatible branch](https://github.com/dougbinks/enkiTS/tree/C++98) has been deprecated as I'm not aware of anyone needing it.
 
-The user thread versions are no longer being maintained as they are no longer in use.
+The user thread versions are no longer being maintained as they are no longer in use. Similar functionality can be obtained with the externalTaskThreads
 * [User thread version  on Branch UserThread](https://github.com/dougbinks/enkiTS/tree/UserThread) for running enkiTS on other tasking / threading systems, so it can be used as in other engines as well as standalone for example.
 * [C++ 11 version of user threads on Branch UserThread_C++11](https://github.com/dougbinks/enkiTS/tree/UserThread_C++11)
 

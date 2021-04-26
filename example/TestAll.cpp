@@ -455,7 +455,53 @@ int main(int argc, const char * argv[])
             return true;
         } );
 
+    RunTestFunction(
+        "WaitForNewPinnedTasks",
+        [&]()->bool
+        {
+            enki::TaskSchedulerConfig config = baseConfig;
+            config.numTaskThreadsToCreate += 1;
+            g_TS.Initialize( config );
+            const uint32_t PINNED_ONLY_THREAD = g_TS.GetNumTaskThreads() - 1;
 
+            LambdaPinnedTask waitTask( PINNED_ONLY_THREAD, []()
+            { 
+                while( g_TS.GetIsWaitforAllCalled() )
+                {
+                    g_TS.WaitForNewPinnedTasks();
+                    g_TS.RunPinnedTasks();
+                }
+            } );
+
+            g_TS.AddPinnedTask( &waitTask );
+
+            PinnedTask pinnedTask;
+            pinnedTask.threadNum = PINNED_ONLY_THREAD;
+            g_TS.AddPinnedTask( &pinnedTask );
+            g_TS.WaitforTask( &pinnedTask );
+            fprintf( stdout,"\tPinned task ran on thread %u, requested thread %u\n", pinnedTask.threadRunOn, pinnedTask.threadNum );
+            if( pinnedTask.threadRunOn != pinnedTask.threadNum )
+            {
+                return false;
+            }
+
+            g_TS.WaitforAll(); // force all tasks to end, waitTask should exit because we use GetIsWaitforAllCalled()
+
+            g_TS.AddPinnedTask( &waitTask );
+            g_TS.AddPinnedTask( &pinnedTask );
+            g_TS.WaitforTask( &pinnedTask );
+            fprintf( stdout,"\tPinned task ran on thread %u, requested thread %u\n", pinnedTask.threadRunOn, pinnedTask.threadNum );
+
+            g_TS.WaitforAllAndShutdown();
+
+            return pinnedTask.threadRunOn == pinnedTask.threadNum;
+        } );
+
+    std::atomic<bool> boolCheck;
+    std::atomic<int32_t> intCheck;
+
+    // Output lock free status of main atomics used in enkiTS
+    fprintf( stdout, "\n boolCheck.is_lock_free(): %d, intCheck.is_lock_free(): %d\n", (int)boolCheck.is_lock_free(), (int)intCheck.is_lock_free() );
 
     fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
     if( g_numTestsRun == g_numTestsSucceeded )

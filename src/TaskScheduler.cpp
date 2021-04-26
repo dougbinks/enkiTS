@@ -258,7 +258,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 
     uint32_t spinCount = 0;
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
-    while( pTS->m_bRunning.load( std::memory_order_relaxed ) )
+    while( pTS->GetIsRunning() )
     {
         if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
         {
@@ -309,7 +309,7 @@ void TaskScheduler::StartThreads()
     // we create one less thread than m_NumThreads as the main thread counts as one
     m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
-    m_bRunning = 1;
+    m_bRunning = true;
 
     // current thread is primary enkiTS thread
     m_pThreadDataStore[0].threadState = ENKI_THREAD_STATE_PRIMARY_REGISTERED;
@@ -366,7 +366,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
     if( m_bHaveThreads )
     {
         // wait for them threads quit before deleting data
-        m_bRunning = 0;
+        m_bRunning.store( false, std::memory_order_release );
         while( bWait_ && m_NumInternalTaskThreadsRunning )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning

@@ -304,7 +304,7 @@ namespace enki
 
         // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
         // If GetIsRunning() returns false should then exit. Not required for finite tasks
-        inline     bool            GetIsRunning() const { return (bool)m_bRunning.load( std::memory_order_relaxed ); }
+        inline     bool            GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
@@ -429,7 +429,7 @@ namespace enki
         uint32_t               m_NumThreads;
         ThreadDataStore*       m_pThreadDataStore;
         std::thread*           m_pThreads;
-        std::atomic<int32_t>   m_bRunning;
+        std::atomic<bool>      m_bRunning;
         std::atomic<int32_t>   m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>   m_NumThreadsWaitingForNewTasks;
         std::atomic<int32_t>   m_NumThreadsWaitingForTaskCompletion;

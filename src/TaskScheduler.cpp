@@ -310,6 +310,7 @@ void TaskScheduler::StartThreads()
     m_pThreadDataStore   = NewArray<ThreadDataStore>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_bRunning = true;
+    m_bWaitforAllCalled = false;
 
     // current thread is primary enkiTS thread
     m_pThreadDataStore[0].threadState = ENKI_THREAD_STATE_PRIMARY_REGISTERED;
@@ -367,6 +368,9 @@ void TaskScheduler::StopThreads( bool bWait_ )
     {
         // wait for them threads quit before deleting data
         m_bRunning.store( false, std::memory_order_release );
+        m_bWaitforAllCalled.store( false, std::memory_order_release );
+
+
         while( bWait_ && m_NumInternalTaskThreadsRunning )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
@@ -890,16 +894,18 @@ class TaskSchedulerWaitTask : public IPinnedTask
 
 void TaskScheduler::WaitforAll()
 {
+    m_bWaitforAllCalled.store( true, std::memory_order_release );
+
     bool bHaveTasks = true;
-    uint32_t threadNum = gtl_threadNum;
-    uint32_t hintPipeToCheck_io = threadNum  + 1;    // does not need to be clamped.
-    int32_t numOtherThreadsRunning = 0; // account for this thread
+    uint32_t ourThreadNum = gtl_threadNum;
+    uint32_t hintPipeToCheck_io = ourThreadNum  + 1;    // does not need to be clamped.
+    bool otherThreadsRunning = false; // account for this thread
     uint32_t spinCount = 0;
     TaskSchedulerWaitTask dummyWaitTask;
     dummyWaitTask.threadNum = 0;
-    while( bHaveTasks || numOtherThreadsRunning )
+    while( bHaveTasks || otherThreadsRunning )
     {
-        bHaveTasks = TryRunTask( threadNum, hintPipeToCheck_io );
+        bHaveTasks = TryRunTask( ourThreadNum, hintPipeToCheck_io );
         ++spinCount;
         if( bHaveTasks )
         {
@@ -917,7 +923,7 @@ void TaskScheduler::WaitforAll()
 
                 // We can only add a pinned task to wait on if we find an enki Task Thread which isn't this thread.
                 // Otherwise we have to busy wait.
-                if( dummyWaitTask.threadNum != threadNum && dummyWaitTask.threadNum > m_Config.numExternalTaskThreads )
+                if( dummyWaitTask.threadNum != ourThreadNum && dummyWaitTask.threadNum > m_Config.numExternalTaskThreads )
                 {
                     ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
                     if( state == ENKI_THREAD_STATE_RUNNING || state == ENKI_THREAD_STATE_WAIT_TASK_COMPLETION )
@@ -930,7 +936,7 @@ void TaskScheduler::WaitforAll()
 
             if( bHaveThreadToWaitOn )
             {
-                ENKI_ASSERT( dummyWaitTask.threadNum != threadNum );
+                ENKI_ASSERT( dummyWaitTask.threadNum != ourThreadNum );
                 AddPinnedTask( &dummyWaitTask );
                 WaitforTask( &dummyWaitTask );
             }
@@ -943,11 +949,11 @@ void TaskScheduler::WaitforAll()
         }
 
         // count threads running
-        numOtherThreadsRunning = 0;
-        for(uint32_t thread = 0; thread < m_NumThreads; ++thread )
+        otherThreadsRunning = false;
+        for(uint32_t thread = 0; thread < m_NumThreads && !otherThreadsRunning; ++thread )
         {
             // ignore our thread
-            if( thread != threadNum )
+            if( thread != ourThreadNum )
             {
                 switch( m_pThreadDataStore[thread].threadState.load( std::memory_order_acquire ) )
                 {
@@ -957,19 +963,36 @@ void TaskScheduler::WaitforAll()
                 case ENKI_THREAD_STATE_NOT_LAUNCHED:
                 case ENKI_THREAD_STATE_RUNNING:
                 case ENKI_THREAD_STATE_WAIT_TASK_COMPLETION:
-                    ++numOtherThreadsRunning;
+                    otherThreadsRunning = true;
+                    break;
+                case ENKI_THREAD_STATE_WAIT_NEW_PINNED_TASKS:
+                    otherThreadsRunning = true;
+                    SemaphoreSignal( *m_pThreadDataStore[thread].pWaitNewPinnedTaskSemaphore, 1 );
                     break;
                 case ENKI_THREAD_STATE_PRIMARY_REGISTERED:
                 case ENKI_THREAD_STATE_EXTERNAL_REGISTERED:
                 case ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED:
                 case ENKI_THREAD_STATE_WAIT_NEW_TASKS:
-                case ENKI_THREAD_STATE_WAIT_NEW_PINNED_TASKS:
                 case ENKI_THREAD_STATE_STOPPED:
                     break;
                  };
             }
         }
+        if( !otherThreadsRunning )
+        {
+            // check there are no tasks
+            for(uint32_t thread = 0; thread < m_NumThreads && !otherThreadsRunning; ++thread )
+            {
+                // ignore our thread
+                if( thread != ourThreadNum )
+                {
+                    otherThreadsRunning = HaveTasks( thread );
+                }
+            }
+        }
      }
+
+    m_bWaitforAllCalled.store( false, std::memory_order_release );
 }
 
 void    TaskScheduler::WaitforAllAndShutdown()

@@ -314,6 +314,12 @@ namespace enki
         // If GetIsRunning() returns false should then exit. Not required for finite tasks
         inline     bool            GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
 
+        // while( !GetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if WaitforAll() has been called.
+        // If GetIsWaitforAllCalled() returns false should then exit. Not required for finite tasks
+        // This is intended to be used with code which calls WaitforAll() with flag WAITFORALLFLAGS_INC_WAIT_NEW_PINNED_TASKS set.
+        // This is also set when the the task manager is shutting down, so no need to have an additional check for GetIsRunning()
+        inline     bool            GetIsWaitforAllCalled() const { return m_bWaitforAllCalled.load( std::memory_order_acquire ); }
+
         // Adds the TaskSet to pipe and returns if the pipe is not full.
         // If the pipe is full, pTaskSet is run.
         // should only be called from main thread, or within a task
@@ -337,6 +343,7 @@ namespace enki
 
         // Waits for all task sets to complete - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuously added.
+        // If you are running tasks which loop, make sure to check GetIsWaitforAllCalled() and exit
         ENKITS_API void            WaitforAll();
 
         // Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
@@ -438,6 +445,7 @@ namespace enki
         ThreadDataStore*       m_pThreadDataStore;
         std::thread*           m_pThreads;
         std::atomic<bool>      m_bRunning;
+        std::atomic<bool>      m_bWaitforAllCalled;
         std::atomic<int32_t>   m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>   m_NumThreadsWaitingForNewTasks;
         std::atomic<int32_t>   m_NumThreadsWaitingForTaskCompletion;

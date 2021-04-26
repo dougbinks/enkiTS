@@ -202,13 +202,21 @@ namespace enki
         TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
         TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
 
-
-        virtual void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  )
-        {
-            m_Function( range_, threadnum_ );
-        }
-
+        void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override { m_Function( range_, threadnum_ ); }
         TaskSetFunction m_Function;
+    };
+
+    // A utility task set for creating tasks based on std::func.
+    typedef std::function<void ()> PinnedTaskFunction;
+    class LambdaPinnedTask : public IPinnedTask
+    {
+    public:
+        LambdaPinnedTask() = default;
+        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( func_ ) {}
+        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( func_ ) {}
+
+        void Execute() override { m_Function(); }
+        PinnedTaskFunction m_Function;
     };
 
     class Dependency

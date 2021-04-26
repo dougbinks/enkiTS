@@ -497,12 +497,6 @@ int main(int argc, const char * argv[])
             return pinnedTask.threadRunOn == pinnedTask.threadNum;
         } );
 
-    std::atomic<bool> boolCheck;
-    std::atomic<int32_t> intCheck;
-
-    // Output lock free status of main atomics used in enkiTS
-    fprintf( stdout, "\n boolCheck.is_lock_free(): %d, intCheck.is_lock_free(): %d\n", (int)boolCheck.is_lock_free(), (int)intCheck.is_lock_free() );
-
     fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
     if( g_numTestsRun == g_numTestsSucceeded )
     {

@@ -206,7 +206,7 @@ namespace enki
         TaskSetFunction m_Function;
     };
 
-    // A utility task set for creating tasks based on std::func.
+    // A utility pinned task for creating tasks based on std::func.
     typedef std::function<void ()> PinnedTaskFunction;
     class LambdaPinnedTask : public IPinnedTask
     {

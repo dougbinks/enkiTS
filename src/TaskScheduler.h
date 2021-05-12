@@ -193,7 +193,7 @@ namespace enki
         void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
     };
 
-    // A utility task set for creating tasks based on std::func.
+    // TaskSet - a utility task set for creating tasks based on std::func.
     typedef std::function<void (TaskSetPartition range, uint32_t threadnum  )> TaskSetFunction;
     class TaskSet : public ITaskSet
     {
@@ -206,7 +206,7 @@ namespace enki
         TaskSetFunction m_Function;
     };
 
-    // A utility pinned task for creating tasks based on std::func.
+    // LambdaPinnedTask - a utility pinned task for creating tasks based on std::func.
     typedef std::function<void ()> PinnedTaskFunction;
     class LambdaPinnedTask : public IPinnedTask
     {

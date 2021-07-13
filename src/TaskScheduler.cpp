@@ -352,7 +352,9 @@ void TaskScheduler::StartThreads()
         // We only need to partition for a maximum of the available processor parallelism.
         uint32_t numThreadsToPartitionFor = std::min( m_NumThreads, GetNumHardwareThreads() );
         m_NumPartitions = numThreadsToPartitionFor * (numThreadsToPartitionFor - 1);
-        m_NumInitialPartitions = numThreadsToPartitionFor - 1;
+        // ensure m_NumPartitions, m_NumInitialPartitions non zero, can happen if m_NumThreads > 1 && GetNumHardwareThreads() == 1
+        m_NumPartitions        = std::max( m_NumPartitions,              (uint32_t)1 );
+        m_NumInitialPartitions = std::max( numThreadsToPartitionFor - 1, (uint32_t)1 );
         if( m_NumInitialPartitions > gc_MaxNumInitialPartitions )
         {
             m_NumInitialPartitions = gc_MaxNumInitialPartitions;

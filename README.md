@@ -34,7 +34,24 @@ For further examples, see https://github.com/dougbinks/enkiTSExamples
 
 ## Building
 
-Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will require the pthreads library.
+Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will likely require the pthreads library.
+
+For C++
+
+  - Use `#include "TaskScheduler.h"`
+  - Add enkiTS/src to your include path
+  - Compile / Add to project: 
+    - `TaskScheduler.cpp`
+  - Unix / Linux builds will likely require the pthreads library.
+
+For C
+
+  - Use `#include "TaskScheduler_c.h"`
+  - Add enkiTS/src to your include path
+  - Compile / Add to project:
+    - `TaskScheduler.cpp`
+    - `TaskScheduler_c.cpp`
+  - Unix / Linux builds will likely require the pthreads library.
 
 For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in the enkiTS directory and:
 

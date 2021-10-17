@@ -1298,8 +1298,8 @@ void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
 }
 
 Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ ) 
-    : pDependencyTask( pDependencyTask_ )
-    , pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
+    : pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
+    , pDependencyTask( pDependencyTask_ )
     , pNext( pDependencyTask->m_pDependents )
 {
     ENKI_ASSERT( pDependencyTask->GetIsComplete() );

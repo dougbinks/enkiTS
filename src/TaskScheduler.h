@@ -30,6 +30,7 @@
     #define ENKITS_TASK_PRIORITIES_NUM 3
 #endif
 
+#ifndef	ENKITS_API
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
     // Building enkiTS as a DLL
     #define ENKITS_API __declspec(dllexport)
@@ -41,6 +42,7 @@
     #define ENKITS_API __attribute__((visibility("default")))
 #else
     #define ENKITS_API
+#endif
 #endif
 
 // Define ENKI_CUSTOM_ALLOC_FILE_AND_LINE (at project level) to get file and line report in custom allocators,

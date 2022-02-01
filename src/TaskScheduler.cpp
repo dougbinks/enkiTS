@@ -872,7 +872,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
         }
         SafeCallback( m_Config.profilerCallbacks.waitForTaskCompleteStop, threadNum );
     }
-    else
+    else if( nullptr == pCompletable_ )
     {
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
             {

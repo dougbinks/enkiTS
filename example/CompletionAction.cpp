@@ -139,7 +139,7 @@ struct SelfDeletingTaskA : ITaskSet
     CompletionActionModifyDependentTaskAndDelete m_TaskModifyAndDelete;
 };
 
-static const int RUNS       = 100000;
+static const int RUNS       = 10;
 
 int main(int argc, const char * argv[])
 {

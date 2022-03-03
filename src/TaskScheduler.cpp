@@ -1050,7 +1050,7 @@ template<typename T>
 T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
 {
     T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, file_, line_ );
-    if( !std::is_pod<T>::value )
+    if( !std::is_trivial<T>::value )
     {
 		T* pCurr = pRet;
         for( size_t i = 0; i < num_; ++i )
@@ -1066,7 +1066,7 @@ T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
 template<typename T>
 void TaskScheduler::DeleteArray( T* p_, size_t num_, const char* file_, int line_ )
 {
-    if( !std::is_pod<T>::value )
+    if( !std::is_trivially_destructible<T>::value )
     {
         size_t i = num_;
         while(i)

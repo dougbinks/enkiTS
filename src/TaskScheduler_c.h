@@ -99,7 +99,8 @@ struct enkiParamsPinnedTask
 
 struct enkiParamsCompletionAction
 {
-    void*                  pArgs;
+    void*                  pArgsPreComplete;
+    void*                  pArgsPostComplete;
     const enkiCompletable* pDependency; // task which when complete triggers completion function
 };
 
@@ -370,7 +371,12 @@ ENKITS_API void                enkiSetDependency(
 
 /* -------------------------- Completion Actions --------------------------- */
 // Create a CompletionAction.
-ENKITS_API enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunc_  );
+// completionFunctionPreComplete_ - function called BEFORE the complete action task is 'complete', which means this is prior to dependent tasks being run.
+//                                  this function can thus alter any task arguments of the dependencies.
+// completionFunctionPostComplete_ - function called AFTER the complete action task is 'complete'. Dependent tasks may have already been started.
+//                                  This function can delete the completion action if needed as it will no longer be accessed by other functions.
+// It is safe to set either of these to NULL if you do not require that function
+ENKITS_API enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunctionPreComplete_, enkiCompletionFunction completionFunctionPostComplete_ );
 
 // Delete a CompletionAction.
 ENKITS_API void                enkiDeleteCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionAction* pCompletionAction_ );

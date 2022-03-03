@@ -35,7 +35,6 @@ static std::atomic<int32_t> gs_CountAsDeleted = {0};
 static std::atomic<int32_t> gs_CountBsRun = {0};
 static std::atomic<int32_t> gs_CountBsDeleted = {0};
 
-
 struct CompletionActionDelete : ICompletable
 {
     Dependency    m_Dependency;
@@ -44,10 +43,10 @@ struct CompletionActionDelete : ICompletable
     // the dependency task is complete.
     void OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
-        // always call base class OnDependenciesComplete first
+        // Call base class OnDependenciesComplete BEFORE deleting depedent task or self
         ICompletable::OnDependenciesComplete( pTaskScheduler_, threadNum_ );
 
-        printf("OnDependenciesComplete called on thread %u\n", threadNum_ );
+        printf("CompletionActionDelete::OnDependenciesComplete called on thread %u\n", threadNum_ );
 
         // In this example we delete the dependency, which is safe to do as the task
         // manager will not dereference it at this point.
@@ -72,23 +71,56 @@ struct SelfDeletingTaskB : ITaskSet
 
     void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_ ) override
     {
-        (void)range_;
-        ++gs_CountBsRun;
-        printf("SelfDeletingTaskB on thread %u\n", threadnum_);
+        if( 0 == range_.start )
+        {
+            // whilst would normally loop over range_ doing work here we want to only output info once per task
+            ++gs_CountBsRun;
+            printf("SelfDeletingTaskB on thread %u with set size %u\n", threadnum_, m_SetSize);
+        }
     }
 
     CompletionActionDelete m_TaskDeleter;
     Dependency             m_Dependency;
 };
 
+struct CompletionActionModifyDependentTaskAndDelete : ICompletable
+{
+    Dependency    m_Dependency;
+
+    ITaskSet*     m_pTaskToModify = nullptr;
+
+    // We override OnDependenciesComplete to provide an 'action' which occurs after
+    // the dependency task is complete.
+    void OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
+    {
+        // Modify following task before calling OnDependenciesComplete
+        m_pTaskToModify->m_SetSize = 10;
+
+        // Call base class OnDependenciesComplete AFTER modifying any depedent task
+        ICompletable::OnDependenciesComplete( pTaskScheduler_, threadNum_ );
+
+        printf("CompletionActionModifyDependentTaskAndDelete::OnDependenciesComplete called on thread %u\n", threadNum_ );
+
+        // In this example we delete the dependency, which is safe to do as the task
+        // manager will not dereference it at this point.
+        // However the dependency task should have no other dependents,
+        // This class can have dependencies.
+        delete m_Dependency.GetDependencyTask(); // also deletes this as member
+    }
+};
+
 struct SelfDeletingTaskA : ITaskSet
 {
     SelfDeletingTaskA()
     {
-        m_TaskDeleter.SetDependency( m_TaskDeleter.m_Dependency, this );
+        m_TaskModifyAndDelete.SetDependency( m_TaskModifyAndDelete.m_Dependency, this );
         SelfDeletingTaskB* pNextTask = new SelfDeletingTaskB();
+
         // we set the dependency of pNextTask on the task deleter, not on this
-        pNextTask->SetDependency( pNextTask->m_Dependency, &m_TaskDeleter );
+        pNextTask->SetDependency( pNextTask->m_Dependency, &m_TaskModifyAndDelete );
+
+        // Set the completion actions task to modify to be the following task
+        m_TaskModifyAndDelete.m_pTaskToModify = pNextTask;
     }
 
     ~SelfDeletingTaskA()
@@ -101,16 +133,27 @@ struct SelfDeletingTaskA : ITaskSet
     {
         (void)range_;
         ++gs_CountAsRun;
-        printf("SelfDeletingTaskA on thread %u\n", threadnum_);
+        printf("SelfDeletingTaskA  on thread %u with set size %u\n", threadnum_, m_SetSize);
     }
 
-    CompletionActionDelete m_TaskDeleter;
+    CompletionActionModifyDependentTaskAndDelete m_TaskModifyAndDelete;
 };
 
-static const int RUNS       = 10;
+static const int RUNS       = 100000;
 
 int main(int argc, const char * argv[])
 {
+    // This examples shows CompletionActions used to modify a following tasks parameters and delete tasks
+    // Task Graph for this example (with names shortened to fit on screen):
+    // 
+    // pTaskSetA
+    //          ->pCompletionActionA-Modify-ICompletable::OnDependenciesComplete-Delete
+    //                                     ->pTaskSetB
+    //                                                ->pCompletionActionB-ICompletable::OnDependenciesComplete-Delete
+    //
+    // Note that pTaskSetB must depend on pCompletionActionA NOT pTaskSetA or it could run at the same time as pCompletionActionA
+    // so cannot be modified.
+
     g_TS.Initialize();
 
     for( int run = 0; run< RUNS; ++run )

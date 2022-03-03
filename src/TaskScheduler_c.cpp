@@ -81,16 +81,30 @@ struct enkiPinnedTask : IPinnedTask
 
 struct enkiCompletionAction : ICompletable
 {
-    void OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
+    void OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override
     {
+        if( completionFunctionPreComplete )
+        {
+            completionFunctionPreComplete( pArgsPreComplete, threadNum_ );
+        }
+
+        // make temporaries for post completion as this task could get deleted after OnDependenciesComplete
+        enkiCompletionFunction tempCompletionFunctionPostComplete = completionFunctionPostComplete;
+        void*                  ptempArgsPostComplete              = pArgsPostComplete;
+
         ICompletable::OnDependenciesComplete( pTaskScheduler_, threadNum_ );
 
-        completionFunction( pArgs, threadNum_ );
+        if( tempCompletionFunctionPostComplete )
+        {
+            tempCompletionFunctionPostComplete( ptempArgsPostComplete, threadNum_ );
+        }
     }
 
-    enkiCompletionFunction completionFunction;
+    enkiCompletionFunction completionFunctionPreComplete;
+    enkiCompletionFunction completionFunctionPostComplete;
     Dependency             dependency;
-    void* pArgs = NULL;
+    void* pArgsPreComplete  = NULL;
+    void* pArgsPostComplete = NULL;
 };
 
 struct enkiDependency : Dependency {}; // empty struct which we will use for dependencies
@@ -476,13 +490,14 @@ void enkiSetDependency( enkiDependency* pDependency_, enkiCompletable* pDependen
     pTaskToRunOnCompletion_->SetDependency( *pDependency_, pDependencyTask_ );
 }
 
-enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunc_ )
+enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunctionPreComplete_, enkiCompletionFunction completionFunctionPostComplete_ )
 {
     const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
     enkiCompletionAction* pCA = (enkiCompletionAction*)customAllocator.alloc(
         alignof(enkiCompletionAction), sizeof(enkiCompletionAction), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pCA) enkiCompletionAction();
-    pCA->completionFunction = completionFunc_;
+    pCA->completionFunctionPreComplete = completionFunctionPreComplete_;
+    pCA->completionFunctionPostComplete = completionFunctionPostComplete_;
     return pCA;
 }
 
@@ -497,7 +512,8 @@ void enkiDeleteCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionAction*
 enkiParamsCompletionAction enkiGetParamsCompletionAction( enkiCompletionAction* pCompletionAction_ )
 {
     enkiParamsCompletionAction params;
-    params.pArgs = pCompletionAction_->pArgs;
+    params.pArgsPreComplete = pCompletionAction_->pArgsPreComplete;
+    params.pArgsPostComplete = pCompletionAction_->pArgsPostComplete;
     params.pDependency = reinterpret_cast<const enkiCompletable*>(
         pCompletionAction_->dependency.GetDependencyTask() );
     return params;
@@ -505,6 +521,7 @@ enkiParamsCompletionAction enkiGetParamsCompletionAction( enkiCompletionAction* 
 
 void enkiSetParamsCompletionAction( enkiCompletionAction* pCompletionAction_, enkiParamsCompletionAction params_ )
 {
-    pCompletionAction_->pArgs = params_.pArgs;
+    pCompletionAction_->pArgsPreComplete  = params_.pArgsPreComplete;
+    pCompletionAction_->pArgsPostComplete = params_.pArgsPostComplete;
     pCompletionAction_->SetDependency( pCompletionAction_->dependency, params_.pDependency );
 }

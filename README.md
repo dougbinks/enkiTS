@@ -281,8 +281,8 @@ int main(int argc, const char * argv[])
 ```
 
 ### WaitForPinnedTasks thread usage in C++ (useful for IO threads)
-- full example in [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp)
-- C example in [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c)
+- full example in [example/WaitForNewPinnedTasks.cpp](example/WaitForNewPinnedTasks.cpp)
+- C example in [example/WaitForNewPinnedTasks_c.c](example/WaitForNewPinnedTasks_c.c)
 ```C++
 #include "TaskScheduler.h"
 

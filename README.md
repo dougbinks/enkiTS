@@ -72,7 +72,7 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Custom allocator API* - can configure enkiTS with custom allocators, see [example/CustomAllocator.cpp](example/CustomAllocator.cpp) and [example/CustomAllocator_c.c](example/CustomAllocator_c.c).
 1. *Dependencies* - can set dependendencies between tasks see [example/Dependencies.cpp](example/Dependencies.cpp) and [example/Dependencies_c.c](example/Dependencies_c.c).
 1. *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
-1. **NEW** *Can wait for pinned tasks* - Can wait for pinned tasks, useful for creating IO threads which do no other work. See [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp) and [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c).
+1. **NEW** *Can wait for pinned tasks* - Can wait for pinned tasks, useful for creating IO threads which do no other work. See [example/WaitForNewPinnedTasks.cpp](example/WaitForNewPinnedTasks.cpp) and [example/WaitForNewPinnedTasks_c.c](example/WaitForNewPinnedTasks_c.c).
 
 ## Using enkiTS
 
@@ -281,8 +281,8 @@ int main(int argc, const char * argv[])
 ```
 
 ### WaitForPinnedTasks thread usage in C++ (useful for IO threads)
-- full example in [example/WaitForPinnedTasks.cpp](example/WaitForPinnedTasks.cpp)
-- C example in [example/WaitForPinnedTasks_c.c](example/WaitForPinnedTasks_c.c)
+- full example in [example/WaitForNewPinnedTasks.cpp](example/WaitForNewPinnedTasks.cpp)
+- C example in [example/WaitForNewPinnedTasks_c.c](example/WaitForNewPinnedTasks_c.c)
 ```C++
 #include "TaskScheduler.h"
 

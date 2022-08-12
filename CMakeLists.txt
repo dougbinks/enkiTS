@@ -9,8 +9,6 @@ option( ENKITS_INSTALL              "Generate installation target" OFF )
 
 set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5, 0 for defined by defaults in source" ) 
 
-include_directories( "${PROJECT_SOURCE_DIR}/src" )
-
 set( ENKITS_HEADERS
     src/LockLessMultiReadPipe.h
     src/TaskScheduler.h
@@ -45,6 +43,7 @@ else()
     add_library( enkiTS STATIC ${ENKITS_SRC} )
 endif()
 
+target_include_directories( enkiTS PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
     target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )    

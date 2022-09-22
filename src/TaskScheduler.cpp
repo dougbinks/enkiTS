@@ -40,6 +40,22 @@ namespace
 #define ENKI_FILE_AND_LINE  gc_File, gc_Line
 #endif
 
+
+#ifdef _WIN64
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include "Windows.h"
+#endif
+
+uint32_t enki::GetNumHardwareThreads()
+{
+#ifdef _WIN64
+    return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+#else
+    return std::thread::hardware_concurrency();
+#endif
+}
+
 namespace enki
 {
     static const int32_t  gc_TaskStartCount          = 2;
@@ -357,6 +373,58 @@ void TaskScheduler::StartThreads()
             m_NumInitialPartitions = gc_MaxNumInitialPartitions;
         }
     }
+
+#ifdef _WIN64
+    // x64 bit Windows may support >64 logical processors using processor groups, and only allocate threads to a default group.
+    // We need to detect this and distribute threads accordingly
+    if( GetNumHardwareThreads() > 64 &&                                    // only have processor groups if > 64 hardware threads
+        std::thread::hardware_concurrency() < GetNumHardwareThreads() &&   // if std::thread sees > 64 hardware threads no need to distribute
+        std::thread::hardware_concurrency() < m_NumThreads )               // no need to distrbute if number of threads requested lower than std::thread sees
+    {
+        uint32_t numProcessorGroups = GetActiveProcessorGroupCount();
+        GROUP_AFFINITY mainThreadAffinity;
+        BOOL success = GetThreadGroupAffinity( GetCurrentThread(), &mainThreadAffinity );
+        assert( success );
+        if( success )
+        {
+            uint32_t mainProcessorGroup = mainThreadAffinity.Group;
+            uint32_t currLogicalProcess = GetActiveProcessorCount( mainProcessorGroup ); // we start iteration at end of current process group's threads
+
+            // If more threads are created than there are logical processors then we still want to distribute them evenly amongst groups
+            // so we iterate continously around the groups until we reach m_NumThreads
+            uint32_t group = 0;
+            while( currLogicalProcess < m_NumThreads )
+            {
+                ++group; // start at group 1 since we set currLogicalProcess to start of next group
+                uint32_t currGroup = ( group + mainProcessorGroup ) % numProcessorGroups; // we start at mainProcessorGroup, go round in circles
+                uint32_t groupNumLogicalProcessors = GetActiveProcessorCount( currGroup );
+                assert( groupNumLogicalProcessors <= 64 );
+                uint64_t GROUPMASK = 0xFFFFFFFFFFFFFFFFULL >> (64-groupNumLogicalProcessors); // group mask should not have 1's where there are no processors
+                for( uint32_t groupLogicalProcess = 0; ( groupLogicalProcess < groupNumLogicalProcessors ) && ( currLogicalProcess < m_NumThreads ); ++groupLogicalProcess, ++currLogicalProcess )
+                {
+                    if( currLogicalProcess > m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread() )
+                    {
+                        auto thread_handle = m_pThreads[currLogicalProcess].native_handle();
+
+                        // From https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups
+                        // If a thread is assigned to a different group than the process, the process's affinity is updated to include the thread's affinity
+                        // and the process becomes a multi-group process. 
+                        GROUP_AFFINITY threadAffinity;
+                        success = GetThreadGroupAffinity( thread_handle, &threadAffinity );
+                        assert(success); (void)success;
+                        if( threadAffinity.Group != currGroup )
+                        {
+                            threadAffinity.Group = currGroup;
+                            threadAffinity.Mask  = GROUPMASK;
+                            success = SetThreadGroupAffinity( thread_handle, &threadAffinity, nullptr );
+                            assert( success ); (void)success;
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
 
     m_bHaveThreads = true;
 }

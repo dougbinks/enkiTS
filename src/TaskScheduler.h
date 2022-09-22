@@ -466,11 +466,6 @@ namespace enki
         void SetCustomAllocator( CustomAllocator customAllocator_ ); // for C interface
     };
 
-    inline uint32_t GetNumHardwareThreads()
-    {
-        return std::thread::hardware_concurrency();
-    }
-
     inline void ICompletable::OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ )
     {
         m_RunningCount.fetch_sub( 1, std::memory_order_release );

@@ -364,7 +364,7 @@ GPU/CPU Texture Generator
 ### [ToyPathRacer](https://github.com/aras-p/ToyPathTracer)
 Aras Pranckevičius' code for his series on [Daily Path Tracer experiments with various languages](https://aras-p.info/blog/2018/03/28/Daily-Pathtracer-Part-0-Intro/).
 
-![ToyPathTracer screenshot](https://github.com/aras-p/ToyPathTracer/blob/master/Shots/screenshot.jpg?raw=true).
+![ToyPathTracer screenshot](https://github.com/aras-p/ToyPathTracer/blob/main/Shots/screenshot.jpg?raw=true).
 
 ## License (zlib)
 

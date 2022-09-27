@@ -732,7 +732,7 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
     // Note: if m_SetSize is < m_RangeToRun this will be handled by SplitTask and so does not need to be handled here
 
     uint32_t rangeToSplit = pTaskSet_->m_SetSize / m_NumInitialPartitions;
-    if( rangeToSplit < pTaskSet_->m_MinRange ) { rangeToSplit = pTaskSet_->m_MinRange; }
+    rangeToSplit = std::max( rangeToSplit, pTaskSet_->m_MinRange );
 
     SubTaskSet subTask;
     subTask.pTask = pTaskSet_;

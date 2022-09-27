@@ -120,11 +120,7 @@ namespace
     {
         SubTaskSet splitTask = subTask_;
         uint32_t rangeLeft = subTask_.partition.end - subTask_.partition.start;
-
-        if( rangeToSplit_ > rangeLeft )
-        {
-            rangeToSplit_ = rangeLeft;
-        }
+        rangeToSplit_ = std::min( rangeToSplit_, rangeLeft );
         splitTask.partition.end = subTask_.partition.start + rangeToSplit_;
         subTask_.partition.start = splitTask.partition.end;
         return splitTask;
@@ -732,7 +728,8 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
 
     // divide task up and add to pipe
     pTaskSet_->m_RangeToRun = pTaskSet_->m_SetSize / m_NumPartitions;
-    if( pTaskSet_->m_RangeToRun < pTaskSet_->m_MinRange ) { pTaskSet_->m_RangeToRun = pTaskSet_->m_MinRange; }
+    pTaskSet_->m_RangeToRun = std::max( pTaskSet_->m_RangeToRun, pTaskSet_->m_MinRange );
+    // Note: if m_SetSize is < m_RangeToRun this will be handled by SplitTask and so does not need to be handled here
 
     uint32_t rangeToSplit = pTaskSet_->m_SetSize / m_NumInitialPartitions;
     if( rangeToSplit < pTaskSet_->m_MinRange ) { rangeToSplit = pTaskSet_->m_MinRange; }

@@ -104,7 +104,7 @@ int main(int argc, const char * argv[])
 
     // start by measuring serial
     double avSerial = 0.0f;
-    uint32_t setSize = 20 * 1024 * 1024;
+    uint32_t setSize = 100 * 1024 * 1024;
     uint64_t sumSerial;
     for( int run = 0; run< REPEATS; ++run )
     {

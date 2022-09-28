@@ -46,7 +46,7 @@ struct ParallelSumTaskSet : ITaskSet
     Count*    m_pPartialSums;
     uint32_t  m_NumPartialSums;
 
-    ParallelSumTaskSet( uint32_t size_ ) : m_pPartialSums(NULL), m_NumPartialSums(0) { m_SetSize = size_; }
+    ParallelSumTaskSet( uint32_t size_ ) : m_pPartialSums(NULL), m_NumPartialSums(0) { m_SetSize = size_; m_MinRange = 10 * 1024; }
     virtual ~ParallelSumTaskSet()
     {
         delete[] m_pPartialSums;

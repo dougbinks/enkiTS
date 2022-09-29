@@ -368,10 +368,7 @@ void TaskScheduler::StartThreads()
         // ensure m_NumPartitions, m_NumInitialPartitions non zero, can happen if m_NumThreads > 1 && GetNumHardwareThreads() == 1
         m_NumPartitions        = std::max( m_NumPartitions,              (uint32_t)1 );
         m_NumInitialPartitions = std::max( numThreadsToPartitionFor - 1, (uint32_t)1 );
-        if( m_NumInitialPartitions > gc_MaxNumInitialPartitions )
-        {
-            m_NumInitialPartitions = gc_MaxNumInitialPartitions;
-        }
+        m_NumInitialPartitions = std::min( m_NumInitialPartitions, gc_MaxNumInitialPartitions );
     }
 
 #ifdef _WIN64

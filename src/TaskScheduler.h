@@ -76,7 +76,7 @@ namespace enki
     struct SubTaskSet;
     struct semaphoreid_t;
 
-    uint32_t GetNumHardwareThreads();
+    ENKITS_API uint32_t GetNumHardwareThreads();
 
     enum TaskPriority
     {

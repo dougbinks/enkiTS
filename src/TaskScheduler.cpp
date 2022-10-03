@@ -64,6 +64,7 @@ namespace enki
     static const uint32_t gc_SpinCount               = 10;
     static const uint32_t gc_SpinBackOffMulitplier   = 100;
     static const uint32_t gc_MaxNumInitialPartitions = 8;
+    static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
     static const uint32_t gc_CacheLineSize           = 64;
     // awaiting std::hardware_constructive_interference_size
 };
@@ -529,7 +530,16 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
         if( subTask.pTask->m_RangeToRun < partitionSize )
         {
             SubTaskSet taskToRun = SplitTask( subTask, subTask.pTask->m_RangeToRun );
-            SplitAndAddTask( threadNum_, subTask, subTask.pTask->m_RangeToRun );
+            uint32_t rangeToSplit = subTask.pTask->m_RangeToRun;
+            if( threadNum_ != threadToCheck )
+            {
+                // task was stolen from another thread
+                // in order to ensure other threads can get enough work we need to split into larger ranges
+                // these larger splits are then stolen and split themselves
+                // otherwise other threads must keep stealing from this thread, which may stall when pipe is full
+                rangeToSplit = std::max( rangeToSplit, (subTask.partition.end - subTask.partition.start) / gc_MaxStolenPartitions );
+            }
+            SplitAndAddTask( threadNum_, subTask, rangeToSplit );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum_ );
             int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
             if( gc_TaskStartCount == prevCount )

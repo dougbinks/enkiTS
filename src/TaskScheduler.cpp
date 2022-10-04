@@ -750,23 +750,27 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
 void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ )
 {
     int32_t numAdded = 0;
+    int32_t numNewTasksSinceNotification = 0;
     int32_t numRun   = 0;
+
+    int32_t upperBoundNumToAdd = 2 + (int32_t)( ( subTask_.partition.end - subTask_.partition.start ) / rangeToSplit_ );
+
     // ensure that an artificial completion is not registered whilst adding tasks by incrementing count
-    subTask_.pTask->m_RunningCount.fetch_add( 1, std::memory_order_acquire );
+    subTask_.pTask->m_RunningCount.fetch_add( upperBoundNumToAdd, std::memory_order_acquire );
     while( subTask_.partition.start != subTask_.partition.end )
     {
         SubTaskSet taskToAdd = SplitTask( subTask_, rangeToSplit_ );
 
         // add the partition to the pipe
-        ++numAdded;
-        subTask_.pTask->m_RunningCount.fetch_add( 1, std::memory_order_acquire );
+        ++numAdded; ++numNewTasksSinceNotification;
         if( !m_pPipesPerThread[ subTask_.pTask->m_Priority ][ threadNum_ ].WriterTryWriteFront( taskToAdd ) )
         {
-            if( numAdded > 1 )
+            --numAdded; // we were unable to add the task
+            if( numNewTasksSinceNotification > 1 )
             {
                 WakeThreadsForNewTasks();
             }
-            numAdded = 0;
+            numNewTasksSinceNotification = 0;
             // alter range to run the appropriate fraction
             if( taskToAdd.pTask->m_RangeToRun < taskToAdd.partition.end - taskToAdd.partition.start )
             {
@@ -778,8 +782,10 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
             ++numRun;
         }
     }
-    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( numRun + 1, std::memory_order_release );
-    if( numRun + gc_TaskStartCount == prevCount )
+    int32_t countToRemove = upperBoundNumToAdd - numAdded;
+    ENKI_ASSERT( countToRemove > 0 );
+    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( countToRemove, std::memory_order_release );
+    if( countToRemove-1 + gc_TaskStartCount == prevCount )
     {
         TaskComplete( subTask_.pTask, false, threadNum_ );
     }

@@ -118,7 +118,8 @@ namespace enki
     {
         semaphoreid_t*           pWaitNewPinnedTaskSemaphore = nullptr;
         std::atomic<ThreadState> threadState = { ENKI_THREAD_STATE_NONE };
-        char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) - sizeof(semaphoreid_t*) ];
+        uint32_t                 rndSeed = 0;
+        char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) - sizeof(semaphoreid_t*) - sizeof( uint32_t ) ];
     };
     constexpr size_t SIZEOFTHREADDATASTORE = sizeof( ThreadDataStore ); // for easier inspection
     static_assert( SIZEOFTHREADDATASTORE == enki::gc_CacheLineSize, "ThreadDataStore may exhibit false sharing" );
@@ -345,10 +346,11 @@ void TaskScheduler::StartThreads()
         ++m_NumInternalTaskThreadsRunning;
     }
 
-    // Create Wait New Pinned Task Semaphores
+    // Create Wait New Pinned Task Semaphores and init rndSeed
     for( uint32_t threadNum = 0; threadNum < m_NumThreads; ++threadNum )
     {
         m_pThreadDataStore[threadNum].pWaitNewPinnedTaskSemaphore = SemaphoreNew();
+        m_pThreadDataStore[threadNum].rndSeed = threadNum;
     }
 
     // ensure we have sufficient tasks to equally fill either all threads including main
@@ -500,6 +502,39 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_i
     return false;
 }
 
+static inline uint32_t RotateLeft( uint32_t value, int32_t count ) 
+{
+	return ( value << count ) | ( value >> ( 32 - count ));
+}
+/*  xxHash variant based on documentation on
+    https://github.com/Cyan4973/xxHash/blob/eec5700f4d62113b47ee548edbc4746f61ffb098/doc/xxhash_spec.md
+
+    Copyright (c) Yann Collet
+
+    Permission is granted to copy and distribute this document for any purpose and without charge, including translations into other languages and incorporation into compilations, provided that the copyright notice and this notice are preserved, and that any substantive changes or deletions from the original are clearly marked. Distribution of this document is unlimited.
+*/
+static inline uint32_t Hash32( uint32_t in_ )
+{
+    static const uint32_t PRIME32_1 = 2654435761U;  // 0b10011110001101110111100110110001
+    static const uint32_t PRIME32_2 = 2246822519U;  // 0b10000101111010111100101001110111
+    static const uint32_t PRIME32_3 = 3266489917U;  // 0b11000010101100101010111000111101
+    static const uint32_t PRIME32_4 =  668265263U;  // 0b00100111110101001110101100101111
+    static const uint32_t PRIME32_5 =  374761393U;  // 0b00010110010101100110011110110001
+    static const uint32_t SEED      = 0; // can configure seed if needed
+
+    // simple hash of nodes, does not check if nodePool is compressed or not.
+    uint32_t acc = SEED + PRIME32_5;
+
+    // add node types to map, and also ensure that fully empty nodes are well distrubuted by hashing the pointer.
+    acc += in_;
+    acc = acc ^ (acc >> 15);
+    acc = acc * PRIME32_2;
+    acc = acc ^ (acc >> 13);
+    acc = acc * PRIME32_3;
+    acc = acc ^ (acc >> 16);
+    return (std::size_t)acc;
+}
+
 bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ )
 {
     // Run any tasks for this thread
@@ -509,16 +544,29 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
     SubTaskSet subTask;
     bool bHaveTask = m_pPipesPerThread[ priority_ ][ threadNum_ ].WriterTryReadFront( &subTask );
 
-    uint32_t threadToCheck = hintPipeToCheck_io_;
+    uint32_t threadToCheckStart = hintPipeToCheck_io_ % m_NumThreads;
+    uint32_t threadToCheck      = threadToCheckStart;
     uint32_t checkCount = 0;
-    while( !bHaveTask && checkCount < m_NumThreads )
+    if( !bHaveTask )
     {
-        threadToCheck = ( hintPipeToCheck_io_ + checkCount ) % m_NumThreads;
-        if( threadToCheck != threadNum_ )
+        bHaveTask = m_pPipesPerThread[ priority_ ][ threadToCheck ].ReaderTryReadBack( &subTask );
+        if( !bHaveTask )
         {
-            bHaveTask = m_pPipesPerThread[ priority_ ][ threadToCheck ].ReaderTryReadBack( &subTask );
+            // To prevent many threads checking the same task pipe for work we pseudorandomly distribute
+            // the starting thread which we start checking for tasks to run
+            uint32_t& rndSeed = m_pThreadDataStore[threadNum_].rndSeed;
+            ++rndSeed;
+            uint32_t threadToCheckOffset = Hash32( rndSeed * threadNum_ ); 
+            while( !bHaveTask && checkCount < m_NumThreads )
+            {
+                threadToCheck = ( threadToCheckOffset + checkCount ) % m_NumThreads;
+                if( threadToCheck != threadNum_ && threadToCheckOffset != threadToCheckStart )
+                {
+                    bHaveTask = m_pPipesPerThread[ priority_ ][ threadToCheck ].ReaderTryReadBack( &subTask );
+                }
+                ++checkCount;
+            }
         }
-        ++checkCount;
     }
         
     if( bHaveTask )

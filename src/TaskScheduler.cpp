@@ -630,22 +630,23 @@ void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint
 
     while( pDependent )
     {
-        int prevDeps = pDependent->pTaskToRunOnCompletion->m_DependenciesCompletedCount.fetch_add( 1, std::memory_order_release );
-        ENKI_ASSERT( prevDeps < pDependent->pTaskToRunOnCompletion->m_DependenciesCount );
-        if( pDependent->pTaskToRunOnCompletion->m_DependenciesCount == ( prevDeps + 1 ) )
+        // access pTaskToRunOnCompletion member data before incrementing m_DependenciesCompletedCount so
+        // they do not get deleted when another thread completes the pTaskToRunOnCompletion
+        int32_t dependenciesCount  = pDependent->pTaskToRunOnCompletion->m_DependenciesCount;
+        // get temp copy of pDependent so OnDependenciesComplete can delete task if needed.
+        Dependency* pDependentCurr = pDependent;
+        pDependent                 = pDependent->pNext;
+        int32_t prevDeps = pDependentCurr->pTaskToRunOnCompletion->m_DependenciesCompletedCount.fetch_add( 1, std::memory_order_release );
+        ENKI_ASSERT( prevDeps < dependenciesCount );
+        if( dependenciesCount == ( prevDeps + 1 ) )
         {
-            // get temp copy of pDependent so OnDependenciesComplete can delete task if needed.
-            Dependency* pDependentCurr = pDependent;
-            pDependent = pDependent->pNext;
             // reset dependencies
+            // only safe to access pDependentCurr here after above fetch_add because this is the thread
+            // which calls OnDependenciesComplete after store with memory_order_release
             pDependentCurr->pTaskToRunOnCompletion->m_DependenciesCompletedCount.store(
                 0,
                 std::memory_order_release );
             pDependentCurr->pTaskToRunOnCompletion->OnDependenciesComplete( this, threadNum_ );
-        }
-        else
-        {
-            pDependent = pDependent->pNext;
         }
     }
 }

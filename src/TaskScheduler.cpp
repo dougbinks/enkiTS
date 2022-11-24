@@ -119,7 +119,6 @@ namespace enki
         semaphoreid_t*           pWaitNewPinnedTaskSemaphore = nullptr;
         std::atomic<ThreadState> threadState = { ENKI_THREAD_STATE_NONE };
         uint32_t                 rndSeed = 0;
-        char prevent_false_Share[ enki::gc_CacheLineSize - sizeof(std::atomic<ThreadState>) - sizeof(semaphoreid_t*) - sizeof( uint32_t ) ];
     };
     constexpr size_t SIZEOFTHREADDATASTORE = sizeof( ThreadDataStore ); // for easier inspection
     static_assert( SIZEOFTHREADDATASTORE == enki::gc_CacheLineSize, "ThreadDataStore may exhibit false sharing" );

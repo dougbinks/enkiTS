@@ -326,6 +326,7 @@ void TaskScheduler::StartThreads()
     m_pThreads           = NewArray<std::thread>( m_NumThreads, ENKI_FILE_AND_LINE );
     m_bRunning = true;
     m_bWaitforAllCalled = false;
+    m_bShutdownRequested = false;
 
     // current thread is primary enkiTS thread
     m_pThreadDataStore[0].threadState = ENKI_THREAD_STATE_PRIMARY_REGISTERED;
@@ -431,13 +432,17 @@ void TaskScheduler::StartThreads()
 
 void TaskScheduler::StopThreads( bool bWait_ )
 {
+    // we set m_bWaitforAllCalled to true to ensure any task which loop using this status exit
+    m_bWaitforAllCalled.store( true, std::memory_order_release );
+
+    // set status 
+    m_bShutdownRequested.store( true, std::memory_order_release );
+    m_bRunning.store( false, std::memory_order_release );
+
     if( m_bHaveThreads )
     {
-        // wait for them threads quit before deleting data
-        m_bRunning.store( false, std::memory_order_release );
-        m_bWaitforAllCalled.store( false, std::memory_order_release );
 
-
+        // wait for threads to quit before deleting data
         while( bWait_ && m_NumInternalTaskThreadsRunning )
         {
             // keep firing event to ensure all threads pick up state of m_bRunning
@@ -975,7 +980,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
         // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
         priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
         uint32_t spinCount = 0;
-        while( !pCompletable_->GetIsComplete() )
+        while( !pCompletable_->GetIsComplete() && GetIsRunning() )
         {
             ++spinCount;
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
@@ -1033,7 +1038,7 @@ void TaskScheduler::WaitforAll()
     uint32_t spinCount = 0;
     TaskSchedulerWaitTask dummyWaitTask;
     dummyWaitTask.threadNum = 0;
-    while( bHaveTasks || otherThreadsRunning )
+    while( GetIsRunning() && ( bHaveTasks || otherThreadsRunning ) )
     {
         bHaveTasks = TryRunTask( ourThreadNum, hintPipeToCheck_io );
         ++spinCount;
@@ -1125,11 +1130,23 @@ void TaskScheduler::WaitforAll()
     m_bWaitforAllCalled.store( false, std::memory_order_release );
 }
 
-void    TaskScheduler::WaitforAllAndShutdown()
+void TaskScheduler::WaitforAllAndShutdown()
 {
+    m_bWaitforAllCalled.store( true, std::memory_order_release );
+    m_bShutdownRequested.store( true, std::memory_order_release );
     if( m_bHaveThreads )
     {
         WaitforAll();
+        StopThreads(true);
+    }
+}
+
+void TaskScheduler::ShutdownNow()
+{
+    m_bWaitforAllCalled.store( true, std::memory_order_release );
+    m_bShutdownRequested.store( true, std::memory_order_release );
+    if( m_bHaveThreads )
+    {
         StopThreads(true);
     }
 }

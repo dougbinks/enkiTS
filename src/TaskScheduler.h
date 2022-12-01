@@ -312,14 +312,16 @@ namespace enki
         // Get config. Can be called before Initialize to get the defaults.
         ENKITS_API TaskSchedulerConfig GetConfig() const;
 
-        // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
-        // If GetIsRunning() returns false should then exit. Not required for finite tasks
-        inline     bool            GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
+        // while( !GetIsShutdownRequested() ) {} can be used in tasks which loop, to check if enkiTS has been requested to shutdown.
+        // If GetIsShutdownRequested() returns true should then exit. Not required for finite tasks
+        // Safe to use with WaitforAllAndShutdown() and ShutdownNow() where this will be set
+        // Not safe to use with WaitforAll(). 
+        inline     bool            GetIsShutdownRequested() const { return m_bShutdownRequested.load( std::memory_order_acquire ); }
 
         // while( !GetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if WaitforAll() has been called.
         // If GetIsWaitforAllCalled() returns false should then exit. Not required for finite tasks
         // This is intended to be used with code which calls WaitforAll() with flag WAITFORALLFLAGS_INC_WAIT_NEW_PINNED_TASKS set.
-        // This is also set when the the task manager is shutting down, so no need to have an additional check for GetIsRunning()
+        // This is also set when the the task manager is shutting down, so no need to have an additional check for GetIsShutdownRequested()
         inline     bool            GetIsWaitforAllCalled() const { return m_bWaitforAllCalled.load( std::memory_order_acquire ); }
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
@@ -341,17 +343,24 @@ namespace enki
         // To run only a subset of tasks, set priorityOfLowestToRun_ to a high priority.
         // Default is lowest priority available.
         // Only wait for child tasks of the current task otherwise a deadlock could occur.
+        // WaitforTask will exit if ShutdownNow() is called even if pCompletable_ is not complete
         ENKITS_API void            WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ = TaskPriority(TASK_PRIORITY_NUM - 1) );
 
         // Waits for all task sets to complete - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuously added.
         // If you are running tasks which loop, make sure to check GetIsWaitforAllCalled() and exit
+        // WaitfoAll will exit if ShutdownNow() is called even if there are still tasks to run or currently running
         ENKITS_API void            WaitforAll();
 
         // Waits for all task sets to complete and shutdown threads - not guaranteed to work unless we know we
         // are in a situation where tasks aren't being continuously added.
         // This function can be safely called even if TaskScheduler::Initialize() has not been called.
         ENKITS_API void            WaitforAllAndShutdown();
+
+        // Shutdown threads without waiting for all tasks to complete.
+        // This function can be safely called even if TaskScheduler::Initialize() has not been called.
+        // This function will still wait for any running tasks to exit before the task threads exit.
+        ENKITS_API void            ShutdownNow();
 
         // Waits for the current thread to receive a PinnedTask
         // Will not run any tasks - use with RunPinnedTasks()
@@ -402,6 +411,11 @@ namespace enki
         inline static constexpr uint32_t  GetNumFirstExternalTaskThread() { return 1; }
 
         // ------------- Start DEPRECATED Functions -------------
+        // DEPRECATED: use GetIsShutdownRequested() instead of GetIsRunning() in external code
+        // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
+        // If GetIsRunning() returns false should then exit. Not required for finite tasks
+        inline     bool            GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
+
         // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask
         inline void                WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
 
@@ -447,6 +461,7 @@ namespace enki
         ThreadDataStore*       m_pThreadDataStore;
         std::thread*           m_pThreads;
         std::atomic<bool>      m_bRunning;
+        std::atomic<bool>      m_bShutdownRequested;
         std::atomic<bool>      m_bWaitforAllCalled;
         std::atomic<int32_t>   m_NumInternalTaskThreadsRunning;
         std::atomic<int32_t>   m_NumThreadsWaitingForNewTasks;

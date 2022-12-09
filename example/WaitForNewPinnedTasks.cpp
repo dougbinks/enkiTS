@@ -143,7 +143,7 @@ int main(int argc, const char * argv[])
         }
     }
 
-    // ensure runPinnedTaskLoopTasks complete by explicitly calling shutdown
+    // ensure runPinnedTaskLoopTasks complete by explicitly calling WaitforAllAndShutdown
     g_TS.WaitforAllAndShutdown();
 
     return 0;

@@ -358,8 +358,11 @@ namespace enki
         ENKITS_API void            WaitforAllAndShutdown();
 
         // Shutdown threads without waiting for all tasks to complete.
+        // Intended to be used to exit an application quickly.
         // This function can be safely called even if TaskScheduler::Initialize() has not been called.
         // This function will still wait for any running tasks to exit before the task threads exit.
+        // ShutdownNow will cause tasks which have been added to the scheduler but not completed
+        // to be in an undefined state in which should not be re-launched.
         ENKITS_API void            ShutdownNow();
 
         // Waits for the current thread to receive a PinnedTask

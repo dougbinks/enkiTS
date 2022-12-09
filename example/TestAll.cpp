@@ -497,6 +497,24 @@ int main(int argc, const char * argv[])
             return pinnedTask.threadRunOn == pinnedTask.threadNum;
         } );
 
+    RunTestFunction(
+        "ShutdownNow",
+        [&]()->bool
+        {
+            g_TS.Initialize( baseConfig );
+            ParallelSumTaskSet          parallelSumTask( setSize );
+            parallelSumTask.Init( g_TS.GetNumTaskThreads() );
+            ParallelReductionSumTaskSet parallelReductionSumTaskSet( &parallelSumTask );
+
+            g_TS.AddTaskSetToPipe( &parallelSumTask );
+            g_TS.WaitforTask( &parallelReductionSumTaskSet );
+
+            fprintf( stdout,"\tCalling ShutdownNow()...");
+            g_TS.ShutdownNow();
+            fprintf( stdout," ...completed.\n" );
+            return parallelReductionSumTaskSet.m_FinalSum == sumSerial;
+        } );
+
     fprintf( stdout, "\n%u Tests Run\n%u Tests Succeeded\n\n", g_numTestsRun, g_numTestsSucceeded );
     if( g_numTestsRun == g_numTestsSucceeded )
     {

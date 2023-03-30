@@ -76,6 +76,8 @@ namespace enki
     struct SubTaskSet;
     struct semaphoreid_t;
 
+    static constexpr uint32_t NO_THREAD_NUM = 0xFFFFFFFF;
+
     ENKITS_API uint32_t GetNumHardwareThreads();
 
     enum TaskPriority
@@ -380,9 +382,9 @@ namespace enki
 
         // Returns the current task threadNum
         // Will return 0 for thread which initialized the task scheduler,
-        // and all other non-enkiTS threads which have not been registered ( see RegisterExternalTaskThread() ),
-        // and < GetNumTaskThreads() for all threads.
-        // It is guaranteed that GetThreadNum() < GetNumTaskThreads()
+        // and NO_THREAD_NUM for all other non-enkiTS threads which have not been registered ( see RegisterExternalTaskThread() ),
+        // and < GetNumTaskThreads() for all registered and internal enkiTS threads.
+        // It is guaranteed that GetThreadNum() < GetNumTaskThreads() unless it is NO_THREAD_NUM
         ENKITS_API uint32_t        GetThreadNum() const;
 
          // Call on a thread to register the thread to use the TaskScheduling API.

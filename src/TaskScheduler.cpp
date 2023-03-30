@@ -87,7 +87,7 @@ namespace enki
 
 
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
-static thread_local uint32_t                             gtl_threadNum       = 0;
+static thread_local uint32_t                             gtl_threadNum       = enki::NO_THREAD_NUM;
 
 namespace enki 
 {

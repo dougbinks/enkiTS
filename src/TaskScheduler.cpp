@@ -40,8 +40,14 @@ namespace
 #define ENKI_FILE_AND_LINE  gc_File, gc_Line
 #endif
 
+// UWP and MinGW don't have GetActiveProcessorCount
+#if defined(_WIN64) \
+    && !defined(__MINGW32__) \
+    && !(defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP))
+#define ENKI_USE_WINDOWS_PROCESSOR_API
+#endif
 
-#ifdef _WIN64
+#ifdef ENKI_USE_WINDOWS_PROCESSOR_API
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include "Windows.h"
@@ -49,7 +55,7 @@ namespace
 
 uint32_t enki::GetNumHardwareThreads()
 {
-#ifdef _WIN64
+#ifdef ENKI_USE_WINDOWS_PROCESSOR_API
     return GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
 #else
     return std::thread::hardware_concurrency();
@@ -375,7 +381,7 @@ void TaskScheduler::StartThreads()
         m_NumInitialPartitions = std::min( m_NumInitialPartitions, gc_MaxNumInitialPartitions );
     }
 
-#ifdef _WIN64
+#ifdef ENKI_USE_WINDOWS_PROCESSOR_API
     // x64 bit Windows may support >64 logical processors using processor groups, and only allocate threads to a default group.
     // We need to detect this and distribute threads accordingly
     if( GetNumHardwareThreads() > 64 &&                                    // only have processor groups if > 64 hardware threads

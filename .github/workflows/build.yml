@@ -14,7 +14,10 @@ jobs:
         runs-on: ubuntu-latest
         env:
             CC: clang
+            CXX: clang++
             CFLAGS: -Werror
+            CXXFLAGS: -Werror
+
         steps:
             - uses: actions/checkout@v3
 
@@ -37,7 +40,10 @@ jobs:
         runs-on: ubuntu-latest
         env:
             CC: gcc
+            CXX: g++
             CFLAGS: -Werror
+            CXXFLAGS: -Werror
+
         steps:
             - uses: actions/checkout@v3
 
@@ -60,6 +66,7 @@ jobs:
         runs-on: macos-latest
         env:
             CFLAGS: -Werror
+            CXXFLAGS: -Werror
         steps:
             - uses: actions/checkout@v3
 
@@ -82,6 +89,7 @@ jobs:
         runs-on: windows-latest
         env:
             CFLAGS: /WX
+            CXXFLAGS: /WX
         steps:
             - uses: actions/checkout@v3
 

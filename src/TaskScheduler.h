@@ -444,7 +444,7 @@ namespace enki
         void        SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, uint32_t rangeToSplit_ );
         void        WakeThreadsForNewTasks();
         void        WakeThreadsForTaskCompletion();
-        bool        WakeSuspendedThreadsWithPinnedTasks();
+        bool        WakeSuspendedThreadsWithPinnedTasks( uint32_t threadNum_ );
         void        InitDependencies( ICompletable* pCompletable_  );
         ENKITS_API void TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ );
         ENKITS_API void AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum_ );

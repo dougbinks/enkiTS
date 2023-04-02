@@ -686,7 +686,7 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
     // We don't want to suspend this thread if there are task threads
     // with pinned tasks suspended, as it could result in this thread
     // being unsuspended and not the thread with pinned tasks
-    if( WakeSuspendedThreadsWithPinnedTasks() )
+    if( WakeSuspendedThreadsWithPinnedTasks( threadNum_ ) )
     {
         return;
     }
@@ -719,7 +719,7 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     // We don't want to suspend this thread if there are task threads
     // with pinned tasks suspended, as the completable could be a pinned task
     // or it could be waiting on one.
-    if( WakeSuspendedThreadsWithPinnedTasks() )
+    if( WakeSuspendedThreadsWithPinnedTasks( threadNum_ ) )
     {
         return;
     }
@@ -779,13 +779,12 @@ void TaskScheduler::WakeThreadsForTaskCompletion()
     }
 }
 
-bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
+bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks( uint32_t threadNum_ )
 {
-    uint32_t threadNum = gtl_threadNum;
     for( uint32_t t = 1; t < m_NumThreads; ++t )
     {
         // distribute thread checks more evenly by starting at our thread number rather than 0.
-        uint32_t thread = ( threadNum + t ) % m_NumThreads;
+        uint32_t thread = ( threadNum_ + t ) % m_NumThreads;
 
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
             
@@ -1014,7 +1013,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
     {
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
             {
-                if( TryRunTask( gtl_threadNum, priority, hintPipeToCheck_io ) )
+                if( TryRunTask( threadNum, priority, hintPipeToCheck_io ) )
                 {
                     break;
                 }

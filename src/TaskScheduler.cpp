@@ -942,6 +942,7 @@ void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
 
 void TaskScheduler::RunPinnedTasks()
 {
+    ENKI_ASSERT( gtl_threadNum != enki::NO_THREAD_NUM );
     uint32_t threadNum = gtl_threadNum;
     ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum].threadState.store( ENKI_THREAD_STATE_RUNNING, std::memory_order_relaxed );
@@ -970,6 +971,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
 
 void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::TaskPriority priorityOfLowestToRun_ )
 {
+    ENKI_ASSERT( gtl_threadNum != enki::NO_THREAD_NUM );
     uint32_t threadNum = gtl_threadNum;
     uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
 
@@ -1035,6 +1037,7 @@ class TaskSchedulerWaitTask : public IPinnedTask
 
 void TaskScheduler::WaitforAll()
 {
+    ENKI_ASSERT( gtl_threadNum != enki::NO_THREAD_NUM );
     m_bWaitforAllCalled.store( true, std::memory_order_release );
 
     bool bHaveTasks = true;
@@ -1159,6 +1162,7 @@ void TaskScheduler::ShutdownNow()
 
 void TaskScheduler::WaitForNewPinnedTasks()
 {
+    ENKI_ASSERT( gtl_threadNum != enki::NO_THREAD_NUM );
     uint32_t threadNum = gtl_threadNum;
     ThreadState prevThreadState = m_pThreadDataStore[threadNum].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum].threadState.store( ENKI_THREAD_STATE_WAIT_NEW_PINNED_TASKS, std::memory_order_seq_cst );

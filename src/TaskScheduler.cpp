@@ -252,14 +252,15 @@ bool TaskScheduler::RegisterExternalTaskThread( uint32_t threadNumToRegister_ )
 
 void TaskScheduler::DeRegisterExternalTaskThread()
 {
-    ENKI_ASSERT( gtl_threadNum );
+    ENKI_ASSERT( gtl_threadNum != enki::NO_THREAD_NUM );
+    ENKI_ASSERT( gtl_threadNum >= GetNumFirstExternalTaskThread() );
     ThreadState threadState = m_pThreadDataStore[gtl_threadNum].threadState.load( std::memory_order_acquire );
     ENKI_ASSERT( threadState == ENKI_THREAD_STATE_EXTERNAL_REGISTERED );
     if( threadState == ENKI_THREAD_STATE_EXTERNAL_REGISTERED )
     {
         --m_NumExternalTaskThreadsRegistered;
         m_pThreadDataStore[gtl_threadNum].threadState.store( ENKI_THREAD_STATE_EXTERNAL_UNREGISTERED, std::memory_order_release );
-        gtl_threadNum = 0;
+        gtl_threadNum = enki::NO_THREAD_NUM;
     }
 }
 

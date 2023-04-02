@@ -60,7 +60,6 @@ jobs:
         runs-on: macos-latest
         env:
             CFLAGS: -Werror
-            MACOSX_DEPLOYMENT_TARGET: 10.8
         steps:
             - uses: actions/checkout@v3
 

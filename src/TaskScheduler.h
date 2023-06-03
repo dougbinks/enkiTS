@@ -201,8 +201,8 @@ namespace enki
     {
     public:
         TaskSet() = default;
-        TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
-        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
+        TaskSet( TaskSetFunction func_ ) : m_Function( std::move(func_) ) {}
+        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( std::move(func_) ) {}
 
         void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override { m_Function( range_, threadnum_ ); }
         TaskSetFunction m_Function;
@@ -214,8 +214,8 @@ namespace enki
     {
     public:
         LambdaPinnedTask() = default;
-        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( func_ ) {}
-        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( func_ ) {}
+        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( std::move(func_) ) {}
+        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( std::move(func_) ) {}
 
         void Execute() override { m_Function(); }
         PinnedTaskFunction m_Function;

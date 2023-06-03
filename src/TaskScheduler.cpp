@@ -1,13 +1,13 @@
 // Copyright (c) 2013 Doug Binks
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgement in the product documentation would be
@@ -68,7 +68,7 @@ namespace enki
     static const int32_t  gc_TaskAlmostCompleteCount = 1; // GetIsComplete() will return false, but execution is done and about to complete
     static const uint32_t gc_PipeSizeLog2            = 8;
     static const uint32_t gc_SpinCount               = 10;
-    static const uint32_t gc_SpinBackOffMulitplier   = 100;
+    static const uint32_t gc_SpinBackOffMultiplier   = 100;
     static const uint32_t gc_MaxNumInitialPartitions = 8;
     static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
     static const uint32_t gc_CacheLineSize           = 64;
@@ -89,7 +89,7 @@ namespace enki
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static thread_local uint32_t                             gtl_threadNum       = 0;
 
-namespace enki 
+namespace enki
 {
     struct SubTaskSet
     {
@@ -98,7 +98,7 @@ namespace enki
     };
 
     // we derive class TaskPipe rather than typedef to get forward declaration working easily
-    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2,enki::SubTaskSet> {};
+    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2, enki::SubTaskSet> {};
 
     enum ThreadState : int32_t
     {
@@ -120,7 +120,7 @@ namespace enki
         TaskScheduler*           pTaskScheduler;
     };
 
-    struct alignas(enki::gc_CacheLineSize) ThreadDataStore 
+    struct alignas(enki::gc_CacheLineSize) ThreadDataStore
     {
         semaphoreid_t*           pWaitNewPinnedTaskSemaphore = nullptr;
         std::atomic<ThreadState> threadState = { ENKI_THREAD_STATE_NONE };
@@ -158,7 +158,7 @@ namespace
         while( __rdtsc() < end )
         {
             _mm_pause();
-        }        
+        }
     }
     #else
     static void SpinWait( uint32_t spinCount_ )
@@ -167,7 +167,7 @@ namespace
         {
             // TODO: may have NOP or yield equiv
             --spinCount_;
-        }        
+        }
     }
     #endif
 }
@@ -180,9 +180,9 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     }
 }
 
-   
+
 ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
-{ 
+{
     (void)userData_; (void)file_; (void)line_;
     void* pRet;
 #ifdef _WIN32
@@ -197,7 +197,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
     else
     {
         int retval = posix_memalign( &pRet, align_, size_ );
-        (void)retval;	//unused
+        (void)retval; // unused
     }
 #endif
     return pRet;
@@ -278,7 +278,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     SafeCallback( pTS->m_Config.profilerCallbacks.threadStart, threadNum );
 
     uint32_t spinCount = 0;
-    uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
+    uint32_t hintPipeToCheck_io = threadNum + 1; // does not need to be clamped.
     while( pTS->GetIsRunning() )
     {
         if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
@@ -291,7 +291,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -361,7 +361,7 @@ void TaskScheduler::StartThreads()
     }
 
     // ensure we have sufficient tasks to equally fill either all threads including main
-    // or just the threads we've launched, this is outside the firstinit as we want to be able
+    // or just the threads we've launched, this is outside the first init as we want to be able
     // to runtime change it
     if( 1 == m_NumThreads )
     {
@@ -386,7 +386,7 @@ void TaskScheduler::StartThreads()
     // We need to detect this and distribute threads accordingly
     if( GetNumHardwareThreads() > 64 &&                                    // only have processor groups if > 64 hardware threads
         std::thread::hardware_concurrency() < GetNumHardwareThreads() &&   // if std::thread sees > 64 hardware threads no need to distribute
-        std::thread::hardware_concurrency() < m_NumThreads )               // no need to distrbute if number of threads requested lower than std::thread sees
+        std::thread::hardware_concurrency() < m_NumThreads )               // no need to distribute if number of threads requested lower than std::thread sees
     {
         uint32_t numProcessorGroups = GetActiveProcessorGroupCount();
         GROUP_AFFINITY mainThreadAffinity;
@@ -398,7 +398,7 @@ void TaskScheduler::StartThreads()
             uint32_t currLogicalProcess = GetActiveProcessorCount( mainProcessorGroup ); // we start iteration at end of current process group's threads
 
             // If more threads are created than there are logical processors then we still want to distribute them evenly amongst groups
-            // so we iterate continously around the groups until we reach m_NumThreads
+            // so we iterate continuously around the groups until we reach m_NumThreads
             uint32_t group = 0;
             while( currLogicalProcess < m_NumThreads )
             {
@@ -415,7 +415,7 @@ void TaskScheduler::StartThreads()
 
                         // From https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups
                         // If a thread is assigned to a different group than the process, the process's affinity is updated to include the thread's affinity
-                        // and the process becomes a multi-group process. 
+                        // and the process becomes a multi-group process.
                         GROUP_AFFINITY threadAffinity;
                         success = GetThreadGroupAffinity( thread_handle, &threadAffinity );
                         assert(success); (void)success;
@@ -441,7 +441,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
     // we set m_bWaitforAllCalled to true to ensure any task which loop using this status exit
     m_bWaitforAllCalled.store( true, std::memory_order_release );
 
-    // set status 
+    // set status
     m_bShutdownRequested.store( true, std::memory_order_release );
     m_bRunning.store( false, std::memory_order_release );
 
@@ -513,7 +513,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_i
     return false;
 }
 
-static inline uint32_t RotateLeft( uint32_t value, int32_t count ) 
+static inline uint32_t RotateLeft( uint32_t value, int32_t count )
 {
 	return ( value << count ) | ( value >> ( 32 - count ));
 }
@@ -536,7 +536,7 @@ static inline uint32_t Hash32( uint32_t in_ )
     // simple hash of nodes, does not check if nodePool is compressed or not.
     uint32_t acc = SEED + PRIME32_5;
 
-    // add node types to map, and also ensure that fully empty nodes are well distrubuted by hashing the pointer.
+    // add node types to map, and also ensure that fully empty nodes are well distributed by hashing the pointer.
     acc += in_;
     acc = acc ^ (acc >> 15);
     acc = acc * PRIME32_2;
@@ -567,7 +567,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             // the starting thread which we start checking for tasks to run
             uint32_t& rndSeed = m_pThreadDataStore[threadNum_].rndSeed;
             ++rndSeed;
-            uint32_t threadToCheckOffset = Hash32( rndSeed * threadNum_ ); 
+            uint32_t threadToCheckOffset = Hash32( rndSeed * threadNum_ );
             while( !bHaveTask && checkCount < m_NumThreads )
             {
                 threadToCheck = ( threadToCheckOffset + checkCount ) % m_NumThreads;
@@ -579,7 +579,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             }
         }
     }
-        
+
     if( bHaveTask )
     {
         // update hint, will preserve value unless actually got task from another thread.
@@ -691,7 +691,7 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
         return;
     }
 
-    // We incrememt the number of threads waiting here in order
+    // We increment the number of threads waiting here in order
     // to ensure that the check for tasks occurs after the increment
     // to prevent a task being added after a check, then the thread waiting.
     // This will occasionally result in threads being mistakenly awoken,
@@ -788,7 +788,7 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
         uint32_t thread = ( threadNum + t ) % m_NumThreads;
 
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
-            
+
         ENKI_ASSERT( state != ENKI_THREAD_STATE_NONE );
 
         if( state == ENKI_THREAD_STATE_WAIT_NEW_TASKS || state == ENKI_THREAD_STATE_WAIT_TASK_COMPLETION )
@@ -923,8 +923,8 @@ void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 
 void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
 {
-    // go through any dependencies and set thier running count so they show as not complete
-    // and increment depedency count
+    // go through any dependencies and set their running count so they show as not complete
+    // and increment dependency count
     if( pCompletable_->m_RunningCount.load( std::memory_order_relaxed ) )
     {
         // already initialized
@@ -1004,7 +1004,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -1085,7 +1085,7 @@ void TaskScheduler::WaitforAll()
         }
         else
         {
-            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
             SpinWait( spinBackoffCount );
         }
 
@@ -1237,7 +1237,7 @@ T* TaskScheduler::New( const char* file_, int line_, Args&&... args_ )
 template< typename T >
 void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
 {
-    p_->~T(); 
+    p_->~T();
     this->Free(p_, file_, line_ );
 }
 
@@ -1315,7 +1315,7 @@ namespace enki
     {
         HANDLE      sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
 #ifdef _XBOX_ONE
@@ -1350,7 +1350,7 @@ namespace enki
 
 // OS X does not have POSIX semaphores
 // Mach semaphores can now only be created by the kernel
-// Named sempahores work, but would require unique name construction to ensure
+// Named semaphores work, but would require unique name construction to ensure
 // they are isolated to this process.
 // Dispatch semaphores appear to be the way other developers use OSX Semaphores, e.g. Boost
 // However the API could change
@@ -1360,27 +1360,27 @@ namespace enki
 
 namespace enki
 {
-    
+
     struct semaphoreid_t
     {
         dispatch_semaphore_t   sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         semaphoreid.sem = dispatch_semaphore_create(0);
     }
-    
+
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
     {
         dispatch_release( semaphoreid.sem );
     }
-    
+
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         dispatch_semaphore_wait( semaphoreid.sem, DISPATCH_TIME_FOREVER );
     }
-    
+
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
@@ -1397,29 +1397,29 @@ namespace enki
 
 namespace enki
 {
-    
+
     struct semaphoreid_t
     {
         sem_t   sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         int err = sem_init( &semaphoreid.sem, 0, 0 );
         ENKI_ASSERT( err == 0 );
         (void)err;
     }
-    
+
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
     {
         sem_destroy( &semaphoreid.sem );
     }
-    
+
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         while( sem_wait( &semaphoreid.sem ) == -1 && errno == EINTR ) {}
     }
-    
+
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
@@ -1448,7 +1448,7 @@ void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
     m_Config.customAllocator = customAllocator_;
 }
 
-Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ ) 
+Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ )
     : pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
     , pDependencyTask( pDependencyTask_ )
     , pNext( pDependencyTask->m_pDependents )

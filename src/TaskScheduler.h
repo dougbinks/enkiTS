@@ -174,7 +174,7 @@ namespace enki
 
     private:
         friend class TaskScheduler;
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
         uint32_t     m_RangeToRun = 1;
     };
 
@@ -192,7 +192,7 @@ namespace enki
         uint32_t                  threadNum = 0; // thread to run this pinned task on
         std::atomic<IPinnedTask*> pNext = {NULL};
     private:
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
     };
 
     // TaskSet - a utility task set for creating tasks based on std::func.

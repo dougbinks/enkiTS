@@ -117,7 +117,7 @@ struct enkiTaskSchedulerConfig
     // See TaskScheduler::RegisterExternalTaskThread() for usage.
     // Defaults to 0. The thread used to initialize the TaskScheduler can also use the TaskScheduler API.
     // Thus there are (numTaskThreadsToCreate + numExternalTaskThreads + 1) able to use the API, with this
-    // defaulting to the number of harware threads available to the system.
+    // defaulting to the number of hardware threads available to the system.
     uint32_t              numExternalTaskThreads;
 
     struct enkiProfilerCallbacks profilerCallbacks;
@@ -163,11 +163,11 @@ ENKITS_API void                enkiInitTaskSchedulerWithConfig( enkiTaskSchedule
 // This function can be safely called even if enkiInit* has not been called.
 ENKITS_API void                enkiWaitforAllAndShutdown( enkiTaskScheduler* pETS_ );
 
-// Delete a task scheduler
+// Delete a task scheduler.
 ENKITS_API void                enkiDeleteTaskScheduler( enkiTaskScheduler* pETS_ );
 
 // Waits for all task sets to complete - not guaranteed to work unless we know we
-// are in a situation where tasks aren't being continuosly added.
+// are in a situation where tasks aren't being continuously added.
 ENKITS_API void                enkiWaitForAll( enkiTaskScheduler* pETS_ );
 
 // Returns the number of threads created for running tasks + number of external threads
@@ -176,7 +176,7 @@ ENKITS_API void                enkiWaitForAll( enkiTaskScheduler* pETS_ );
 // It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
 ENKITS_API uint32_t            enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ );
 
-// Returns the current task threadNum
+// Returns the current task threadNum.
 // Will return 0 for thread which initialized the task scheduler,
 // and all other non-enkiTS threads which have not been registered ( see enkiRegisterExternalTaskThread() ),
 // and < enkiGetNumTaskThreads() for all threads.
@@ -186,7 +186,7 @@ ENKITS_API uint32_t            enkiGetThreadNum( enkiTaskScheduler* pETS_ );
 // Call on a thread to register the thread to use the TaskScheduling API.
 // This is implicitly done for the thread which initializes the TaskScheduler
 // Intended for developers who have threads who need to call the TaskScheduler API
-// Returns true if successfull, false if not.
+// Returns true if successful, false if not.
 // Can only have numExternalTaskThreads registered at any one time, which must be set
 // at initialization time.
 ENKITS_API int                 enkiRegisterExternalTaskThread( enkiTaskScheduler* pETS_ );
@@ -248,7 +248,7 @@ ENKITS_API void                enkiAddTaskSetArgs( enkiTaskScheduler* pETS_, enk
 
 // Schedule the task with a minimum range.
 // This should be set to a value which results in computation effort of at least 10k
-// clock cycles to minimize tast scheduler overhead.
+// clock cycles to minimize task scheduler overhead.
 // NOTE: The last partition will be smaller than m_MinRange if m_SetSize is not a multiple
 // of m_MinRange.
 // Also known as grain size in literature.
@@ -258,7 +258,7 @@ ENKITS_API void                enkiAddTaskSetMinRange( enkiTaskScheduler* pETS_,
 ENKITS_API int                 enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
 
 // Wait for a given task.
-// should only be called from thread which created the taskscheduler , or within a task
+// should only be called from thread which created the task scheduler, or within a task
 // if called with 0 it will try to run tasks, and return if none available.
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ );
@@ -298,14 +298,14 @@ ENKITS_API void                enkiAddPinnedTaskArgs( enkiTaskScheduler* pETS_, 
                                            void* pArgs_ );
 
 // This function will run any enkiPinnedTask* for current thread, but not run other
-// Main thread should call this or use a wait to ensure it's tasks are run.
+// Main thread should call this or use a wait to ensure its tasks are run.
 ENKITS_API void                enkiRunPinnedTasks( enkiTaskScheduler * pETS_ );
 
 // Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.
 ENKITS_API int                 enkiIsPinnedTaskComplete( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
 
 // Wait for a given pinned task.
-// should only be called from thread which created the taskscheduler, or within a task
+// should only be called from thread which created the task scheduler, or within a task
 // if called with 0 it will try to run tasks, and return if none available.
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForPinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pTask_ );
@@ -344,7 +344,7 @@ ENKITS_API enkiCompletable*    enkiCreateCompletable( enkiTaskScheduler* pETS_ )
 ENKITS_API void                enkiDeleteCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pCompletable_ );
 
 // Wait for a given completable.
-// should only be called from thread which created the taskscheduler, or within a task
+// should only be called from thread which created the task scheduler, or within a task
 // if called with 0 it will try to run tasks, and return if none available.
 // Only wait for child tasks of the current task otherwise a deadlock could occur.
 ENKITS_API void                enkiWaitForCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pTask_ );
@@ -356,14 +356,14 @@ ENKITS_API void                enkiWaitForCompletablePriority( enkiTaskScheduler
 
 /* ----------------------------   Dependencies  ---------------------------- */
 // Create an enkiDependency, used to set dependencies between tasks
-// Call enkiDeleteDependency to delete
+// Call enkiDeleteDependency to delete.
 ENKITS_API enkiDependency*     enkiCreateDependency( enkiTaskScheduler* pETS_ );
 
-// Delerte an enkiDependency creatged with enkiCreateDependency
+// Delete an enkiDependency created with enkiCreateDependency.
 ENKITS_API void                enkiDeleteDependency( enkiTaskScheduler* pETS_, enkiDependency* pDependency_ );
 
 // Set a dependency between pDependencyTask_ and pTaskToRunOnCompletion_
-// Such that when all depedencies of pTaskToRunOnCompletion_ are completed it will run
+// such that when all dependencies of pTaskToRunOnCompletion_ are completed it will run.
 ENKITS_API void                enkiSetDependency(
                                     enkiDependency*  pDependency_,
                                     enkiCompletable* pDependencyTask_,

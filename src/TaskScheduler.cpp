@@ -68,7 +68,7 @@ namespace enki
     static const int32_t  gc_TaskAlmostCompleteCount = 1; // GetIsComplete() will return false, but execution is done and about to complete
     static const uint32_t gc_PipeSizeLog2            = 8;
     static const uint32_t gc_SpinCount               = 10;
-    static const uint32_t gc_SpinBackOffMulitplier   = 100;
+    static const uint32_t gc_SpinBackOffMultiplier   = 100;
     static const uint32_t gc_MaxNumInitialPartitions = 8;
     static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
     static const uint32_t gc_CacheLineSize           = 64;
@@ -86,7 +86,7 @@ namespace enki
 #endif
 
 
-// each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
+// each software thread gets its own copy of gtl_threadNum, so this is safe to use as a static variable
 static thread_local uint32_t                             gtl_threadNum       = 0;
 
 namespace enki 
@@ -291,7 +291,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -361,7 +361,7 @@ void TaskScheduler::StartThreads()
     }
 
     // ensure we have sufficient tasks to equally fill either all threads including main
-    // or just the threads we've launched, this is outside the firstinit as we want to be able
+    // or just the threads we've launched, this is outside the first init as we want to be able
     // to runtime change it
     if( 1 == m_NumThreads )
     {
@@ -386,7 +386,7 @@ void TaskScheduler::StartThreads()
     // We need to detect this and distribute threads accordingly
     if( GetNumHardwareThreads() > 64 &&                                    // only have processor groups if > 64 hardware threads
         std::thread::hardware_concurrency() < GetNumHardwareThreads() &&   // if std::thread sees > 64 hardware threads no need to distribute
-        std::thread::hardware_concurrency() < m_NumThreads )               // no need to distrbute if number of threads requested lower than std::thread sees
+        std::thread::hardware_concurrency() < m_NumThreads )               // no need to distribute if number of threads requested lower than std::thread sees
     {
         uint32_t numProcessorGroups = GetActiveProcessorGroupCount();
         GROUP_AFFINITY mainThreadAffinity;
@@ -398,7 +398,7 @@ void TaskScheduler::StartThreads()
             uint32_t currLogicalProcess = GetActiveProcessorCount( mainProcessorGroup ); // we start iteration at end of current process group's threads
 
             // If more threads are created than there are logical processors then we still want to distribute them evenly amongst groups
-            // so we iterate continously around the groups until we reach m_NumThreads
+            // so we iterate continuously around the groups until we reach m_NumThreads
             uint32_t group = 0;
             while( currLogicalProcess < m_NumThreads )
             {
@@ -536,7 +536,7 @@ static inline uint32_t Hash32( uint32_t in_ )
     // simple hash of nodes, does not check if nodePool is compressed or not.
     uint32_t acc = SEED + PRIME32_5;
 
-    // add node types to map, and also ensure that fully empty nodes are well distrubuted by hashing the pointer.
+    // add node types to map, and also ensure that fully empty nodes are well distributed by hashing the pointer.
     acc += in_;
     acc = acc ^ (acc >> 15);
     acc = acc * PRIME32_2;
@@ -625,7 +625,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
 void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ )
 {
     // It must be impossible for a thread to enter the sleeping wait prior to the load of m_WaitingForTaskCount
-    // in this function, so we introduce an gc_TaskAlmostCompleteCount to prevent this.
+    // in this function, so we introduce a gc_TaskAlmostCompleteCount to prevent this.
     ENKI_ASSERT( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
     bool bCallWakeThreads = bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire );
 
@@ -691,7 +691,7 @@ void TaskScheduler::WaitForNewTasks( uint32_t threadNum_ )
         return;
     }
 
-    // We incrememt the number of threads waiting here in order
+    // We increment the number of threads waiting here in order
     // to ensure that the check for tasks occurs after the increment
     // to prevent a task being added after a check, then the thread waiting.
     // This will occasionally result in threads being mistakenly awoken,
@@ -923,8 +923,8 @@ void TaskScheduler::AddPinnedTask( IPinnedTask* pTask_ )
 
 void TaskScheduler::InitDependencies( ICompletable* pCompletable_ )
 {
-    // go through any dependencies and set thier running count so they show as not complete
-    // and increment depedency count
+    // go through any dependencies and set their running count so they show as not complete
+    // and increment dependency count
     if( pCompletable_->m_RunningCount.load( std::memory_order_relaxed ) )
     {
         // already initialized
@@ -1004,7 +1004,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
             }
             else
             {
-                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+                uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
                 SpinWait( spinBackoffCount );
             }
         }
@@ -1063,7 +1063,7 @@ void TaskScheduler::WaitforAll()
                 dummyWaitTask.threadNum = ( dummyWaitTask.threadNum + 1 ) % m_NumThreads;
 
                 // We can only add a pinned task to wait on if we find an enki Task Thread which isn't this thread.
-                // Otherwise we have to busy wait.
+                // Otherwise, we have to busy wait.
                 if( dummyWaitTask.threadNum != ourThreadNum && dummyWaitTask.threadNum > m_Config.numExternalTaskThreads )
                 {
                     ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
@@ -1085,7 +1085,7 @@ void TaskScheduler::WaitforAll()
         }
         else
         {
-            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMulitplier;
+            uint32_t spinBackoffCount = spinCount * gc_SpinBackOffMultiplier;
             SpinWait( spinBackoffCount );
         }
 
@@ -1350,7 +1350,7 @@ namespace enki
 
 // OS X does not have POSIX semaphores
 // Mach semaphores can now only be created by the kernel
-// Named sempahores work, but would require unique name construction to ensure
+// Named semaphores work, but would require unique name construction to ensure
 // they are isolated to this process.
 // Dispatch semaphores appear to be the way other developers use OSX Semaphores, e.g. Boost
 // However the API could change

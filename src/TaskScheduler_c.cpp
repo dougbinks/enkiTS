@@ -1,13 +1,13 @@
 // Copyright (c) 2013 Doug Binks
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgement in the product documentation would be
@@ -139,13 +139,13 @@ struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pE
     enkiTaskSchedulerConfig configC;
     configC.numExternalTaskThreads                             = config.numExternalTaskThreads;
     configC.numTaskThreadsToCreate                             = config.numTaskThreadsToCreate;
-    configC.profilerCallbacks.threadStart                      = config.profilerCallbacks.threadStart;                      
-    configC.profilerCallbacks.threadStop                       = config.profilerCallbacks.threadStop;                       
-    configC.profilerCallbacks.waitForNewTaskSuspendStart       = config.profilerCallbacks.waitForNewTaskSuspendStart;      
-    configC.profilerCallbacks.waitForNewTaskSuspendStop        = config.profilerCallbacks.waitForNewTaskSuspendStop;        
-    configC.profilerCallbacks.waitForTaskCompleteStart         = config.profilerCallbacks.waitForTaskCompleteStart;         
-    configC.profilerCallbacks.waitForTaskCompleteStop          = config.profilerCallbacks.waitForTaskCompleteStop;          
-    configC.profilerCallbacks.waitForTaskCompleteSuspendStart  = config.profilerCallbacks.waitForTaskCompleteSuspendStart;  
+    configC.profilerCallbacks.threadStart                      = config.profilerCallbacks.threadStart;
+    configC.profilerCallbacks.threadStop                       = config.profilerCallbacks.threadStop;
+    configC.profilerCallbacks.waitForNewTaskSuspendStart       = config.profilerCallbacks.waitForNewTaskSuspendStart;
+    configC.profilerCallbacks.waitForNewTaskSuspendStop        = config.profilerCallbacks.waitForNewTaskSuspendStop;
+    configC.profilerCallbacks.waitForTaskCompleteStart         = config.profilerCallbacks.waitForTaskCompleteStart;
+    configC.profilerCallbacks.waitForTaskCompleteStop          = config.profilerCallbacks.waitForTaskCompleteStop;
+    configC.profilerCallbacks.waitForTaskCompleteSuspendStart  = config.profilerCallbacks.waitForTaskCompleteSuspendStart;
     configC.profilerCallbacks.waitForTaskCompleteSuspendStop   = config.profilerCallbacks.waitForTaskCompleteSuspendStop;
     configC.customAllocator.alloc                              = config.customAllocator.alloc;
     configC.customAllocator.free                               = config.customAllocator.free;
@@ -173,14 +173,14 @@ void enkiInitTaskSchedulerWithConfig( enkiTaskScheduler* pETS_, struct enkiTaskS
     TaskSchedulerConfig config;
     config.numExternalTaskThreads                             = config_.numExternalTaskThreads;
     config.numTaskThreadsToCreate                             = config_.numTaskThreadsToCreate;
-    config.profilerCallbacks.threadStart                      = config_.profilerCallbacks.threadStart;                      
-    config.profilerCallbacks.threadStop                       = config_.profilerCallbacks.threadStop;                       
-    config.profilerCallbacks.waitForNewTaskSuspendStart       = config_.profilerCallbacks.waitForNewTaskSuspendStart;      
-    config.profilerCallbacks.waitForNewTaskSuspendStop        = config_.profilerCallbacks.waitForNewTaskSuspendStop;        
-    config.profilerCallbacks.waitForTaskCompleteStart         = config_.profilerCallbacks.waitForTaskCompleteStart;         
-    config.profilerCallbacks.waitForTaskCompleteStop          = config_.profilerCallbacks.waitForTaskCompleteStop;          
-    config.profilerCallbacks.waitForTaskCompleteSuspendStart  = config_.profilerCallbacks.waitForTaskCompleteSuspendStart;  
-    config.profilerCallbacks.waitForTaskCompleteSuspendStop   = config_.profilerCallbacks.waitForTaskCompleteSuspendStop;   
+    config.profilerCallbacks.threadStart                      = config_.profilerCallbacks.threadStart;
+    config.profilerCallbacks.threadStop                       = config_.profilerCallbacks.threadStop;
+    config.profilerCallbacks.waitForNewTaskSuspendStart       = config_.profilerCallbacks.waitForNewTaskSuspendStart;
+    config.profilerCallbacks.waitForNewTaskSuspendStop        = config_.profilerCallbacks.waitForNewTaskSuspendStop;
+    config.profilerCallbacks.waitForTaskCompleteStart         = config_.profilerCallbacks.waitForTaskCompleteStart;
+    config.profilerCallbacks.waitForTaskCompleteStop          = config_.profilerCallbacks.waitForTaskCompleteStop;
+    config.profilerCallbacks.waitForTaskCompleteSuspendStart  = config_.profilerCallbacks.waitForTaskCompleteSuspendStart;
+    config.profilerCallbacks.waitForTaskCompleteSuspendStop   = config_.profilerCallbacks.waitForTaskCompleteSuspendStop;
     config.customAllocator.alloc                              = config_.customAllocator.alloc;
     config.customAllocator.free                               = config_.customAllocator.free;
     config.customAllocator.userData                         = config_.customAllocator.userData;

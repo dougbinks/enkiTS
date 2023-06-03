@@ -1,13 +1,13 @@
 // Copyright (c) 2013 Doug Binks
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgement in the product documentation would be
@@ -30,7 +30,7 @@
     #define ENKITS_TASK_PRIORITIES_NUM 3
 #endif
 
-#ifndef	ENKITS_API
+#ifndef ENKITS_API
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
     // Building enkiTS as a DLL
     #define ENKITS_API __declspec(dllexport)
@@ -60,7 +60,6 @@
 
 namespace enki
 {
-
     struct TaskSetPartition
     {
         uint32_t start;
@@ -89,7 +88,7 @@ namespace enki
 #endif
 #if ( ENKITS_TASK_PRIORITIES_NUM > 4 )
         TASK_PRIORITY_MED_LO,
-#endif 
+#endif
 #if ( ENKITS_TASK_PRIORITIES_NUM > 1 )
         TASK_PRIORITY_LOW,
 #endif
@@ -224,9 +223,9 @@ namespace enki
     class Dependency
     {
     public:
-                        Dependency() = default; 
+                        Dependency() = default;
                         Dependency( const Dependency& ) = delete;
-        ENKITS_API      Dependency( Dependency&& ) noexcept;	
+        ENKITS_API      Dependency( Dependency&& ) noexcept;
         ENKITS_API      Dependency(    const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ );
         ENKITS_API      ~Dependency();
 
@@ -315,7 +314,7 @@ namespace enki
         // while( !GetIsShutdownRequested() ) {} can be used in tasks which loop, to check if enkiTS has been requested to shutdown.
         // If GetIsShutdownRequested() returns true should then exit. Not required for finite tasks
         // Safe to use with WaitforAllAndShutdown() and ShutdownNow() where this will be set
-        // Not safe to use with WaitforAll(). 
+        // Not safe to use with WaitforAll().
         inline     bool            GetIsShutdownRequested() const { return m_bShutdownRequested.load( std::memory_order_acquire ); }
 
         // while( !GetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if WaitforAll() has been called.
@@ -385,7 +384,7 @@ namespace enki
         // It is guaranteed that GetThreadNum() < GetNumTaskThreads()
         ENKITS_API uint32_t        GetThreadNum() const;
 
-         // Call on a thread to register the thread to use the TaskScheduling API.
+        // Call on a thread to register the thread to use the TaskScheduling API.
         // This is implicitly done for the thread which initializes the TaskScheduler
         // Intended for developers who have threads who need to call the TaskScheduler API
         // Returns true if successfull, false if not.

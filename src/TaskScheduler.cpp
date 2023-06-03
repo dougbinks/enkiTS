@@ -1,13 +1,13 @@
 // Copyright (c) 2013 Doug Binks
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty. In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgement in the product documentation would be
@@ -89,7 +89,7 @@ namespace enki
 // each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
 static thread_local uint32_t                             gtl_threadNum       = 0;
 
-namespace enki 
+namespace enki
 {
     struct SubTaskSet
     {
@@ -98,7 +98,7 @@ namespace enki
     };
 
     // we derive class TaskPipe rather than typedef to get forward declaration working easily
-    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2,enki::SubTaskSet> {};
+    class TaskPipe : public LockLessMultiReadPipe<gc_PipeSizeLog2, enki::SubTaskSet> {};
 
     enum ThreadState : int32_t
     {
@@ -120,7 +120,7 @@ namespace enki
         TaskScheduler*           pTaskScheduler;
     };
 
-    struct alignas(enki::gc_CacheLineSize) ThreadDataStore 
+    struct alignas(enki::gc_CacheLineSize) ThreadDataStore
     {
         semaphoreid_t*           pWaitNewPinnedTaskSemaphore = nullptr;
         std::atomic<ThreadState> threadState = { ENKI_THREAD_STATE_NONE };
@@ -158,7 +158,7 @@ namespace
         while( __rdtsc() < end )
         {
             _mm_pause();
-        }        
+        }
     }
     #else
     static void SpinWait( uint32_t spinCount_ )
@@ -167,7 +167,7 @@ namespace
         {
             // TODO: may have NOP or yield equiv
             --spinCount_;
-        }        
+        }
     }
     #endif
 }
@@ -180,9 +180,9 @@ static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     }
 }
 
-   
+
 ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* userData_, const char* file_, int line_ )
-{ 
+{
     (void)userData_; (void)file_; (void)line_;
     void* pRet;
 #ifdef _WIN32
@@ -197,7 +197,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
     else
     {
         int retval = posix_memalign( &pRet, align_, size_ );
-        (void)retval;	//unused
+        (void)retval; // unused
     }
 #endif
     return pRet;
@@ -278,7 +278,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     SafeCallback( pTS->m_Config.profilerCallbacks.threadStart, threadNum );
 
     uint32_t spinCount = 0;
-    uint32_t hintPipeToCheck_io = threadNum + 1;    // does not need to be clamped.
+    uint32_t hintPipeToCheck_io = threadNum + 1; // does not need to be clamped.
     while( pTS->GetIsRunning() )
     {
         if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
@@ -415,7 +415,7 @@ void TaskScheduler::StartThreads()
 
                         // From https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups
                         // If a thread is assigned to a different group than the process, the process's affinity is updated to include the thread's affinity
-                        // and the process becomes a multi-group process. 
+                        // and the process becomes a multi-group process.
                         GROUP_AFFINITY threadAffinity;
                         success = GetThreadGroupAffinity( thread_handle, &threadAffinity );
                         assert(success); (void)success;
@@ -441,7 +441,7 @@ void TaskScheduler::StopThreads( bool bWait_ )
     // we set m_bWaitforAllCalled to true to ensure any task which loop using this status exit
     m_bWaitforAllCalled.store( true, std::memory_order_release );
 
-    // set status 
+    // set status
     m_bShutdownRequested.store( true, std::memory_order_release );
     m_bRunning.store( false, std::memory_order_release );
 
@@ -513,9 +513,9 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_i
     return false;
 }
 
-static inline uint32_t RotateLeft( uint32_t value, int32_t count ) 
+static inline uint32_t RotateLeft( uint32_t value, int32_t count )
 {
-	return ( value << count ) | ( value >> ( 32 - count ));
+    return ( value << count ) | ( value >> ( 32 - count ));
 }
 /*  xxHash variant based on documentation on
     https://github.com/Cyan4973/xxHash/blob/eec5700f4d62113b47ee548edbc4746f61ffb098/doc/xxhash_spec.md
@@ -567,7 +567,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             // the starting thread which we start checking for tasks to run
             uint32_t& rndSeed = m_pThreadDataStore[threadNum_].rndSeed;
             ++rndSeed;
-            uint32_t threadToCheckOffset = Hash32( rndSeed * threadNum_ ); 
+            uint32_t threadToCheckOffset = Hash32( rndSeed * threadNum_ );
             while( !bHaveTask && checkCount < m_NumThreads )
             {
                 threadToCheck = ( threadToCheckOffset + checkCount ) % m_NumThreads;
@@ -579,7 +579,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             }
         }
     }
-        
+
     if( bHaveTask )
     {
         // update hint, will preserve value unless actually got task from another thread.
@@ -788,7 +788,7 @@ bool TaskScheduler::WakeSuspendedThreadsWithPinnedTasks()
         uint32_t thread = ( threadNum + t ) % m_NumThreads;
 
         ThreadState state = m_pThreadDataStore[ thread ].threadState.load( std::memory_order_acquire );
-            
+
         ENKI_ASSERT( state != ENKI_THREAD_STATE_NONE );
 
         if( state == ENKI_THREAD_STATE_WAIT_NEW_TASKS || state == ENKI_THREAD_STATE_WAIT_TASK_COMPLETION )
@@ -1202,12 +1202,12 @@ T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
     T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, file_, line_ );
     if( !std::is_trivial<T>::value )
     {
-		T* pCurr = pRet;
+        T* pCurr = pRet;
         for( size_t i = 0; i < num_; ++i )
         {
-			void* pBuffer = pCurr;
+            void* pBuffer = pCurr;
             pCurr = new(pBuffer) T;
-			++pCurr;
+            ++pCurr;
         }
     }
     return pRet;
@@ -1237,7 +1237,7 @@ T* TaskScheduler::New( const char* file_, int line_, Args&&... args_ )
 template< typename T >
 void TaskScheduler::Delete( T* p_, const char* file_, int line_  )
 {
-    p_->~T(); 
+    p_->~T();
     this->Free(p_, file_, line_ );
 }
 
@@ -1315,7 +1315,7 @@ namespace enki
     {
         HANDLE      sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
 #ifdef _XBOX_ONE
@@ -1360,27 +1360,27 @@ namespace enki
 
 namespace enki
 {
-    
+
     struct semaphoreid_t
     {
         dispatch_semaphore_t   sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         semaphoreid.sem = dispatch_semaphore_create(0);
     }
-    
+
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
     {
         dispatch_release( semaphoreid.sem );
     }
-    
+
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         dispatch_semaphore_wait( semaphoreid.sem, DISPATCH_TIME_FOREVER );
     }
-    
+
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
@@ -1397,29 +1397,29 @@ namespace enki
 
 namespace enki
 {
-    
+
     struct semaphoreid_t
     {
         sem_t   sem;
     };
-    
+
     inline void SemaphoreCreate( semaphoreid_t& semaphoreid )
     {
         int err = sem_init( &semaphoreid.sem, 0, 0 );
         ENKI_ASSERT( err == 0 );
         (void)err;
     }
-    
+
     inline void SemaphoreClose( semaphoreid_t& semaphoreid )
     {
         sem_destroy( &semaphoreid.sem );
     }
-    
+
     inline void SemaphoreWait( semaphoreid_t& semaphoreid  )
     {
         while( sem_wait( &semaphoreid.sem ) == -1 && errno == EINTR ) {}
     }
-    
+
     inline void SemaphoreSignal( semaphoreid_t& semaphoreid, int32_t countWaiting )
     {
         while( countWaiting-- > 0 )
@@ -1448,7 +1448,7 @@ void TaskScheduler::SetCustomAllocator( CustomAllocator customAllocator_ )
     m_Config.customAllocator = customAllocator_;
 }
 
-Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ ) 
+Dependency::Dependency( const ICompletable* pDependencyTask_, ICompletable* pTaskToRunOnCompletion_ )
     : pTaskToRunOnCompletion( pTaskToRunOnCompletion_ )
     , pDependencyTask( pDependencyTask_ )
     , pNext( pDependencyTask->m_pDependents )

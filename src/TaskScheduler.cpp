@@ -515,7 +515,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t& hintPipeToCheck_i
 
 static inline uint32_t RotateLeft( uint32_t value, int32_t count )
 {
-	return ( value << count ) | ( value >> ( 32 - count ));
+    return ( value << count ) | ( value >> ( 32 - count ));
 }
 /*  xxHash variant based on documentation on
     https://github.com/Cyan4973/xxHash/blob/eec5700f4d62113b47ee548edbc4746f61ffb098/doc/xxhash_spec.md
@@ -1202,12 +1202,12 @@ T* TaskScheduler::NewArray( size_t num_, const char* file_, int line_  )
     T* pRet = (T*)m_Config.customAllocator.alloc( alignof(T), num_*sizeof(T), m_Config.customAllocator.userData, file_, line_ );
     if( !std::is_trivial<T>::value )
     {
-		T* pCurr = pRet;
+        T* pCurr = pRet;
         for( size_t i = 0; i < num_; ++i )
         {
-			void* pBuffer = pCurr;
+            void* pBuffer = pCurr;
             pCurr = new(pBuffer) T;
-			++pCurr;
+            ++pCurr;
         }
     }
     return pRet;

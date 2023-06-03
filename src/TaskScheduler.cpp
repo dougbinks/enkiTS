@@ -73,7 +73,7 @@ namespace enki
     static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
     static const uint32_t gc_CacheLineSize           = 64;
     // awaiting std::hardware_constructive_interference_size
-};
+}
 
 // thread_local not well supported yet by C++11 compilers.
 #ifdef _MSC_VER
@@ -86,7 +86,7 @@ namespace enki
 #endif
 
 
-// each software thread gets it's own copy of gtl_threadNum, so this is safe to use as a static variable
+// each software thread gets its own copy of gtl_threadNum, so this is safe to use as a static variable
 static thread_local uint32_t                             gtl_threadNum       = 0;
 
 namespace enki
@@ -161,7 +161,7 @@ namespace
         }
     }
     #else
-    static void SpinWait( uint32_t spinCount_ )
+    void SpinWait( uint32_t spinCount_ )
     {
         while( spinCount_ )
         {
@@ -201,7 +201,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
     }
 #endif
     return pRet;
-};
+}
 
 ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userData_, const char* file_, int line_ )
 {
@@ -211,7 +211,7 @@ ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userD
 #else
     free( ptr_ );
 #endif
-};
+}
 
 bool TaskScheduler::RegisterExternalTaskThread()
 {
@@ -304,8 +304,6 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     pTS->m_NumInternalTaskThreadsRunning.fetch_sub( 1, std::memory_order_release );
     pTS->m_pThreadDataStore[threadNum].threadState.store( ENKI_THREAD_STATE_STOPPED, std::memory_order_release );
     SafeCallback( pTS->m_Config.profilerCallbacks.threadStop, threadNum );
-    return;
-
 }
 
 
@@ -625,7 +623,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
 void TaskScheduler::TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ )
 {
     // It must be impossible for a thread to enter the sleeping wait prior to the load of m_WaitingForTaskCount
-    // in this function, so we introduce an gc_TaskAlmostCompleteCount to prevent this.
+    // in this function, so we introduce a gc_TaskAlmostCompleteCount to prevent this.
     ENKI_ASSERT( gc_TaskAlmostCompleteCount == pTask_->m_RunningCount.load( std::memory_order_acquire ) );
     bool bCallWakeThreads = bWakeThreads_ && pTask_->m_WaitingForTaskCount.load( std::memory_order_acquire );
 
@@ -1063,7 +1061,7 @@ void TaskScheduler::WaitforAll()
                 dummyWaitTask.threadNum = ( dummyWaitTask.threadNum + 1 ) % m_NumThreads;
 
                 // We can only add a pinned task to wait on if we find an enki Task Thread which isn't this thread.
-                // Otherwise we have to busy wait.
+                // Otherwise, we have to busy wait.
                 if( dummyWaitTask.threadNum != ourThreadNum && dummyWaitTask.threadNum > m_Config.numExternalTaskThreads )
                 {
                     ThreadState state = m_pThreadDataStore[ dummyWaitTask.threadNum ].threadState.load( std::memory_order_acquire );
@@ -1116,7 +1114,7 @@ void TaskScheduler::WaitforAll()
                 case ENKI_THREAD_STATE_WAIT_NEW_TASKS:
                 case ENKI_THREAD_STATE_STOPPED:
                     break;
-                 };
+                }
             }
         }
         if( !otherThreadsRunning )
@@ -1260,7 +1258,7 @@ TaskScheduler::TaskScheduler()
         , m_NumThreads(0)
         , m_pThreadDataStore(NULL)
         , m_pThreads(NULL)
-        , m_bRunning(0)
+        , m_bRunning(false)
         , m_NumInternalTaskThreadsRunning(0)
         , m_NumThreadsWaitingForNewTasks(0)
         , m_NumThreadsWaitingForTaskCompletion(0)

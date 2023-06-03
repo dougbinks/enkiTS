@@ -21,7 +21,7 @@
 #include <atomic>
 #include <thread>
 #include <condition_variable>
-#include <stdint.h>
+#include <cstdint>
 #include <functional>
 
 // ENKITS_TASK_PRIORITIES_NUM can be set from 1 to 5.
@@ -54,7 +54,7 @@
 #endif
 
 #ifndef ENKI_ASSERT
-#include <assert.h>
+#include <cassert>
 #define ENKI_ASSERT(x) assert(x)
 #endif
 
@@ -160,7 +160,7 @@ namespace enki
         // Set Size - usually the number of data items to be processed, see ExecuteRange. Defaults to 1
         uint32_t     m_SetSize  = 1;
 
-        // Min Range - Minimum size of of TaskSetPartition range when splitting a task set into partitions.
+        // Min Range - Minimum size of TaskSetPartition range when splitting a task set into partitions.
         // Designed for reducing scheduling overhead by preventing set being
         // divided up too small. Ranges passed to ExecuteRange will *not* be a multiple of this,
         // only attempts to deliver range sizes larger than this most of the time.
@@ -173,7 +173,7 @@ namespace enki
 
     private:
         friend class TaskScheduler;
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
         uint32_t     m_RangeToRun = 1;
     };
 
@@ -184,14 +184,14 @@ namespace enki
         IPinnedTask() = default;
         IPinnedTask( uint32_t threadNum_ ) : threadNum(threadNum_) {}  // default is to run a task on main thread
 
-        // IPinnedTask needs to be non abstract for intrusive list functionality.
+        // IPinnedTask needs to be non-abstract for intrusive list functionality.
         // Should never be called as is, should be overridden.
         virtual void Execute() { ENKI_ASSERT(false); }
 
         uint32_t                  threadNum = 0; // thread to run this pinned task on
         std::atomic<IPinnedTask*> pNext = {NULL};
     private:
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
     };
 
     // TaskSet - a utility task set for creating tasks based on std::function.
@@ -200,8 +200,8 @@ namespace enki
     {
     public:
         TaskSet() = default;
-        TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
-        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
+        TaskSet( TaskSetFunction func_ ) : m_Function( std::move(func_) ) {}
+        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( std::move(func_) ) {}
 
         void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override { m_Function( range_, threadnum_ ); }
         TaskSetFunction m_Function;
@@ -213,8 +213,8 @@ namespace enki
     {
     public:
         LambdaPinnedTask() = default;
-        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( func_ ) {}
-        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( func_ ) {}
+        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( std::move(func_) ) {}
+        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( std::move(func_) ) {}
 
         void Execute() override { m_Function(); }
         PinnedTaskFunction m_Function;
@@ -320,7 +320,7 @@ namespace enki
         // while( !GetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if WaitforAll() has been called.
         // If GetIsWaitforAllCalled() returns false should then exit. Not required for finite tasks
         // This is intended to be used with code which calls WaitforAll() with flag WAITFORALLFLAGS_INC_WAIT_NEW_PINNED_TASKS set.
-        // This is also set when the the task manager is shutting down, so no need to have an additional check for GetIsShutdownRequested()
+        // This is also set when the task manager is shutting down, so no need to have an additional check for GetIsShutdownRequested()
         inline     bool            GetIsWaitforAllCalled() const { return m_bWaitforAllCalled.load( std::memory_order_acquire ); }
 
         // Adds the TaskSet to pipe and returns if the pipe is not full.
@@ -333,7 +333,7 @@ namespace enki
         ENKITS_API void            AddPinnedTask( IPinnedTask* pTask_ );
 
         // This function will run any IPinnedTask* for current thread, but not run other
-        // Main thread should call this or use a wait to ensure it's tasks are run.
+        // Main thread should call this or use a wait to ensure its tasks are run.
         ENKITS_API void            RunPinnedTasks();
 
         // Runs the TaskSets in pipe until true == pTaskSet->GetIsComplete();
@@ -368,7 +368,7 @@ namespace enki
         // Will not run any tasks - use with RunPinnedTasks().
         // Can be used with both ExternalTaskThreads or with an enkiTS tasking thread to create
         // a thread which only runs pinned tasks. If enkiTS threads are used can create
-        // extra enkiTS task threads to handle non blocking computation via normal tasks.
+        // extra enkiTS task threads to handle non-blocking computation via normal tasks.
         ENKITS_API void            WaitForNewPinnedTasks();
 
         // Returns the number of threads created for running tasks + number of external threads

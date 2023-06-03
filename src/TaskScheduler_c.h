@@ -298,7 +298,7 @@ ENKITS_API void                enkiAddPinnedTaskArgs( enkiTaskScheduler* pETS_, 
                                            void* pArgs_ );
 
 // This function will run any enkiPinnedTask* for current thread, but not run other
-// Main thread should call this or use a wait to ensure it's tasks are run.
+// Main thread should call this or use a wait to ensure its tasks are run.
 ENKITS_API void                enkiRunPinnedTasks( enkiTaskScheduler * pETS_ );
 
 // Check if enkiPinnedTask is complete. Doesn't wait. Returns 1 if complete, 0 if not.

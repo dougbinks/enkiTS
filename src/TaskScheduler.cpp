@@ -725,15 +725,15 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
         return;
     }
 
-    m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
-    pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acquire );
+    m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acq_rel );
+    pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acq_rel );
     ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum_].threadState.store( ENKI_THREAD_STATE_WAIT_TASK_COMPLETION, std::memory_order_seq_cst );
 
     // do not wait on semaphore if task in gc_TaskAlmostCompleteCount state.
     if( gc_TaskAlmostCompleteCount >= pCompletable_->m_RunningCount.load( std::memory_order_acquire ) || HaveTasks( threadNum_ ) )
     {
-        m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_release );
+        m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_acq_rel );
     }
     else
     {
@@ -750,7 +750,7 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     }
 
     m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
-    pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_release );
+    pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
 }
 
 void TaskScheduler::WakeThreadsForNewTasks()

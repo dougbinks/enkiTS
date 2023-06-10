@@ -601,7 +601,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             }
             SplitAndAddTask( threadNum_, subTask, rangeToSplit );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum_ );
-            int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel );
             if( gc_TaskStartCount == prevCount )
             {
                 TaskComplete( taskToRun.pTask, true, threadNum_ );
@@ -611,7 +611,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
         {
             // the task has already been divided up by AddTaskSetToPipe, so just run it
             subTask.pTask->ExecuteRange( subTask.partition, threadNum_ );
-            int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel );
             if( gc_TaskStartCount == prevCount )
             {
                 TaskComplete( subTask.pTask, true, threadNum_ );
@@ -844,7 +844,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
     }
     int32_t countToRemove = upperBoundNumToAdd - numAdded;
     ENKI_ASSERT( countToRemove > 0 );
-    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( countToRemove, std::memory_order_release );
+    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( countToRemove, std::memory_order_acq_rel );
     if( countToRemove-1 + gc_TaskStartCount == prevCount )
     {
         TaskComplete( subTask_.pTask, false, threadNum_ );
@@ -880,7 +880,7 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet_->m_SetSize;
     SplitAndAddTask( threadNum_, subTask, rangeToSplit );
-    int prevCount = pTaskSet_->m_RunningCount.fetch_sub(1, std::memory_order_release );
+    int prevCount = pTaskSet_->m_RunningCount.fetch_sub(1, std::memory_order_acq_rel );
     if( gc_TaskStartCount == prevCount )
     {
         TaskComplete( pTaskSet_, true, threadNum_ );
@@ -963,7 +963,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         if( pPinnedTaskSet )
         {
             pPinnedTaskSet->Execute();
-            pPinnedTaskSet->m_RunningCount.fetch_sub(1,std::memory_order_release);
+            pPinnedTaskSet->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel);
             TaskComplete( pPinnedTaskSet, true, threadNum_ );
         }
     } while( pPinnedTaskSet );

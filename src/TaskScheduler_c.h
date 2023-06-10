@@ -53,6 +53,8 @@ typedef struct enkiCompletable      enkiCompletable;
 typedef struct enkiDependency       enkiDependency;
 typedef struct enkiCompletionAction enkiCompletionAction;
 
+static const uint32_t ENKI_NO_THREAD_NUM = 0xFFFFFFFF;
+
 typedef void (* enkiTaskExecuteRange)( uint32_t start_, uint32_t end_, uint32_t threadnum_, void* pArgs_ );
 typedef void (* enkiPinnedTaskExecute)( void* pArgs_ );
 typedef void (* enkiCompletionFunction)( void* pArgs_, uint32_t threadNum_ );
@@ -178,9 +180,9 @@ ENKITS_API uint32_t            enkiGetNumTaskThreads( enkiTaskScheduler* pETS_ )
 
 // Returns the current task threadNum.
 // Will return 0 for thread which initialized the task scheduler,
-// and all other non-enkiTS threads which have not been registered ( see enkiRegisterExternalTaskThread() ),
-// and < enkiGetNumTaskThreads() for all threads.
-// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads()
+// and ENKI_NO_THREAD_NUM for all other non-enkiTS threads which have not been registered ( see enkiRegisterExternalTaskThread() ),
+// and < enkiGetNumTaskThreads() for all registered and internal enkiTS threads.
+// It is guaranteed that enkiGetThreadNum() < enkiGetNumTaskThreads() unless it is ENKI_NO_THREAD_NUM
 ENKITS_API uint32_t            enkiGetThreadNum( enkiTaskScheduler* pETS_ );
 
 // Call on a thread to register the thread to use the TaskScheduling API.

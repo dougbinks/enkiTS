@@ -1,0 +1,108 @@
+name: Build
+on:
+    pull_request:
+    push:
+        branches: [ master, dev ]
+    workflow_dispatch:
+permissions:
+    statuses: write
+    contents: read
+
+jobs:
+    build-linux-clang:
+        name: Linux, Clang
+        runs-on: ubuntu-latest
+        env:
+            CC: clang
+            CXX: clang++
+            CFLAGS: -Werror
+            CXXFLAGS: -Werror
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Configure static library
+              run: cmake -S . -B build-static
+            - name: Build static library
+              run: cmake --build build-static --parallel
+            - name: Test static library
+              run: ./build-static/TestAll
+
+            - name: Configure shared library
+              run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
+            - name: Build shared library
+              run: cmake --build build-shared --parallel
+            - name: Test shared library
+              run: ./build-shared/TestAll
+
+    build-linux-gcc:
+        name: Linux, gcc
+        runs-on: ubuntu-latest
+        env:
+            CC: gcc
+            CXX: g++
+            CFLAGS: -Werror
+            CXXFLAGS: -Werror
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Configure static library
+              run: cmake -S . -B build-static
+            - name: Build static library
+              run: cmake --build build-static --parallel
+            - name: Test static library
+              run: ./build-static/TestAll
+
+            - name: Configure shared library
+              run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
+            - name: Build shared library
+              run: cmake --build build-shared --parallel
+            - name: Test shared library
+              run: ./build-shared/TestAll
+
+    build-macos-cocoa-clang:
+        name: Cocoa (macOS, Clang)
+        runs-on: macos-latest
+        env:
+            CFLAGS: -Werror
+            CXXFLAGS: -Werror
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Configure static library
+              run: cmake -S . -B build-static
+            - name: Build static library
+              run: cmake --build build-static --parallel
+            - name: Test static library
+              run: ./build-static/TestAll
+
+            - name: Configure shared library
+              run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
+            - name: Build shared library
+              run: cmake --build build-shared --parallel
+            - name: Test shared library
+              run: ./build-shared/TestAll
+
+    build-windows-win32-vs2022:
+        name: Win32 (Windows, VS2022)
+        runs-on: windows-latest
+        env:
+            CFLAGS: /WX
+            CXXFLAGS: /WX
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Configure static library
+              run: cmake -S . -B build-static -G "Visual Studio 17 2022"
+            - name: Build static library
+              run: cmake --build build-static --parallel
+            - name: Test static library
+              run: .\build-static\Debug\TestAll.exe
+
+            - name: Configure shared library
+              run: cmake -S . -B build-shared -G "Visual Studio 17 2022" -D ENKITS_BUILD_SHARED=ON
+            - name: Build shared library
+              run: cmake --build build-shared --parallel
+            - name: Test shared library
+              run: .\build-shared\Debug\TestAll.exe

@@ -6,7 +6,7 @@ Support development of enkiTS through [Github Sponsors](https://github.com/spons
 # enkiTS
 | [Master branch](https://github.com/dougbinks/enkiTS/) | [Dev branch](https://github.com/dougbinks/enkiTS/tree/dev) |
 | --- | --- |
-| [![Build Status for branch: master](https://travis-ci.org/dougbinks/enkiTS.svg?branch=master)](https://travis-ci.org/dougbinks/enkiTS) | [![Build Status for branch: dev](https://travis-ci.org/dougbinks/enkiTS.svg?branch=dev)](https://travis-ci.org/dougbinks/enkiTS) |
+| [![Build Status for branch: master](https://github.com/dougbinks/enkiTS/actions/workflows/build.yml/badge.svg)](https://github.com/dougbinks/enkiTS/actions) | [![Build Status for branch: dev](https://github.com/dougbinks/enkiTS/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/dougbinks/enkiTS/actions) |
 
 ## enki Task Scheduler
 

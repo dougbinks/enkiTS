@@ -175,7 +175,7 @@ namespace enki
 
     private:
         friend class TaskScheduler;
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
         uint32_t     m_RangeToRun = 1;
     };
 
@@ -193,7 +193,7 @@ namespace enki
         uint32_t                  threadNum = 0; // thread to run this pinned task on
         std::atomic<IPinnedTask*> pNext = {NULL};
     private:
-        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) override final;
+        void         OnDependenciesComplete( TaskScheduler* pTaskScheduler_, uint32_t threadNum_ ) final;
     };
 
     // TaskSet - a utility task set for creating tasks based on std::function.
@@ -202,8 +202,8 @@ namespace enki
     {
     public:
         TaskSet() = default;
-        TaskSet( TaskSetFunction func_ ) : m_Function( func_ ) {}
-        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( func_ ) {}
+        TaskSet( TaskSetFunction func_ ) : m_Function( std::move(func_) ) {}
+        TaskSet( uint32_t setSize_, TaskSetFunction func_ ) : ITaskSet( setSize_ ), m_Function( std::move(func_) ) {}
 
         void ExecuteRange( TaskSetPartition range_, uint32_t threadnum_  ) override { m_Function( range_, threadnum_ ); }
         TaskSetFunction m_Function;
@@ -215,8 +215,8 @@ namespace enki
     {
     public:
         LambdaPinnedTask() = default;
-        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( func_ ) {}
-        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( func_ ) {}
+        LambdaPinnedTask( PinnedTaskFunction func_ ) : m_Function( std::move(func_) ) {}
+        LambdaPinnedTask( uint32_t threadNum_, PinnedTaskFunction func_ ) : IPinnedTask( threadNum_ ), m_Function( std::move(func_) ) {}
 
         void Execute() override { m_Function(); }
         PinnedTaskFunction m_Function;

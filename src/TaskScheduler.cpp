@@ -73,7 +73,7 @@ namespace enki
     static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
     static const uint32_t gc_CacheLineSize           = 64;
     // awaiting std::hardware_constructive_interference_size
-};
+}
 
 // thread_local not well supported yet by C++11 compilers.
 #ifdef _MSC_VER
@@ -161,7 +161,7 @@ namespace
         }
     }
     #else
-    static void SpinWait( uint32_t spinCount_ )
+    void SpinWait( uint32_t spinCount_ )
     {
         while( spinCount_ )
         {
@@ -201,7 +201,7 @@ ENKITS_API void* enki::DefaultAllocFunc( size_t align_, size_t size_, void* user
     }
 #endif
     return pRet;
-};
+}
 
 ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userData_, const char* file_, int line_ )
 {
@@ -211,7 +211,7 @@ ENKITS_API void  enki::DefaultFreeFunc(  void* ptr_,   size_t size_, void* userD
 #else
     free( ptr_ );
 #endif
-};
+}
 
 bool TaskScheduler::RegisterExternalTaskThread()
 {
@@ -305,8 +305,6 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
     pTS->m_NumInternalTaskThreadsRunning.fetch_sub( 1, std::memory_order_release );
     pTS->m_pThreadDataStore[threadNum].threadState.store( ENKI_THREAD_STATE_STOPPED, std::memory_order_release );
     SafeCallback( pTS->m_Config.profilerCallbacks.threadStop, threadNum );
-    return;
-
 }
 
 
@@ -1119,7 +1117,7 @@ void TaskScheduler::WaitforAll()
                 case ENKI_THREAD_STATE_WAIT_NEW_TASKS:
                 case ENKI_THREAD_STATE_STOPPED:
                     break;
-                 };
+                }
             }
         }
         if( !otherThreadsRunning )
@@ -1264,7 +1262,7 @@ TaskScheduler::TaskScheduler()
         , m_NumThreads(0)
         , m_pThreadDataStore(NULL)
         , m_pThreads(NULL)
-        , m_bRunning(0)
+        , m_bRunning(false)
         , m_NumInternalTaskThreadsRunning(0)
         , m_NumThreadsWaitingForNewTasks(0)
         , m_NumThreadsWaitingForTaskCompletion(0)

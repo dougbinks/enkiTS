@@ -599,7 +599,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
             }
             SplitAndAddTask( threadNum_, subTask, rangeToSplit );
             taskToRun.pTask->ExecuteRange( taskToRun.partition, threadNum_ );
-            int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            int prevCount = taskToRun.pTask->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel );
             if( gc_TaskStartCount == prevCount )
             {
                 TaskComplete( taskToRun.pTask, true, threadNum_ );
@@ -609,7 +609,7 @@ bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_
         {
             // the task has already been divided up by AddTaskSetToPipe, so just run it
             subTask.pTask->ExecuteRange( subTask.partition, threadNum_ );
-            int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_release );
+            int prevCount = subTask.pTask->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel );
             if( gc_TaskStartCount == prevCount )
             {
                 TaskComplete( subTask.pTask, true, threadNum_ );
@@ -723,15 +723,15 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
         return;
     }
 
-    m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acquire );
-    pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acquire );
+    m_NumThreadsWaitingForTaskCompletion.fetch_add( 1, std::memory_order_acq_rel );
+    pCompletable_->m_WaitingForTaskCount.fetch_add( 1, std::memory_order_acq_rel );
     ThreadState prevThreadState = m_pThreadDataStore[threadNum_].threadState.load( std::memory_order_relaxed );
     m_pThreadDataStore[threadNum_].threadState.store( ENKI_THREAD_STATE_WAIT_TASK_COMPLETION, std::memory_order_seq_cst );
 
     // do not wait on semaphore if task in gc_TaskAlmostCompleteCount state.
     if( gc_TaskAlmostCompleteCount >= pCompletable_->m_RunningCount.load( std::memory_order_acquire ) || HaveTasks( threadNum_ ) )
     {
-        m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_release );
+        m_NumThreadsWaitingForTaskCompletion.fetch_sub( 1, std::memory_order_acq_rel );
     }
     else
     {
@@ -748,7 +748,7 @@ void TaskScheduler::WaitForTaskCompletion( const ICompletable* pCompletable_, ui
     }
 
     m_pThreadDataStore[threadNum_].threadState.store( prevThreadState, std::memory_order_release );
-    pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_release );
+    pCompletable_->m_WaitingForTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
 }
 
 void TaskScheduler::WakeThreadsForNewTasks()
@@ -842,7 +842,7 @@ void TaskScheduler::SplitAndAddTask( uint32_t threadNum_, SubTaskSet subTask_, u
     }
     int32_t countToRemove = upperBoundNumToAdd - numAdded;
     ENKI_ASSERT( countToRemove > 0 );
-    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( countToRemove, std::memory_order_release );
+    int prevCount = subTask_.pTask->m_RunningCount.fetch_sub( countToRemove, std::memory_order_acq_rel );
     if( countToRemove-1 + gc_TaskStartCount == prevCount )
     {
         TaskComplete( subTask_.pTask, false, threadNum_ );
@@ -878,7 +878,7 @@ void TaskScheduler::AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum
     subTask.partition.start = 0;
     subTask.partition.end = pTaskSet_->m_SetSize;
     SplitAndAddTask( threadNum_, subTask, rangeToSplit );
-    int prevCount = pTaskSet_->m_RunningCount.fetch_sub(1, std::memory_order_release );
+    int prevCount = pTaskSet_->m_RunningCount.fetch_sub(1, std::memory_order_acq_rel );
     if( gc_TaskStartCount == prevCount )
     {
         TaskComplete( pTaskSet_, true, threadNum_ );
@@ -961,7 +961,7 @@ void TaskScheduler::RunPinnedTasks( uint32_t threadNum_, uint32_t priority_ )
         if( pPinnedTaskSet )
         {
             pPinnedTaskSet->Execute();
-            pPinnedTaskSet->m_RunningCount.fetch_sub(1,std::memory_order_release);
+            pPinnedTaskSet->m_RunningCount.fetch_sub(1,std::memory_order_acq_rel);
             TaskComplete( pPinnedTaskSet, true, threadNum_ );
         }
     } while( pPinnedTaskSet );

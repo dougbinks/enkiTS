@@ -20,6 +20,7 @@
 #include "Timer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 enki::TaskScheduler g_TS;
 uint32_t g_Iteration;

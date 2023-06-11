@@ -22,6 +22,7 @@
 #include <thread>
 #include <stdint.h>
 #include <functional>
+#include <initializer_list>
 
 // ENKITS_TASK_PRIORITIES_NUM can be set from 1 to 5.
 // 1 corresponds to effectively no priorities.

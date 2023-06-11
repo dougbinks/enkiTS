@@ -75,19 +75,23 @@ namespace enki
     // awaiting std::hardware_constructive_interference_size
 }
 
-// thread_local not well supported yet by C++11 compilers.
-#ifdef _MSC_VER
-    #if _MSC_VER <= 1800
-        #define thread_local __declspec(thread)
-    #endif
-#elif __APPLE__
-        // Apple thread_local currently not implemented despite it being in Clang.
-        #define thread_local __thread
+// thread_local not well supported yet by some older C++11 compilers.
+// For XCode before version 8 thread_local is not defined, so add to your compile defines: ENKI_THREAD_LOCAL __thread
+#ifndef ENKI_THREAD_LOCAL
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+        #define ENKI_THREAD_LOCAL __declspec(thread)
+// Removed below as XCode supports thread_local since version 8
+// #elif __APPLE__
+//         // Apple thread_local currently not implemented in XCode before version 8 despite it being in Clang.
+//         #define ENKI_THREAD_LOCAL __thread
+#else
+        #define ENKI_THREAD_LOCAL thread_local
+#endif
 #endif
 
 
 // each software thread gets its own copy of gtl_threadNum, so this is safe to use as a static variable
-static thread_local uint32_t                             gtl_threadNum       = enki::NO_THREAD_NUM;
+static ENKI_THREAD_LOCAL uint32_t  gtl_threadNum             = enki::NO_THREAD_NUM;
 
 namespace enki
 {

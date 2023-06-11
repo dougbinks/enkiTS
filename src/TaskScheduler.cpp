@@ -64,14 +64,14 @@ uint32_t enki::GetNumHardwareThreads()
 
 namespace enki
 {
-    static const int32_t  gc_TaskStartCount          = 2;
-    static const int32_t  gc_TaskAlmostCompleteCount = 1; // GetIsComplete() will return false, but execution is done and about to complete
-    static const uint32_t gc_PipeSizeLog2            = 8;
-    static const uint32_t gc_SpinCount               = 10;
-    static const uint32_t gc_SpinBackOffMultiplier   = 100;
-    static const uint32_t gc_MaxNumInitialPartitions = 8;
-    static const uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
-    static const uint32_t gc_CacheLineSize           = 64;
+    static constexpr int32_t  gc_TaskStartCount          = 2;
+    static constexpr int32_t  gc_TaskAlmostCompleteCount = 1; // GetIsComplete() will return false, but execution is done and about to complete
+    static constexpr uint32_t gc_PipeSizeLog2            = 8;
+    static constexpr uint32_t gc_SpinCount               = 10;
+    static constexpr uint32_t gc_SpinBackOffMultiplier   = 100;
+    static constexpr uint32_t gc_MaxNumInitialPartitions = 8;
+    static constexpr uint32_t gc_MaxStolenPartitions     = 1 << gc_PipeSizeLog2;
+    static constexpr uint32_t gc_CacheLineSize           = 64;
     // awaiting std::hardware_constructive_interference_size
 }
 

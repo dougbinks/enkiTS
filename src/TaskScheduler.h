@@ -30,7 +30,7 @@
     #define ENKITS_TASK_PRIORITIES_NUM 3
 #endif
 
-#ifndef	ENKITS_API
+#ifndef ENKITS_API
 #if   defined(_WIN32) && defined(ENKITS_BUILD_DLL)
     // Building enkiTS as a DLL
     #define ENKITS_API __declspec(dllexport)
@@ -60,7 +60,6 @@
 
 namespace enki
 {
-
     struct TaskSetPartition
     {
         uint32_t start;
@@ -387,7 +386,7 @@ namespace enki
         // It is guaranteed that GetThreadNum() < GetNumTaskThreads() unless it is NO_THREAD_NUM
         ENKITS_API uint32_t        GetThreadNum() const;
 
-         // Call on a thread to register the thread to use the TaskScheduling API.
+        // Call on a thread to register the thread to use the TaskScheduling API.
         // This is implicitly done for the thread which initializes the TaskScheduler
         // Intended for developers who have threads who need to call the TaskScheduler API
         // Returns true if successful, false if not.

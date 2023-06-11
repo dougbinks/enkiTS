@@ -7,7 +7,7 @@ option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 option( ENKITS_BUILD_SHARED         "Build shared library" OFF )
 option( ENKITS_INSTALL              "Generate installation target" OFF )
 
-set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5, 0 for defined by defaults in source" ) 
+set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5, 0 for defined by defaults in source" )
 
 set( ENKITS_HEADERS
     src/LockLessMultiReadPipe.h
@@ -22,7 +22,7 @@ if( ENKITS_BUILD_C_INTERFACE )
     list( APPEND ENKITS_HEADERS
         src/TaskScheduler_c.h
         )
-		
+
     list( APPEND ENKITS_SRC
         src/TaskScheduler_c.cpp
         )
@@ -35,10 +35,10 @@ if( ENKITS_BUILD_SHARED )
     target_compile_definitions( enkiTS PRIVATE ENKITS_BUILD_DLL=1 )
     target_compile_definitions( enkiTS INTERFACE ENKITS_DLL=1 )
     if( UNIX )
-	    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang") 
-	         SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-    	endif()
-	endif ()
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+             SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+        endif()
+    endif ()
 else()
     add_library( enkiTS STATIC ${ENKITS_SRC} )
 endif()
@@ -46,7 +46,7 @@ endif()
 target_include_directories( enkiTS PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 if( ENKITS_TASK_PRIORITIES_NUM GREATER "0" )
-    target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )    
+    target_compile_definitions( enkiTS PUBLIC "ENKITS_TASK_PRIORITIES_NUM=${ENKITS_TASK_PRIORITIES_NUM}" )
 endif()
 
 if( UNIX )
@@ -84,7 +84,7 @@ if( ENKITS_BUILD_EXAMPLES )
         add_executable( Priorities example/Priorities.cpp )
         target_link_libraries(Priorities enkiTS )
     endif()
-    
+
     add_executable( TaskThroughput example/TaskThroughput.cpp example/Timer.h )
     target_link_libraries(TaskThroughput enkiTS )
 
@@ -111,11 +111,11 @@ if( ENKITS_BUILD_EXAMPLES )
 
     add_executable( WaitForNewPinnedTasks example/WaitForNewPinnedTasks.cpp )
     target_link_libraries(WaitForNewPinnedTasks enkiTS )
-	
+
 if( ENKITS_BUILD_C_INTERFACE )
     add_executable( ParallelSum_c example/ParallelSum_c.c )
     target_link_libraries(ParallelSum_c enkiTS )
-    
+
     add_executable( PinnedTask_c example/PinnedTask_c.c )
     target_link_libraries(PinnedTask_c enkiTS )
 
@@ -135,10 +135,10 @@ if( ENKITS_BUILD_C_INTERFACE )
 
     add_executable( CompletionAction_c example/CompletionAction_c.c )
     target_link_libraries(CompletionAction_c enkiTS )
-	
-	add_executable( WaitForNewPinnedTasks_c example/WaitForNewPinnedTasks_c.c )
+
+    add_executable( WaitForNewPinnedTasks_c example/WaitForNewPinnedTasks_c.c )
     target_link_libraries(WaitForNewPinnedTasks_c enkiTS )
 
-endif()    
+endif()
 
 endif()

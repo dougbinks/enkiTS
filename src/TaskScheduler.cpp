@@ -152,7 +152,7 @@ namespace
 
     #if ( defined _WIN32 && ( defined _M_IX86  || defined _M_X64 ) ) || ( defined __i386__ || defined __x86_64__ )
     // Note: see https://software.intel.com/en-us/articles/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops
-    static void SpinWait( uint32_t spinCount_ )
+    void SpinWait( uint32_t spinCount_ )
     {
         uint64_t end = __rdtsc() + spinCount_;
         while( __rdtsc() < end )
@@ -170,13 +170,13 @@ namespace
         }
     }
     #endif
-}
 
-static void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
-{
-    if( func_ != nullptr )
+    void SafeCallback( ProfilerCallbackFunc func_, uint32_t threadnum_ )
     {
-        func_( threadnum_ );
+        if( func_ != nullptr )
+        {
+            func_( threadnum_ );
+        }
     }
 }
 

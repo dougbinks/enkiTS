@@ -366,6 +366,11 @@ Aras Pranckevičius' code for his series on [Daily Path Tracer experiments with 
 
 ![ToyPathTracer screenshot](https://github.com/aras-p/ToyPathTracer/blob/main/Shots/screenshot.jpg?raw=true).
 
+### [Mastering Graphics Programming with Vulkan](https://github.com/PacktPublishing/Mastering-Graphics-Programming-with-Vulkan)
+Marco Castorina and Gabriel Sassone's book on developing a modern rendering engine from first principles to state-of-the-art techniques. Source code uses enkiTS.
+
+![Mastering Graphics Programming with Vulkan](https://static.packt-cdn.com/products/9781803244792/cover/smaller)
+
 ## License (zlib)
 
 Copyright (c) 2013-2020 Doug Binks

@@ -403,7 +403,7 @@ void TaskScheduler::StartThreads()
         if( success )
         {
             uint32_t mainProcessorGroup = mainThreadAffinity.Group;
-            uint32_t currLogicalProcess = GetActiveProcessorCount( mainProcessorGroup ); // we start iteration at end of current process group's threads
+            uint32_t currLogicalProcess = GetActiveProcessorCount( (WORD)mainProcessorGroup ); // we start iteration at end of current process group's threads
 
             // If more threads are created than there are logical processors then we still want to distribute them evenly amongst groups
             // so we iterate continuously around the groups until we reach m_NumThreads
@@ -412,7 +412,7 @@ void TaskScheduler::StartThreads()
             {
                 ++group; // start at group 1 since we set currLogicalProcess to start of next group
                 uint32_t currGroup = ( group + mainProcessorGroup ) % numProcessorGroups; // we start at mainProcessorGroup, go round in circles
-                uint32_t groupNumLogicalProcessors = GetActiveProcessorCount( currGroup );
+                uint32_t groupNumLogicalProcessors = GetActiveProcessorCount( (WORD)currGroup );
                 ENKI_ASSERT( groupNumLogicalProcessors <= 64 );
                 uint64_t GROUPMASK = 0xFFFFFFFFFFFFFFFFULL >> (64-groupNumLogicalProcessors); // group mask should not have 1's where there are no processors
                 for( uint32_t groupLogicalProcess = 0; ( groupLogicalProcess < groupNumLogicalProcessors ) && ( currLogicalProcess < m_NumThreads ); ++groupLogicalProcess, ++currLogicalProcess )

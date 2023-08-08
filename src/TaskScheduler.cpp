@@ -399,7 +399,7 @@ void TaskScheduler::StartThreads()
         uint32_t numProcessorGroups = GetActiveProcessorGroupCount();
         GROUP_AFFINITY mainThreadAffinity;
         BOOL success = GetThreadGroupAffinity( GetCurrentThread(), &mainThreadAffinity );
-        assert( success );
+        ENKI_ASSERT( success );
         if( success )
         {
             uint32_t mainProcessorGroup = mainThreadAffinity.Group;
@@ -413,7 +413,7 @@ void TaskScheduler::StartThreads()
                 ++group; // start at group 1 since we set currLogicalProcess to start of next group
                 uint32_t currGroup = ( group + mainProcessorGroup ) % numProcessorGroups; // we start at mainProcessorGroup, go round in circles
                 uint32_t groupNumLogicalProcessors = GetActiveProcessorCount( currGroup );
-                assert( groupNumLogicalProcessors <= 64 );
+                ENKI_ASSERT( groupNumLogicalProcessors <= 64 );
                 uint64_t GROUPMASK = 0xFFFFFFFFFFFFFFFFULL >> (64-groupNumLogicalProcessors); // group mask should not have 1's where there are no processors
                 for( uint32_t groupLogicalProcess = 0; ( groupLogicalProcess < groupNumLogicalProcessors ) && ( currLogicalProcess < m_NumThreads ); ++groupLogicalProcess, ++currLogicalProcess )
                 {
@@ -426,13 +426,13 @@ void TaskScheduler::StartThreads()
                         // and the process becomes a multi-group process.
                         GROUP_AFFINITY threadAffinity;
                         success = GetThreadGroupAffinity( thread_handle, &threadAffinity );
-                        assert(success); (void)success;
+                        ENKI_ASSERT(success); (void)success;
                         if( threadAffinity.Group != currGroup )
                         {
-                            threadAffinity.Group = currGroup;
+                            threadAffinity.Group = (WORD)currGroup;
                             threadAffinity.Mask  = GROUPMASK;
                             success = SetThreadGroupAffinity( thread_handle, &threadAffinity, nullptr );
-                            assert( success ); (void)success;
+                            ENKI_ASSERT( success ); (void)success;
                         }
                     }
                 }

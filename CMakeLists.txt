@@ -71,6 +71,7 @@ if( ENKITS_INSTALL )
     install(
         EXPORT enkiTS-config
         NAMESPACE enkiTS::
+        FILE enkiTSConfig.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/enkiTS)
 endif()
 

@@ -65,13 +65,12 @@ endif()
 if( ENKITS_INSTALL )
     install(
         TARGETS enkiTS
-        EXPORT enkiTS-config
+        EXPORT enkiTSConfig
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(FILES ${ENKITS_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
     install(
-        EXPORT enkiTS-config
+        EXPORT enkiTSConfig
         NAMESPACE enkiTS::
-        FILE enkiTSConfig.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/enkiTS)
 endif()
 

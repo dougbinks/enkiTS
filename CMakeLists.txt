@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
 
-project( enkiTS )
+project( enkiTS 
+         VERSION "1.11"
+         DESCRIPTION "A C and C++ task scheduler for creating parallel programs"
+         HOMEPAGE_URL "https://github.com/dougbinks/enkiTS"
+         LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
@@ -36,6 +40,9 @@ if( ENKITS_BUILD_SHARED )
     add_library( enkiTS SHARED ${ENKITS_SRC} )
     target_compile_definitions( enkiTS PRIVATE ENKITS_BUILD_DLL=1 )
     target_compile_definitions( enkiTS INTERFACE ENKITS_DLL=1 )
+    set_target_properties( enkiTS PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR})
     if( UNIX )
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
              SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")

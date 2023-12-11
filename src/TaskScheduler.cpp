@@ -551,7 +551,7 @@ static inline uint32_t Hash32( uint32_t in_ )
     acc = acc ^ (acc >> 13);
     acc = acc * PRIME32_3;
     acc = acc ^ (acc >> 16);
-    return (std::size_t)acc;
+    return acc;
 }
 
 bool TaskScheduler::TryRunTask( uint32_t threadNum_, uint32_t priority_, uint32_t& hintPipeToCheck_io_ )

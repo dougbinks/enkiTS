@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <vector>
 #include <algorithm>
+#include <cstring>
 
 #ifndef _WIN32
     #include <string.h>

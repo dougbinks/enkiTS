@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <math.h>
+#include <cstring>
 
 #ifndef _WIN32
     #include <string.h>

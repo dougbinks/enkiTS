@@ -24,11 +24,7 @@
 #include <inttypes.h>
 #undef __STDC_FORMAT_MACROS
 #include <assert.h>
-#include <cstring>
-
-#ifndef _WIN32
-    #include <string.h>
-#endif
+#include <string.h>
 
 using namespace enki;
 

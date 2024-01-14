@@ -25,10 +25,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstring>
-
-#ifndef _WIN32
-    #include <string.h>
-#endif
+#include <string.h>
 
 using namespace enki;
 

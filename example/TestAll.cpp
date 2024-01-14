@@ -24,10 +24,8 @@
 #include <assert.h>
 #include <vector>
 #include <algorithm>
-
-#ifndef _WIN32
-    #include <string.h>
-#endif
+#include <cstring>
+#include <string.h>
 
 using namespace enki;
 

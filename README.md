@@ -32,6 +32,9 @@ Several examples exist in  the [example folder](https://github.com/dougbinks/enk
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
+On Linux and Mac OS X, the header files are installed in a subdirectory of the include path, `include/enkiTS` to ensure that they do not conflict with header files from other packages.
+When building applications either ensure this is part of the INCLUDE_PATH variable or ensure that enkiTS is in the header path in the source files, for example use `#include "enkiTS/TaskScheduler.h"` instead of `#include "TaskScheduler.h"`.
+
 ## Building
 
 Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will likely require the pthreads library.

@@ -32,9 +32,6 @@ Several examples exist in  the [example folder](https://github.com/dougbinks/enk
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
-On Linux and Mac OS X, the header files are installed in a subdirectory of the include path, `include/enkiTS` to ensure that they do not conflict with header files from other packages.
-When building applications either ensure this is part of the INCLUDE_PATH variable or ensure that enkiTS is in the header path in the source files, for example use `#include "enkiTS/TaskScheduler.h"` instead of `#include "TaskScheduler.h"`.
-
 ## Building
 
 Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will likely require the pthreads library.
@@ -76,6 +73,14 @@ For cmake, on Windows / Mac OS X / Linux with cmake installed, open a prompt in 
 1. *Dependencies* - can set dependendencies between tasks see [example/Dependencies.cpp](example/Dependencies.cpp) and [example/Dependencies_c.c](example/Dependencies_c.c).
 1. *Completion Actions* - can perform an action on task completion. This avoids the expensive action of adding the task to the scheduler, and can be used to safely delete a completed task. See [example/CompletionAction.cpp](example/CompletionAction.cpp) and [example/CompletionAction_c.c](example/CompletionAction_c.c)
 1. **NEW** *Can wait for pinned tasks* - Can wait for pinned tasks, useful for creating IO threads which do no other work. See [example/WaitForNewPinnedTasks.cpp](example/WaitForNewPinnedTasks.cpp) and [example/WaitForNewPinnedTasks_c.c](example/WaitForNewPinnedTasks_c.c).
+
+## Installing
+
+I recommend using enkiTS directly from source in each project rather than installing it for system wide use. However enkiTS' cmake script can also be used to install the library
+if the `ENKITS_INSTALL` cmake variable is set to `ON` (it defaults to `OFF`).
+
+When installed the header files are installed in a subdirectory of the include path, `include/enkiTS` to ensure that they do not conflict with header files from other packages.
+When building applications either ensure this is part of the `INCLUDE_PATH` variable or ensure that enkiTS is in the header path in the source files, for example use `#include "enkiTS/TaskScheduler.h"` instead of `#include "TaskScheduler.h"`.
 
 ## Using enkiTS
 

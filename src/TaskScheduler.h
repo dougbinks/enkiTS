@@ -316,12 +316,12 @@ namespace enki
         // while( !GetIsShutdownRequested() ) {} can be used in tasks which loop, to check if enkiTS has been requested to shutdown.
         // If GetIsShutdownRequested() returns true should then exit. Not required for finite tasks
         // Safe to use with WaitforAllAndShutdown() and ShutdownNow() where this will be set
-        // Not safe to use with WaitforAll().
+        // Not safe to use with WaitforAll(), use GetIsWaitforAllCalled() instead.
         inline     bool            GetIsShutdownRequested() const { return m_bShutdownRequested.load( std::memory_order_acquire ); }
 
         // while( !GetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if WaitforAll() has been called.
         // If GetIsWaitforAllCalled() returns false should then exit. Not required for finite tasks
-        // This is intended to be used with code which calls WaitforAll() with flag WAITFORALLFLAGS_INC_WAIT_NEW_PINNED_TASKS set.
+        // This is intended to be used with code which calls WaitforAll().
         // This is also set when the task manager is shutting down, so no need to have an additional check for GetIsShutdownRequested()
         inline     bool            GetIsWaitforAllCalled() const { return m_bWaitforAllCalled.load( std::memory_order_acquire ); }
 

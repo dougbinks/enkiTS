@@ -354,18 +354,20 @@ void TaskScheduler::StartThreads()
     {
         m_pThreadDataStore[thread].threadState   = ENKI_THREAD_STATE_NOT_LAUNCHED;
     }
-    // only launch threads once all thread states are set
-    for( uint32_t thread = m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread(); thread < m_NumThreads; ++thread )
-    {
-        m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
-        ++m_NumInternalTaskThreadsRunning;
-    }
+
 
     // Create Wait New Pinned Task Semaphores and init rndSeed
     for( uint32_t threadNum = 0; threadNum < m_NumThreads; ++threadNum )
     {
         m_pThreadDataStore[threadNum].pWaitNewPinnedTaskSemaphore = SemaphoreNew();
         m_pThreadDataStore[threadNum].rndSeed = threadNum;
+    }
+
+    // only launch threads once all thread states are set
+    for( uint32_t thread = m_Config.numExternalTaskThreads + GetNumFirstExternalTaskThread(); thread < m_NumThreads; ++thread )
+    {
+        m_pThreads[thread]                       = std::thread( TaskingThreadFunction, ThreadArgs{ thread, this } );
+        ++m_NumInternalTaskThreadsRunning;
     }
 
     // ensure we have sufficient tasks to equally fill either all threads including main

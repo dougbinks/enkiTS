@@ -130,7 +130,7 @@ struct enkiTaskSchedulerConfig
 
 /* ----------------------------  Task Scheduler  ---------------------------- */
 // Create a new task scheduler
-ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler();
+ENKITS_API enkiTaskScheduler*  enkiNewTaskScheduler( void );
 
 // Create a new task scheduler using a custom allocator
 // This will  use the custom allocator to allocate the task scheduler struct
@@ -211,7 +211,7 @@ ENKITS_API uint32_t            enkiGetNumRegisteredExternalTaskThreads( enkiTask
 // for( uint32_t externalThreadNum = GetNumFirstExternalTaskThread();
 //      externalThreadNum < ( GetNumFirstExternalTaskThread() + numExternalTaskThreads
 //      ++externalThreadNum ) { // do something with externalThreadNum }
-ENKITS_API uint32_t            enkiGetNumFirstExternalTaskThread();
+ENKITS_API uint32_t            enkiGetNumFirstExternalTaskThread( void );
 
 
 /* ----------------------------     TaskSets    ---------------------------- */

@@ -22,10 +22,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <math.h>
-
-#ifndef _WIN32
-    #include <string.h>
-#endif
+#include <cstring>
+#include <string.h>
 
 using namespace enki;
 

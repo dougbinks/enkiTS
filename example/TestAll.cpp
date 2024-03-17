@@ -24,10 +24,8 @@
 #include <assert.h>
 #include <vector>
 #include <algorithm>
-
-#ifndef _WIN32
-    #include <string.h>
-#endif
+#include <cstring>
+#include <string.h>
 
 using namespace enki;
 
@@ -412,11 +410,22 @@ int main(int argc, const char * argv[])
             g_TS.AddTaskSetToPipe( &taskSetA );
             g_TS.WaitforTask( &finalTask );
 
-            // check counters
+            // check counters and complete status
+            if( !taskSetA.GetIsComplete() )
+            {
+                fprintf( stderr,"\tERROR: enkiTS dependencies issue taskSetA not complete\n");
+                return false;
+            }
+
             int32_t lastCount = taskSetA.m_Counter;
             int32_t countCheck = lastCount;
             for( auto& task : taskSetBs )
             {
+                if( !task.GetIsComplete() )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue taskSetBs not complete\n");
+                    return false;
+                }
                 if( task.m_Counter < countCheck )
                 {
                     fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );
@@ -425,6 +434,11 @@ int main(int argc, const char * argv[])
                 lastCount = std::max( lastCount, task.m_Counter );
             }
             countCheck = lastCount;
+            if( !pinnedTaskC.GetIsComplete() )
+            {
+                fprintf( stderr,"\tERROR: enkiTS dependencies issue pinnedTaskC not complete\n");
+                return false;
+            }
             if( pinnedTaskC.m_Counter < countCheck )
             {
                 fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", pinnedTaskC.m_Counter, lastCount, __LINE__ );
@@ -434,6 +448,11 @@ int main(int argc, const char * argv[])
             countCheck = lastCount;
             for( auto& task : taskSetDs )
             {
+                if( !task.GetIsComplete() )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue taskSetDs not complete\n");
+                    return false;
+                }
                 if( task.m_Counter < countCheck )
                 {
                     fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );
@@ -444,6 +463,11 @@ int main(int argc, const char * argv[])
             countCheck = lastCount;
             for( auto& task : taskSetEs )
             {
+                if( !task.GetIsComplete() )
+                {
+                    fprintf( stderr,"\tERROR: enkiTS dependencies issue taskSetEs not complete\n");
+                    return false;
+                }
                 if( task.m_Counter < countCheck )
                 {
                     fprintf( stderr,"\tERROR: enkiTS dependencies issue %d < %d at line %d\n", task.m_Counter, lastCount, __LINE__ );

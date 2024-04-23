@@ -55,7 +55,7 @@ namespace
 #ifndef NOMINMAX
     #define NOMINMAX
 #endif
-#include "windows.h"
+#include <windows.h>
 #endif
 
 uint32_t enki::GetNumHardwareThreads()

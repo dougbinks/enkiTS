@@ -93,6 +93,11 @@ jobs:
         steps:
             - uses: actions/checkout@v3
 
+            - name: Setup MSVC dev command prompt
+              uses: TheMrMilchmann/setup-msvc-dev@v3
+              with:
+                arch: x64
+
             - name: Configure static library
               run: cmake -S . -B build-static -G "Visual Studio 17 2022" -D ENKITS_SANITIZE=ON
             - name: Build static library

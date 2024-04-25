@@ -12,6 +12,7 @@ option( ENKITS_BUILD_C_INTERFACE    "Build C interface" ON )
 option( ENKITS_BUILD_EXAMPLES       "Build example applications" ON )
 option( ENKITS_BUILD_SHARED         "Build shared library" OFF )
 option( ENKITS_INSTALL              "Generate installation target" OFF )
+option( ENKITS_SANITIZE             "Build with sanitizers" OFF)
 
 set( ENKITS_TASK_PRIORITIES_NUM "3" CACHE STRING "Number of task priorities, 1-5, 0 for defined by defaults in source" )
 
@@ -79,6 +80,16 @@ if( ENKITS_INSTALL )
         EXPORT enkiTSConfig
         NAMESPACE enkiTS::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/enkiTS)
+endif()
+
+if(ENKITS_SANITIZE)
+	if(MSVC)
+		add_compile_options("$<$<CONFIG:Debug>:/fsanitize=address>")
+	else()
+		# add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+		add_compile_options(-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined)
+		add_link_options(-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined)
+	endif()
 endif()
 
 if( UNIX )

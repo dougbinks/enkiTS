@@ -84,7 +84,7 @@ endif()
 
 if(ENKITS_SANITIZE)
 	if(MSVC)
-		add_compile_options("$<$<CONFIG:Debug>:/fsanitize=address>")
+		add_compile_options(/fsanitize=address)
 	else()
 		# add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
 		add_compile_options(-fsanitize=address -fsanitize-address-use-after-scope -fsanitize=undefined)

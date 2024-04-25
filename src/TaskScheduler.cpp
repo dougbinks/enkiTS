@@ -55,7 +55,7 @@ namespace
 #ifndef NOMINMAX
     #define NOMINMAX
 #endif
-#include "Windows.h"
+#include <windows.h>
 #endif
 
 uint32_t enki::GetNumHardwareThreads()
@@ -1320,7 +1320,7 @@ void TaskScheduler::Initialize()
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 
 namespace enki
 {

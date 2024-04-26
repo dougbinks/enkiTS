@@ -206,7 +206,7 @@ ENKITS_API uint32_t enkiGetNumFirstExternalTaskThread()
 
 enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange taskFunc_  )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     enkiTaskSet* pTask = (enkiTaskSet*)customAllocator.alloc(
         alignof(enkiTaskSet), sizeof(enkiTaskSet), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pTask) enkiTaskSet( taskFunc_ );
@@ -216,7 +216,7 @@ enkiTaskSet* enkiCreateTaskSet( enkiTaskScheduler* pETS_, enkiTaskExecuteRange t
 
 void enkiDeleteTaskSet( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
 
     pTaskSet_->~enkiTaskSet();
     customAllocator.free( pTaskSet_, sizeof(enkiTaskSet), customAllocator.userData, ENKI_FILE_AND_LINE );
@@ -300,7 +300,7 @@ int enkiIsTaskSetComplete( enkiTaskScheduler* pETS_, enkiTaskSet* pTaskSet_ )
 
 enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExecute taskFunc_, uint32_t threadNum_)
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     enkiPinnedTask* pTask = (enkiPinnedTask*)customAllocator.alloc(
         alignof(enkiPinnedTask), sizeof(enkiPinnedTask), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pTask) enkiPinnedTask( taskFunc_, threadNum_ );
@@ -309,7 +309,7 @@ enkiPinnedTask* enkiCreatePinnedTask(enkiTaskScheduler* pETS_, enkiPinnedTaskExe
 
 void enkiDeletePinnedTask( enkiTaskScheduler* pETS_, enkiPinnedTask* pPinnedTask_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
 
     pPinnedTask_->~enkiPinnedTask();
     customAllocator.free( pPinnedTask_, sizeof(enkiPinnedTask), customAllocator.userData, ENKI_FILE_AND_LINE );
@@ -443,7 +443,7 @@ enkiCompletable* enkiGetCompletableFromCompletionAction( enkiCompletionAction* p
 
 enkiCompletable* enkiCreateCompletable( enkiTaskScheduler* pETS_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     enkiCompletable* pTask = (enkiCompletable*)customAllocator.alloc(
         alignof(enkiCompletable), sizeof(enkiCompletable), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pTask) enkiCompletable();
@@ -452,7 +452,7 @@ enkiCompletable* enkiCreateCompletable( enkiTaskScheduler* pETS_ )
 
 void enkiDeleteCompletable( enkiTaskScheduler* pETS_, enkiCompletable* pCompletable_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
 
     pCompletable_->~enkiCompletable();
     customAllocator.free( pCompletable_, sizeof(enkiCompletable), customAllocator.userData, ENKI_FILE_AND_LINE );
@@ -470,7 +470,7 @@ void enkiWaitForCompletablePriority( enkiTaskScheduler* pETS_, enkiCompletable* 
 
 enkiDependency* enkiCreateDependency( enkiTaskScheduler* pETS_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     enkiDependency* pDep = (enkiDependency*)customAllocator.alloc(
         alignof(enkiDependency), sizeof(enkiDependency), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pDep) enkiDependency();
@@ -479,7 +479,7 @@ enkiDependency* enkiCreateDependency( enkiTaskScheduler* pETS_ )
 
 void enkiDeleteDependency( enkiTaskScheduler* pETS_, enkiDependency* pDependency_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
 
     pDependency_->~enkiDependency();
     customAllocator.free( pDependency_, sizeof(enkiDependency), customAllocator.userData, ENKI_FILE_AND_LINE );
@@ -492,7 +492,7 @@ void enkiSetDependency( enkiDependency* pDependency_, enkiCompletable* pDependen
 
 enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionFunction completionFunctionPreComplete_, enkiCompletionFunction completionFunctionPostComplete_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
     enkiCompletionAction* pCA = (enkiCompletionAction*)customAllocator.alloc(
         alignof(enkiCompletionAction), sizeof(enkiCompletionAction), customAllocator.userData, ENKI_FILE_AND_LINE );
     new(pCA) enkiCompletionAction();
@@ -503,7 +503,7 @@ enkiCompletionAction* enkiCreateCompletionAction( enkiTaskScheduler* pETS_, enki
 
 void enkiDeleteCompletionAction( enkiTaskScheduler* pETS_, enkiCompletionAction* pCompletionAction_ )
 {
-    const CustomAllocator& customAllocator = pETS_->GetConfig().customAllocator;
+    CustomAllocator customAllocator = pETS_->GetConfig().customAllocator;
 
     pCompletionAction_->~enkiCompletionAction();
     customAllocator.free( pCompletionAction_, sizeof(enkiCompletionAction), customAllocator.userData, ENKI_FILE_AND_LINE );

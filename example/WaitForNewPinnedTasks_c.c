@@ -38,7 +38,7 @@ void PinnedTaskRunPinnedTaskLoop( void* pArgs_ )
     assert( threadNum == threadNumDesired );
     printf("PinnedTaskRunPinnedTaskLoop running on thread %d (should be thread %d)\n", threadNum, threadNumDesired );
 
-    while( enkiGetIsRunning( pETS ) )
+    while( !enkiGetIsShutdownRequested( pETS ) )
     {
         enkiWaitForNewPinnedTasks( pETS );
         enkiRunPinnedTasks( pETS );
@@ -83,7 +83,7 @@ int main(int argc, const char * argv[])
     enkiDeletePinnedTask( pETS, pPinnedTaskPretendIO );
 
 
-    // Shutdown enkiTS, which will cause pPinnedTaskRunPinnedTaskLoop to exit as enkiGetIsRunning will return false
+    // Shutdown enkiTS, which will cause pPinnedTaskRunPinnedTaskLoop to exit as enkiGetIsShutdownRequested will return true
     enkiWaitforAllAndShutdown( pETS );
 
     // delete the tasks before the scheduler

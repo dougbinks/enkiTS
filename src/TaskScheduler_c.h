@@ -145,6 +145,18 @@ ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskSc
 // If enkiGetIsRunning() returns false should then exit. Not required for finite tasks
 ENKITS_API int                 enkiGetIsRunning( enkiTaskScheduler* pETS_ );
 
+// while( !enkiGetIsShutdownRequested() ) {} can be used in tasks which loop, to check if enkiTS has been requested to shutdown.
+// If enkiGetIsShutdownRequested() returns true should then exit. Not required for finite tasks
+// Safe to use with enkiWaitforAllAndShutdown() where this will be set
+// Not safe to use with enkiWaitforAll(), use enkiGetIsWaitforAllCalled() instead.
+ENKITS_API int                 enkiGetIsShutdownRequested( enkiTaskScheduler* pETS_ );
+
+// while( !enkiGetIsWaitforAllCalled() ) {} can be used in tasks which loop, to check if enkiWaitforAll() has been called.
+// If enkiGetIsWaitforAllCalled() returns false should then exit. Not required for finite tasks
+// This is intended to be used with code which calls enkiWaitforAll().
+// This is also set when the task manager is shutting down, so no need to have an additional check for enkiGetIsShutdownRequested()
+ENKITS_API int                 enkiGetIsWaitforAllCalled( enkiTaskScheduler* pETS_ );
+
 // Initialize task scheduler - will create GetNumHardwareThreads()-1 threads, which is
 // sufficient to fill the system when including the main thread.
 // Initialize can be called multiple times - it will wait for completion

@@ -58,6 +58,12 @@
 #define ENKI_ASSERT(x) assert(x)
 #endif
 
+#if (!defined(_MSVC_LANG) && __cplusplus >= 201402L) || (defined(_MSVC_LANG) && _MSVC_LANG >= 201402L)
+#define ENKI_DEPRECATED [[deprecated]]
+#else
+#define ENKI_DEPRECATED
+#endif
+
 namespace enki
 {
     struct TaskSetPartition
@@ -418,15 +424,15 @@ namespace enki
         // DEPRECATED: use GetIsShutdownRequested() instead of GetIsRunning() in external code
         // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
         // If GetIsRunning() returns false should then exit. Not required for finite tasks.
-        inline     bool            GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
+        ENKI_DEPRECATED inline bool GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
 
         // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask.
-        inline void                WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
+        ENKI_DEPRECATED inline void WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
 
         // DEPRECATED - GetProfilerCallbacks.  Use TaskSchedulerConfig instead.
         // Returns the ProfilerCallbacks structure so that it can be modified to
         // set the callbacks. Should be set prior to initialization.
-        inline ProfilerCallbacks* GetProfilerCallbacks() { return &m_Config.profilerCallbacks; }
+        ENKI_DEPRECATED inline ProfilerCallbacks* GetProfilerCallbacks() { return &m_Config.profilerCallbacks; }
         // -------------  End DEPRECATED Functions  -------------
 
     private:

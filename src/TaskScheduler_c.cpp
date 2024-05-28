@@ -158,6 +158,16 @@ int enkiGetIsRunning( enkiTaskScheduler* pETS_ )
     return (int)pETS_->GetIsRunning();
 }
 
+int enkiGetIsShutdownRequested(enkiTaskScheduler* pETS_)
+{
+    return (int)pETS_->GetIsShutdownRequested();
+}
+
+int enkiGetIsWaitforAllCalled( enkiTaskScheduler* pETS_ )
+{
+    return (int)pETS_->GetIsWaitforAllCalled();
+}
+
 void enkiInitTaskScheduler(  enkiTaskScheduler* pETS_ )
 {
     pETS_->Initialize();

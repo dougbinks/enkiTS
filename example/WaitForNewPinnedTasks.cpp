@@ -57,7 +57,7 @@ struct RunPinnedTaskLoopTask : IPinnedTask
 {
     void Execute() override
     {
-        while( g_TS.GetIsRunning() )
+        while( !g_TS.GetIsShutdownRequested() )
         {
             g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
             g_TS.RunPinnedTasks();
@@ -133,7 +133,7 @@ int main(int argc, const char * argv[])
             g_TS.AddPinnedTask( &pretendDoNetworkIO[ ioThreadID - (uint32_t)IOThreadId::NETWORK_IO_0 ] );
         }
 
-        g_TS.WaitforTaskSet( &parallelTaskSet );
+        g_TS.WaitforTask( &parallelTaskSet );
 
         // in this example  we need to wait for IO tasks to complete before running next loop
         g_TS.WaitforTask( &pretendDoFileIO  );

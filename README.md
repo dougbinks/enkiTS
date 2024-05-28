@@ -300,7 +300,7 @@ struct RunPinnedTaskLoopTask : enki::IPinnedTask
 {
     void Execute() override
     {
-        while( g_TS.GetIsRunning() )
+        while( !g_TS.GetIsShutdownRequested() )
         {
             g_TS.WaitForNewPinnedTasks(); // this thread will 'sleep' until there are new pinned tasks
             g_TS.RunPinnedTasks();

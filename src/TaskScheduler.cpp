@@ -289,7 +289,7 @@ void TaskScheduler::TaskingThreadFunction( const ThreadArgs& args_ )
 
     uint32_t spinCount = 0;
     uint32_t hintPipeToCheck_io = threadNum + 1; // does not need to be clamped.
-    while( pTS->GetIsRunning() )
+    while( pTS->GetIsRunningInt() )
     {
         if( !pTS->TryRunTask( threadNum, hintPipeToCheck_io ) )
         {
@@ -997,7 +997,7 @@ void    TaskScheduler::WaitforTask( const ICompletable* pCompletable_, enki::Tas
         // so we clamp the priorityOfLowestToRun_ to no smaller than the task we're waiting for
         priorityOfLowestToRun_ = std::max( priorityOfLowestToRun_, pCompletable_->m_Priority );
         uint32_t spinCount = 0;
-        while( !pCompletable_->GetIsComplete() && GetIsRunning() )
+        while( !pCompletable_->GetIsComplete() && GetIsRunningInt() )
         {
             ++spinCount;
             for( int priority = 0; priority <= priorityOfLowestToRun_; ++priority )
@@ -1056,7 +1056,7 @@ void TaskScheduler::WaitforAll()
     uint32_t spinCount = 0;
     TaskSchedulerWaitTask dummyWaitTask;
     dummyWaitTask.threadNum = 0;
-    while( GetIsRunning() && ( bHaveTasks || otherThreadsRunning ) )
+    while( GetIsRunningInt() && ( bHaveTasks || otherThreadsRunning ) )
     {
         bHaveTasks = TryRunTask( ourThreadNum, hintPipeToCheck_io );
         ++spinCount;

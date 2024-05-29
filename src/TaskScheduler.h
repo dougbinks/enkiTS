@@ -424,7 +424,7 @@ namespace enki
         // DEPRECATED: use GetIsShutdownRequested() instead of GetIsRunning() in external code
         // while( GetIsRunning() ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
         // If GetIsRunning() returns false should then exit. Not required for finite tasks.
-        ENKI_DEPRECATED inline bool GetIsRunning() const { return m_bRunning.load( std::memory_order_acquire ); }
+        ENKI_DEPRECATED inline bool GetIsRunning() const { return !GetIsShutdownRequested(); }
 
         // DEPRECATED - WaitforTaskSet, deprecated interface use WaitforTask.
         ENKI_DEPRECATED inline void WaitforTaskSet( const ICompletable* pCompletable_ ) { WaitforTask( pCompletable_ ); }
@@ -451,6 +451,8 @@ namespace enki
         void        WakeThreadsForTaskCompletion();
         bool        WakeSuspendedThreadsWithPinnedTasks( uint32_t threadNum_ );
         void        InitDependencies( ICompletable* pCompletable_  );
+        inline bool GetIsRunningInt() const { return m_bRunning.load( std::memory_order_acquire ); }
+
         ENKITS_API void TaskComplete( ICompletable* pTask_, bool bWakeThreads_, uint32_t threadNum_ );
         ENKITS_API void AddTaskSetToPipeInt( ITaskSet* pTaskSet_, uint32_t threadNum_ );
         ENKITS_API void AddPinnedTaskInt( IPinnedTask* pTask_ );

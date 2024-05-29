@@ -140,7 +140,7 @@ ENKITS_API enkiTaskScheduler*  enkiNewTaskSchedulerWithCustomAllocator( struct e
 // Get config. Can be called before enkiInitTaskSchedulerWithConfig to get the defaults
 ENKITS_API struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pETS_ );
 
-
+// DEPRECATED: use GetIsShutdownRequested() instead of GetIsRunning() in external code
 // while( enkiGetIsRunning(pETS) ) {} can be used in tasks which loop, to check if enkiTS has been shutdown.
 // If enkiGetIsRunning() returns false should then exit. Not required for finite tasks
 ENKITS_API int                 enkiGetIsRunning( enkiTaskScheduler* pETS_ );

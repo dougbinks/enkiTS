@@ -155,7 +155,7 @@ struct enkiTaskSchedulerConfig enkiGetTaskSchedulerConfig( enkiTaskScheduler* pE
 
 int enkiGetIsRunning( enkiTaskScheduler* pETS_ )
 {
-    return (int)pETS_->GetIsRunning();
+    return (int)(!pETS_->GetIsShutdownRequested());
 }
 
 int enkiGetIsShutdownRequested(enkiTaskScheduler* pETS_)

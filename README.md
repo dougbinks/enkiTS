@@ -10,7 +10,7 @@ Support development of enkiTS through [Github Sponsors](https://github.com/spons
 
 ## enki Task Scheduler
 
-A permissively licensed C and C++ Task Scheduler for creating parallel programs. Requires C++11 support.
+A permissively licensed C++ Task Scheduler for creating parallel programs. Requires C++11 support.
 
 The primary goal of enkiTS is to help developers create programs which handle both data and task level parallelism to utilize the full performance of multicore CPUs, whilst being lightweight (only a small amount of code) and easy to use.
 

@@ -537,10 +537,8 @@ static inline uint32_t Hash32( uint32_t in_ )
     static const uint32_t PRIME32_5 =  374761393U;  // 0b00010110010101100110011110110001
     static const uint32_t SEED      = 0; // can configure seed if needed
 
-    // simple hash of nodes, does not check if nodePool is compressed or not.
+    // less than 16 bytes of input so simplified hash steps
     uint32_t acc = SEED + PRIME32_5;
-
-    // add node types to map, and also ensure that fully empty nodes are well distributed by hashing the pointer.
     acc += in_;
     acc = acc ^ (acc >> 15);
     acc = acc * PRIME32_2;

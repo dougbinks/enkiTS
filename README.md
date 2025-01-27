@@ -347,7 +347,7 @@ int main(int argc, const char * argv[])
 
 ## Bindings
 
-- C# [EnkiTasks C#](https://github.com/nxrighthere/EnkiTasks-CSharp)
+- Odin [enkiTS Odin bindings](https://github.com/nadako/odin-enkiTS) by @nadako
 
 ## Deprecated
 

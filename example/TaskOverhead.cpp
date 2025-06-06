@@ -174,5 +174,8 @@ int main(int argc, const char * argv[])
         printf("%8d,\t%f,\t%f\n", GetSetSizeForDataPoint( dataPoint ), (float)avTimeTakenMS[ dataPoint ], (float)avSerialTimeTakenMS[ dataPoint ] );
     }
 
+    delete[] avSerialTimeTakenMS;
+    delete[] avTimeTakenMS;
+
     return 0;
 }

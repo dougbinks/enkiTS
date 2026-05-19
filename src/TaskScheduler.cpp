@@ -18,7 +18,7 @@
 
 #include "TaskScheduler.h"
 #include "LockLessMultiReadPipe.h"
-
+#include <type_traits>
 #include <algorithm>
 
 #if defined __i386__ || defined __x86_64__

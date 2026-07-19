@@ -173,7 +173,7 @@ fn buildCppExample(
     const example_path = "example/" ++ example_name ++ ".cpp";
     const source_files = [_][]const u8{example_path};
 
-    exe.addCSourceFiles(.{
+    exe.root_module.addCSourceFiles(.{
         .files = &source_files,
         .flags = &[_][]const u8{
             "-std=c++11",
@@ -184,7 +184,7 @@ fn buildCppExample(
     try options.applyTaskPriorities(b, exe);
 
     // link with lib
-    exe.linkLibrary(enki_ts);
+    exe.root_module.linkLibrary(enki_ts);
 
     b.installArtifact(exe);
 
@@ -212,7 +212,7 @@ fn buildCExample(
     const example_path = "example/" ++ example_name ++ ".c";
     const source_files = [_][]const u8{example_path};
 
-    exe.addCSourceFiles(.{
+    exe.root_module.addCSourceFiles(.{
         .files = &source_files,
         .flags = &[_][]const u8{},
         .language = .c,
@@ -221,7 +221,7 @@ fn buildCExample(
     try options.applyTaskPriorities(b, exe);
 
     // link with lib
-    exe.linkLibrary(enki_ts);
+    exe.root_module.linkLibrary(enki_ts);
 
     b.installArtifact(exe);
 

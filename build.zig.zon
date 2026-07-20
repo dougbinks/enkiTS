@@ -2,7 +2,7 @@
     .name = .enkiTS,
     .version = "1.11.0",
     .fingerprint = 0x486deed5a741584a, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.15.1",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{},
     .paths = .{
         "build.zig",

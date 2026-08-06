@@ -68,7 +68,7 @@ jobs:
           - uses: actions/checkout@v3
           - uses: mlugg/setup-zig@v2
             with:
-              version: 0.15.1
+              version: 0.16.0
 
           - name: Build static library and priorities
             run: zig build -Dbuild_examples=true -Dshared=false -Dtask_priorities=4
@@ -139,7 +139,7 @@ jobs:
         - uses: actions/checkout@v3
         - uses: mlugg/setup-zig@v2
           with:
-            version: 0.15.1
+            version: 0.16.0
 
         - name: Build static library and priorities
           run: zig build -Dbuild_examples=true -Dshared=false -Dtask_priorities=4

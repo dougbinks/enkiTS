@@ -20,6 +20,7 @@
 #include "LockLessMultiReadPipe.h"
 #include <type_traits>
 #include <algorithm>
+#include <cstdlib>
 
 #if defined __i386__ || defined __x86_64__
 #include "x86intrin.h"

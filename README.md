@@ -21,7 +21,7 @@ enkiTS was developed for, and is used in [enkisoftware](http://www.enkisoftware.
 
 ## Platforms
 
-- Windows, Linux, Mac OS, Android (should work on iOS) 
+- Windows, Linux, Mac OS, Android (should work on iOS)
 - x64 & x86, ARM
 
 enkiTS is primarily developed on x64 and x86 Intel architectures on MS Windows, with well tested support for Linux and somewhat less frequently tested support on Mac OS and ARM Android.
@@ -32,6 +32,8 @@ Several examples exist in  the [example folder](https://github.com/dougbinks/enk
 
 For further examples, see https://github.com/dougbinks/enkiTSExamples
 
+For building information about examples, see [Building Examples](example/README.md) section.
+
 ## Building
 
 Building enkiTS is simple, just add the files in enkiTS/src to your build system (_c.* files can be ignored if you only need C++ interface), and add enkiTS/src to your include path. Unix / Linux builds will likely require the pthreads library.
@@ -40,7 +42,7 @@ For C++
 
   - Use `#include "TaskScheduler.h"`
   - Add enkiTS/src to your include path
-  - Compile / Add to project: 
+  - Compile / Add to project:
     - `TaskScheduler.cpp`
   - Unix / Linux builds will likely require the pthreads library.
 
@@ -233,7 +235,7 @@ struct TaskB : enki::ITaskSet {
 
 int main(int argc, const char * argv[]) {
     g_TS.Initialize();
-    
+
     // set dependencies once (can set more than one if needed).
     TaskA taskA;
     TaskB taskB;
@@ -360,7 +362,7 @@ The user thread versions are no longer being maintained as they are no longer in
 ## Projects using enkiTS
 
 ### [Avoyd](https://www.avoyd.com)
-Avoyd is an abstract 6 degrees of freedom voxel game. enkiTS was developed for use in our [in-house engine powering Avoyd](https://www.enkisoftware.com/faq#engine). 
+Avoyd is an abstract 6 degrees of freedom voxel game. enkiTS was developed for use in our [in-house engine powering Avoyd](https://www.enkisoftware.com/faq#engine).
 
 ![Avoyd screenshot](https://github.com/juliettef/Media/blob/main/Avoyd_2019-06-22_enkiTS_microprofile.jpg?raw=true)
 

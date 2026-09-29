@@ -1484,6 +1484,11 @@ Dependency::Dependency( Dependency&& rhs_ ) noexcept
             ppDependent = &((*ppDependent)->pNext);
         }
     }
+
+    // clear RHS dependency members as have been moved
+    rhs_.pTaskToRunOnCompletion = NULL;
+    rhs_.pDependencyTask = NULL;
+    rhs_.pNext = NULL;
 }
 
 
@@ -1532,7 +1537,7 @@ void Dependency::ClearDependency()
             }
         }
     }
-    pDependencyTask = NULL;
+    pTaskToRunOnCompletion = NULL;
     pDependencyTask =  NULL;
     pNext = NULL;
 }

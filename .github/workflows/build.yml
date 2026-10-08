@@ -19,21 +19,21 @@ jobs:
             CXXFLAGS: -Werror
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Configure static library
               run: cmake -S . -B build-static -D ENKITS_SANITIZE=ON
             - name: Build static library
               run: cmake --build build-static --parallel
             - name: Test static library
-              run: ./build-static/TestAll
+              run: ./build-static/example/TestAll
 
             - name: Configure shared library
               run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
             - name: Build shared library
               run: cmake --build build-shared --parallel
             - name: Test shared library
-              run: ./build-shared/TestAll
+              run: ./build-shared/example/TestAll
 
     build-linux-gcc:
         name: Linux, gcc
@@ -45,27 +45,27 @@ jobs:
             CXXFLAGS: -Werror
 
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Configure static library
               run: cmake -S . -B build-static -D ENKITS_SANITIZE=ON
             - name: Build static library
               run: cmake --build build-static --parallel
             - name: Test static library
-              run: ./build-static/TestAll
+              run: ./build-static/example/TestAll
 
             - name: Configure shared library
               run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
             - name: Build shared library
               run: cmake --build build-shared --parallel
             - name: Test shared library
-              run: ./build-shared/TestAll
+              run: ./build-shared/example/TestAll
 
     build-ubuntu-zig:
         name: Linux, zig
         runs-on: ubuntu-latest
         steps:
-          - uses: actions/checkout@v3
+          - uses: actions/checkout@v7
           - uses: mlugg/setup-zig@v2
             with:
               version: 0.16.0
@@ -88,21 +88,21 @@ jobs:
             CFLAGS: -Werror
             CXXFLAGS: -Werror
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Configure static library
               run: cmake -S . -B build-static -D ENKITS_SANITIZE=ON
             - name: Build static library
               run: cmake --build build-static --parallel
             - name: Test static library
-              run: ./build-static/TestAll
+              run: ./build-static/example/TestAll
 
             - name: Configure shared library
               run: cmake -S . -B build-shared -D ENKITS_BUILD_SHARED=ON
             - name: Build shared library
               run: cmake --build build-shared --parallel
             - name: Test shared library
-              run: ./build-shared/TestAll
+              run: ./build-shared/example/TestAll
 
     build-windows-win32-vs2022:
         name: Win32 (Windows, VS2022)
@@ -111,7 +111,7 @@ jobs:
             CFLAGS: /WX
             CXXFLAGS: /WX
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v7
 
             - name: Setup MSVC dev command prompt
               uses: TheMrMilchmann/setup-msvc-dev@v3
@@ -123,20 +123,23 @@ jobs:
             - name: Build static library
               run: cmake --build build-static --parallel
             - name: Test static library
-              run: .\build-static\Debug\TestAll.exe
+              run: build-static\example\Debug\TestAll.exe
 
             - name: Configure shared library
               run: cmake -S . -B build-shared -G "Visual Studio 17 2022" -D ENKITS_BUILD_SHARED=ON
             - name: Build shared library
               run: cmake --build build-shared --parallel
             - name: Test shared library
-              run: .\build-shared\Debug\TestAll.exe
+              shell: pwsh
+              run: |
+                  $env:PATH = "$PWD\build-shared\Debug;$env:PATH"
+                  build-shared\example\Debug\TestAll.exe
 
     build-windows-win32-zig:
         name: Win32 (Windows, zig)
         runs-on: windows-latest
         steps:
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@v7
         - uses: mlugg/setup-zig@v2
           with:
             version: 0.16.0
@@ -150,3 +153,91 @@ jobs:
           run: zig build -Dbuild_examples=true -Dshared=true
         - name: Test shared library
           run: .\zig-out\bin\TestAll.exe
+
+    build-examples-linux:
+        name: Build examples with external Enkits (Linux) ${{ matrix.compiler }} Shared=${{ matrix.shared }}
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            include:
+              - compiler: clang
+                cc: clang
+                cxx: clang++
+                shared: "ON"
+              - compiler: clang
+                cc: clang
+                cxx: clang++
+                shared: "OFF"
+              - compiler: gcc
+                cc: gcc
+                cxx: g++
+                shared: "ON"
+              - compiler: gcc
+                cc: gcc
+                cxx: g++
+                shared: "OFF"
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        steps:
+          - uses: actions/checkout@v7
+          - name: Setup CMake
+            run: cmake -S . -B build -DENKITS_BUILD_EXAMPLES=OFF -DENKITS_BUILD_SHARED=${{ matrix.shared }} -DENKITS_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DENKITS_BUILD_C_INTERFACE=ON
+          - name: Build library
+            run: cmake --build build --parallel
+          - name: Install artifacts
+            run: cmake --install build --prefix ${{ github.workspace }}/install
+          - name: Setup examples using installed artifacts
+            run: cmake -S example -B build-examples -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install -DCMAKE_BUILD_TYPE=Release -DENKITS_BUILD_C_INTERFACE=ON
+          - name: Build examples
+            run: cmake --build build-examples --parallel
+          - name: Test examples
+            run: ./build-examples/ParallelSum_c && ./build-examples/PinnedTask
+
+    build-examples-macos:
+        name: Build examples with external Enkits  (macOS) Shared=${{ matrix.shared }}
+        runs-on: macos-latest
+        strategy:
+          matrix:
+            shared: ["ON", "OFF"]
+        steps:
+          - uses: actions/checkout@v7
+          - name: Setup CMake
+            run: cmake -S . -B build -DENKITS_BUILD_EXAMPLES=OFF -DENKITS_BUILD_SHARED=${{ matrix.shared }} -DENKITS_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DENKITS_BUILD_C_INTERFACE=ON
+          - name: Build library
+            run: cmake --build build --parallel
+          - name: Install artifacts
+            run: cmake --install build --prefix ${{ github.workspace }}/install
+          - name: Setup examples using installed artifacts
+            run: cmake -S example -B build-examples -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install -DCMAKE_BUILD_TYPE=Release -DENKITS_BUILD_C_INTERFACE=ON
+          - name: Build examples
+            run: cmake --build build-examples --parallel
+          - name: Test examples
+            run: ./build-examples/ParallelSum_c && ./build-examples/PinnedTask
+
+    build-examples-windows:
+      name: Build examples with external Enkits (Windows) Shared=${{ matrix.shared }}
+      runs-on: windows-latest
+      strategy:
+        matrix:
+          shared: ["ON", "OFF"]
+      steps:
+        - uses: actions/checkout@v7
+        - name: Setup CMake
+          run: cmake -S . -B build -DENKITS_BUILD_EXAMPLES=OFF -DENKITS_BUILD_SHARED=${{ matrix.shared }} -DENKITS_INSTALL=ON -DCMAKE_BUILD_TYPE=Release -DENKITS_BUILD_C_INTERFACE=ON
+        - name: Build library
+          run: cmake --build build --config Release --parallel
+        - name: Install artifacts
+          run: cmake --install build --prefix ${{ github.workspace }}/install --config Release
+        - name: Setup examples using installed artifacts
+          run: cmake -S example -B build-examples -DCMAKE_PREFIX_PATH=${{ github.workspace }}/install -DENKITS_BUILD_C_INTERFACE=ON
+        - name: Build examples
+          run: cmake --build build-examples --config Release --parallel
+        - name: Test examples
+          shell: bash
+          # allow failed tests to not fail the job, since some of the examples are expected to fail on Windows due missing .dll files
+          run: |
+            set +e
+            ./build-examples/Release/ParallelSum_c.exe
+            ./build-examples/Release/PinnedTask.exe
+            set -e

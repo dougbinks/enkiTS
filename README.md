@@ -19,6 +19,13 @@ The primary goal of enkiTS is to help developers create programs which handle bo
 
 enkiTS was developed for, and is used in [enkisoftware](http://www.enkisoftware.com/)'s Avoyd codebase.
 
+## No generative AI / LLMs
+
+Do not use generative AI / large language models (LLMs) to contribute to this project.
+
+- You must confirm that you are the author of the contribution, and that you did not use generative AI / LLMs.
+- You must contribute under the terms of the project licence.
+
 ## Platforms
 
 - Windows, Linux, Mac OS, Android (should work on iOS) 
